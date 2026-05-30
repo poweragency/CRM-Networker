@@ -40,6 +40,21 @@
     --branch-global: 222 80% 56%;
     --branch-left: 265 70% 58%;
     --branch-right: 170 70% 42%;
+
+    /* rank accent ramp (6 ranks, ascending seniority → richer/warmer tone).
+       Consumed by RankBadge; mirrors ranks_meta tone (doc 08 §6.2/§14). */
+    --rank-executive: 220 9% 46%;
+    --rank-consultant: 199 89% 48%;
+    --rank-team-leader: 158 64% 40%;
+    --rank-senior-team-leader: 262 70% 56%;
+    --rank-executive-team-leader: 25 90% 52%;
+    --rank-vice-president: 42 95% 47%;
+
+    /* node activity indicator (hot / warm / cold / dormant — doc 14 §7.2) */
+    --activity-hot: 0 72% 51%;
+    --activity-warm: 38 92% 50%;
+    --activity-cold: 210 90% 56%;
+    --activity-dormant: 220 9% 60%;
   }
 
   .dark {
@@ -70,6 +85,18 @@
     --branch-global: 222 90% 66%;
     --branch-left: 265 65% 68%;
     --branch-right: 170 65% 52%;
+
+    --rank-executive: 217 12% 65%;
+    --rank-consultant: 199 85% 60%;
+    --rank-team-leader: 158 60% 50%;
+    --rank-senior-team-leader: 262 65% 70%;
+    --rank-executive-team-leader: 25 88% 62%;
+    --rank-vice-president: 42 92% 58%;
+
+    --activity-hot: 0 72% 60%;
+    --activity-warm: 38 92% 58%;
+    --activity-cold: 210 90% 64%;
+    --activity-dormant: 217 12% 55%;
   }
 }
 

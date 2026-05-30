@@ -1,48 +1,73 @@
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { getCurrentClaims } from '@/lib/data/session';
+import { getNode } from '@/lib/data/genealogy';
 import { isSupabaseConfigured } from '@/lib/env';
-import { ConfigNotice } from '@/components/config-notice';
-import { Sidebar } from '@/components/shell/sidebar';
-import { TopBar } from '@/components/shell/topbar';
+import { AppShell } from '@/components/shell/app-shell';
+import type { NavViewer } from '@/lib/nav';
+import type { TopbarUser } from '@/components/shell/topbar';
 
 /**
  * (app) authenticated CRM shell (doc 08 §2 / ADR-008).
- * Server component: reads the session and bounces unauthenticated requests to
- * /accedi. The full CRM gate (effective_crm_access) and rank/role sidebar
- * filtering are layered in a later phase — this scaffold gates only on session.
  *
- * When env is missing the app must not crash: it renders a config notice shell.
+ * Server component. Reads the caller's JWT claims via `getCurrentClaims()`, which
+ * is demo-safe: when Supabase env is missing OR there is no session it returns a
+ * deterministic DEMO claim set instead of throwing, so the shell renders fully in
+ * "modalità demo" and `next build` succeeds with no env (RESILIENCE).
+ *
+ * Authenticated routing: only when Supabase IS configured and the call resolves
+ * to demo (no real session) do we bounce to /accedi — in pure no-env demo mode
+ * we render the shell so the product is explorable.
+ *
+ * The derived viewer (rank/role/crm_access) drives the gated sidebar; identity
+ * (org name, display name) feeds the topbar. All gating is computed here once and
+ * passed down — the client shell never re-reads claims.
  */
 export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  if (!isSupabaseConfigured) {
-    return (
-      <main className="flex min-h-screen items-center justify-center px-4 py-12">
-        <ConfigNotice />
-      </main>
-    );
-  }
+  const { claims, demo, email } = await getCurrentClaims();
 
-  const supabase = createClient();
-  // `supabase` is non-null here because isSupabaseConfigured is true.
-  const {
-    data: { user },
-  } = await supabase!.auth.getUser();
-
-  if (!user) {
+  // Env configured but no real session → require login.
+  if (isSupabaseConfigured && demo) {
     redirect('/accedi');
   }
 
+  const viewer: NavViewer = {
+    role: claims.role,
+    rank: claims.rank,
+    crmAccess: claims.crm_access,
+  };
+
+  // Resolve a friendly display name: the caller's own marketer profile (demo
+  // tree falls back gracefully), else the email local-part, else a default.
+  const { data: self } = await getNode(claims.marketer_id);
+  const displayName =
+    self?.display_name ??
+    (email ? email.split('@')[0]! : 'Marketer');
+
+  const user: TopbarUser = {
+    displayName,
+    email,
+    rank: claims.rank,
+    role: claims.role,
+    avatarUrl: null,
+  };
+
+  const orgName = demo ? 'Networker · Demo' : claims.org_id || 'Workspace';
+
+  // Static placeholder until the notifications feed lands (doc 08 §2).
+  const unreadCount = 3;
+
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar userEmail={user.email ?? null} />
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
-      </div>
-    </div>
+    <AppShell
+      viewer={viewer}
+      user={user}
+      orgName={orgName}
+      unreadCount={unreadCount}
+    >
+      {children}
+    </AppShell>
   );
 }

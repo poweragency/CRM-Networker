@@ -1,14 +1,20 @@
 'use client';
 
 import { Suspense, useState } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import { z } from 'zod';
-import { LogIn } from 'lucide-react';
+import { LogIn, AlertCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { isSupabaseConfigured } from '@/lib/env';
-import { ConfigNotice } from '@/components/config-notice';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { AuthCard } from '../_components/auth-card';
+import { FormField } from '../_components/form-field';
+import { FormError } from '../_components/form-error';
+import { OAuthButtons } from '../_components/oauth-buttons';
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -22,10 +28,9 @@ type LoginValues = z.infer<typeof loginSchema>;
  * Calls supabase.auth.signInWithPassword; on success redirects to the
  * `redirect` param or /dashboard. OAuth buttons are visible-but-disabled
  * (ADR-004: MFA/OAuth present but not enforced in v1).
- */
-/**
- * Page wrapper: useSearchParams() (inside LoginForm) requires a Suspense
- * boundary for static prerendering.
+ *
+ * useSearchParams() (inside LoginForm) requires a Suspense boundary for static
+ * prerendering.
  */
 export default function LoginPage() {
   return (
@@ -37,8 +42,17 @@ export default function LoginPage() {
 
 function LoginCardSkeleton() {
   return (
-    <div className="rounded-xl border bg-card p-6 shadow-sm">
-      <div className="h-40 animate-pulse rounded-md bg-muted" />
+    <div className="space-y-4">
+      <div className="rounded-xl border bg-card p-6 shadow-sm sm:p-8">
+        <Skeleton className="mx-auto mb-6 h-11 w-11 rounded-xl" />
+        <Skeleton className="mx-auto mb-2 h-6 w-32" />
+        <Skeleton className="mx-auto mb-8 h-4 w-48" />
+        <div className="space-y-4">
+          <Skeleton className="h-14 w-full" />
+          <Skeleton className="h-14 w-full" />
+          <Skeleton className="h-9 w-full" />
+        </div>
+      </div>
     </div>
   );
 }
@@ -55,6 +69,7 @@ function LoginForm() {
     formState: { errors, isSubmitting },
   } = useForm<LoginValues>({
     defaultValues: { email: '', password: '' },
+    mode: 'onSubmit',
   });
 
   async function onSubmit(values: LoginValues) {
@@ -68,7 +83,8 @@ function LoginForm() {
 
     const supabase = createClient();
     if (!supabase) {
-      setServerError(t('genericError'));
+      // No env → cannot authenticate; surface a clear message (RESILIENCE).
+      setServerError(t('demoBody'));
       return;
     }
 
@@ -88,68 +104,57 @@ function LoginForm() {
   }
 
   return (
-    <div className="rounded-xl border bg-card p-6 shadow-sm">
-      <div className="mb-6 text-center">
-        <h1 className="text-xl font-semibold text-card-foreground">
-          {t('loginTitle')}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t('loginSubtitle')}
-        </p>
-      </div>
-
-      {!isSupabaseConfigured && (
-        <div className="mb-5">
-          <ConfigNotice />
-        </div>
-      )}
-
+    <AuthCard title={t('loginTitle')} subtitle={t('loginSubtitle')} icon={LogIn}>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-        <div className="space-y-1.5">
-          <label htmlFor="email" className="text-sm font-medium">
-            {t('email')}
-          </label>
-          <input
-            id="email"
-            type="email"
-            autoComplete="email"
-            placeholder={t('emailPlaceholder')}
-            className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-            {...register('email', { required: true })}
-          />
-          {errors.email && (
-            <p className="text-xs text-danger">{t('genericError')}</p>
-          )}
-        </div>
+        <FormField
+          id="email"
+          type="email"
+          autoComplete="email"
+          label={t('email')}
+          placeholder={t('emailPlaceholder')}
+          error={errors.email ? t('emailInvalid') : undefined}
+          {...register('email', {
+            required: true,
+            pattern: /.+@.+\..+/,
+          })}
+        />
 
         <div className="space-y-1.5">
-          <label htmlFor="password" className="text-sm font-medium">
-            {t('password')}
-          </label>
-          <input
+          <div className="flex items-center justify-between">
+            <label
+              htmlFor="password"
+              className="text-sm font-medium leading-none text-foreground"
+            >
+              {t('password')}
+            </label>
+            <Link
+              href="/recupera-password"
+              className="text-xs font-medium text-primary underline-offset-4 hover:underline"
+            >
+              {t('forgotPassword')}
+            </Link>
+          </div>
+          <FormField
             id="password"
             type="password"
+            revealable
             autoComplete="current-password"
             placeholder={t('passwordPlaceholder')}
-            className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+            error={errors.password ? t('passwordRequired') : undefined}
             {...register('password', { required: true })}
           />
         </div>
 
-        {serverError && (
-          <p className="text-sm text-danger" role="alert">
-            {serverError}
-          </p>
-        )}
+        <FormError message={serverError} icon={AlertCircle} />
 
-        <button
+        <Button
           type="submit"
-          disabled={isSubmitting || !isSupabaseConfigured}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={isSubmitting}
+          className="w-full"
         >
-          <LogIn className="h-4 w-4" aria-hidden />
+          <LogIn aria-hidden />
           {isSubmitting ? t('submitting') : t('submit')}
-        </button>
+        </Button>
       </form>
 
       <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground">
@@ -159,24 +164,7 @@ function LoginForm() {
       </div>
 
       {/* ADR-004: OAuth present but not enforced — visible-but-disabled in v1. */}
-      <div className="space-y-2">
-        <button
-          type="button"
-          disabled
-          aria-disabled="true"
-          className="w-full cursor-not-allowed rounded-md border bg-background px-3 py-2 text-sm text-muted-foreground opacity-60"
-        >
-          {t('oauthGoogle')}
-        </button>
-        <button
-          type="button"
-          disabled
-          aria-disabled="true"
-          className="w-full cursor-not-allowed rounded-md border bg-background px-3 py-2 text-sm text-muted-foreground opacity-60"
-        >
-          {t('oauthMicrosoft')}
-        </button>
-      </div>
-    </div>
+      <OAuthButtons />
+    </AuthCard>
   );
 }

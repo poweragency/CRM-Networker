@@ -46,6 +46,20 @@ const config: Config = {
           left: 'hsl(var(--branch-left))',
           right: 'hsl(var(--branch-right))',
         },
+        rank: {
+          executive: 'hsl(var(--rank-executive))',
+          consultant: 'hsl(var(--rank-consultant))',
+          teamLeader: 'hsl(var(--rank-team-leader))',
+          seniorTeamLeader: 'hsl(var(--rank-senior-team-leader))',
+          executiveTeamLeader: 'hsl(var(--rank-executive-team-leader))',
+          vicePresident: 'hsl(var(--rank-vice-president))',
+        },
+        activity: {
+          hot: 'hsl(var(--activity-hot))',
+          warm: 'hsl(var(--activity-warm))',
+          cold: 'hsl(var(--activity-cold))',
+          dormant: 'hsl(var(--activity-dormant))',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -56,6 +70,23 @@ const config: Config = {
       fontFamily: {
         sans: ['var(--font-sans)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         mono: ['var(--font-mono)', 'ui-monospace', 'monospace'],
+      },
+      keyframes: {
+        'fade-in': {
+          from: { opacity: '0', transform: 'translateY(2px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+        'scale-in': {
+          from: { opacity: '0', transform: 'scale(0.97)' },
+          to: { opacity: '1', transform: 'scale(1)' },
+        },
+        shimmer: {
+          '100%': { transform: 'translateX(100%)' },
+        },
+      },
+      animation: {
+        'fade-in': 'fade-in 150ms ease-out',
+        'scale-in': 'scale-in 120ms ease-out',
       },
     },
   },

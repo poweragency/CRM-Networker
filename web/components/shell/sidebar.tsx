@@ -1,85 +1,108 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { navSections, navFooterItems } from '@/lib/nav';
+import { Network, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import type { NavViewer } from '@/lib/nav';
+import { SidebarNav } from '@/components/shell/sidebar-nav';
+import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 /**
- * Primary sidebar (links only, scaffold). Rank/role/flag filtering is added in a
- * later phase — here every member item from the ADR-008 route map is shown.
+ * Desktop primary sidebar (≥ md). Collapsible to an icons-only rail; the
+ * collapsed/expanded state is owned by the parent {@link AppShell} so the
+ * content area can reflow. Hidden below `md` — the mobile drawer takes over.
+ *
+ * The navigation list is gated by `viewer` (rank/role/crm_access) via
+ * {@link SidebarNav}; this component only owns the brand header and the collapse
+ * affordance.
  */
-export function Sidebar() {
-  const t = useTranslations('nav');
-  const pathname = usePathname();
 
-  function isActive(href: string): boolean {
-    return pathname === href || pathname.startsWith(`${href}/`);
-  }
+export interface SidebarProps {
+  viewer: NavViewer;
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
+}
+
+export function Sidebar({ viewer, collapsed, onToggleCollapsed }: SidebarProps) {
+  const t = useTranslations('topbar');
+  const tc = useTranslations('common');
 
   return (
-    <aside className="hidden w-64 shrink-0 border-r bg-card md:flex md:flex-col">
-      <div className="flex h-14 items-center gap-2 border-b px-5">
-        <span className="text-sm font-semibold text-card-foreground">
-          CRM Networker
-        </span>
+    <aside
+      className={cn(
+        'hidden shrink-0 border-r bg-card transition-[width] duration-200 ease-out md:flex md:flex-col',
+        collapsed ? 'w-[4.25rem]' : 'w-64',
+      )}
+      data-collapsed={collapsed}
+    >
+      {/* Brand header */}
+      <div
+        className={cn(
+          'flex h-14 shrink-0 items-center border-b',
+          collapsed ? 'justify-center px-2' : 'justify-between px-4',
+        )}
+      >
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label={tc('appName')}
+        >
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+            <Network className="h-[18px] w-[18px]" aria-hidden />
+          </span>
+          {!collapsed && (
+            <span className="truncate text-sm font-semibold tracking-tight text-card-foreground">
+              {tc('appName')}
+            </span>
+          )}
+        </Link>
+
+        {!collapsed && (
+          <CollapseButton
+            collapsed={collapsed}
+            label={t('toggle_sidebar')}
+            onClick={onToggleCollapsed}
+          />
+        )}
       </div>
 
-      <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
-        {navSections.map((section) => (
-          <div key={section.titleKey}>
-            <p className="px-2 pb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {t(`section.${section.titleKey}`)}
-            </p>
-            <ul className="space-y-0.5">
-              {section.items.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      className={cn(
-                        'flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors',
-                        isActive(item.href)
-                          ? 'bg-primary/10 font-medium text-primary'
-                          : 'text-foreground hover:bg-muted',
-                      )}
-                    >
-                      <Icon className="h-4 w-4 shrink-0" aria-hidden />
-                      {t(item.labelKey)}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
-      </nav>
+      <SidebarNav viewer={viewer} collapsed={collapsed} />
 
-      <div className="border-t px-3 py-3">
-        <ul className="space-y-0.5">
-          {navFooterItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className={cn(
-                    'flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors',
-                    isActive(item.href)
-                      ? 'bg-primary/10 font-medium text-primary'
-                      : 'text-foreground hover:bg-muted',
-                  )}
-                >
-                  <Icon className="h-4 w-4 shrink-0" aria-hidden />
-                  {t(item.labelKey)}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
+      {/* Expand affordance pinned at the bottom when collapsed */}
+      {collapsed && (
+        <div className="flex justify-center border-t px-2 py-3">
+          <CollapseButton
+            collapsed={collapsed}
+            label={t('open_menu')}
+            onClick={onToggleCollapsed}
+          />
+        </div>
+      )}
     </aside>
+  );
+}
+
+function CollapseButton({
+  collapsed,
+  label,
+  onClick,
+}: {
+  collapsed: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  const Icon = collapsed ? PanelLeftOpen : PanelLeftClose;
+  return (
+    <Tooltip content={label} side={collapsed ? 'right' : 'bottom'}>
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={label}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <Icon className="h-[18px] w-[18px]" aria-hidden />
+      </button>
+    </Tooltip>
   );
 }

@@ -2,12 +2,14 @@
 
 import { useState, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ThemeProvider } from 'next-themes';
 
 /**
  * Client providers wrapper. Holds the react-query client (one per browser
- * session). The NextIntlClientProvider is mounted in the root layout (server)
- * so it can read messages from getMessages() — only the cache provider needs to
- * be a client component here.
+ * session) and the `next-themes` provider (class strategy → toggles `.dark` on
+ * <html>; default `system`). The NextIntlClientProvider is mounted in the root
+ * layout (server) so it can read messages from getMessages() — only the cache
+ * and theme providers need to be client components here. (doc 08 §6.2/§14.)
  */
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -24,6 +26,13 @@ export function Providers({ children }: { children: ReactNode }) {
   );
 
   return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+    >
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    </ThemeProvider>
   );
 }
