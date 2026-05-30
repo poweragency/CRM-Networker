@@ -1,0 +1,14 @@
+# Normalize line endings: store LF in the repo and check out LF everywhere,
+# so the repo is identical across machines (Windows/macOS/Linux).
+* text=auto eol=lf
+
+# Treat true binaries as binary (never convert).
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.webp binary
+*.woff  binary
+*.woff2 binary
+*.pdf  binary
