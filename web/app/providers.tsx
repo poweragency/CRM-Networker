@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
+import { Toaster } from '@/components/crm/toaster';
 
 /**
  * Client providers wrapper. Holds the react-query client (one per browser
@@ -32,7 +33,9 @@ export function Providers({ children }: { children: ReactNode }) {
       enableSystem
       disableTransitionOnChange
     >
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <Toaster>{children}</Toaster>
+      </QueryClientProvider>
     </ThemeProvider>
   );
 }

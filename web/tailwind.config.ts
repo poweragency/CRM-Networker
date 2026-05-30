@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss';
+import typography from '@tailwindcss/typography';
 
 // Token-driven theme: all colors/radius are HSL CSS variables (see app/globals.css),
 // consumed via hsl(var(--token)). Mirrors doc 08 §6.2.
@@ -80,6 +81,10 @@ const config: Config = {
           from: { opacity: '0', transform: 'scale(0.97)' },
           to: { opacity: '1', transform: 'scale(1)' },
         },
+        'slide-in-right': {
+          from: { opacity: '0', transform: 'translateX(2rem)' },
+          to: { opacity: '1', transform: 'translateX(0)' },
+        },
         shimmer: {
           '100%': { transform: 'translateX(100%)' },
         },
@@ -87,10 +92,11 @@ const config: Config = {
       animation: {
         'fade-in': 'fade-in 150ms ease-out',
         'scale-in': 'scale-in 120ms ease-out',
+        'slide-in-right': 'slide-in-right 200ms cubic-bezier(0.16, 1, 0.3, 1)',
       },
     },
   },
-  plugins: [],
+  plugins: [typography],
 };
 
 export default config;
