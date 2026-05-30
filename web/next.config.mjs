@@ -8,8 +8,11 @@ const nextConfig = {
   reactStrictMode: true,
   experimental: {
     // Server Actions are stable in Next 14, kept explicit for clarity.
+    // Same-origin is always allowed; these are ADDITIONAL permitted origins.
+    // '*.vercel.app' covers Vercel preview + production deploys. Add your custom
+    // domain here when you connect one.
     serverActions: {
-      allowedOrigins: ['localhost:3000'],
+      allowedOrigins: ['localhost:3000', '*.vercel.app'],
     },
   },
 };
