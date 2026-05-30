@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Design tokens (doc 08 §6.2): HSL CSS variables on :root (light) and .dark.
+ * Tailwind consumes them via hsl(var(--token)). Single accent + a semantic
+ * data-viz ramp (funnel stages, branch identity, status).
+ */
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222 22% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 22% 11%;
+    --muted: 220 16% 96%;
+    --muted-foreground: 220 9% 46%;
+    --border: 220 14% 90%;
+    --input: 220 14% 90%;
+    --ring: 222 80% 56%;
+    --primary: 222 80% 56%;
+    --primary-foreground: 0 0% 100%;
+    --radius: 0.625rem;
+
+    /* status ramp */
+    --success: 142 64% 38%;
+    --warning: 38 92% 50%;
+    --danger: 0 72% 51%;
+    --info: 210 90% 56%;
+
+    /* funnel stage ramp (6 prospect_stage values, cool → warm) */
+    --stage-conoscitiva: 210 85% 60%;
+    --stage-business-info: 200 80% 52%;
+    --stage-follow-up: 265 70% 60%;
+    --stage-closing: 38 92% 52%;
+    --stage-check-soldi: 25 90% 55%;
+    --stage-iscrizione: 142 64% 42%;
+
+    /* branch identity (Global / Left / Right) */
+    --branch-global: 222 80% 56%;
+    --branch-left: 265 70% 58%;
+    --branch-right: 170 70% 42%;
+  }
+
+  .dark {
+    --background: 222 24% 8%;
+    --foreground: 210 20% 96%;
+    --card: 222 22% 11%;
+    --card-foreground: 210 20% 96%;
+    --muted: 222 16% 17%;
+    --muted-foreground: 217 12% 65%;
+    --border: 222 16% 20%;
+    --input: 222 16% 20%;
+    --ring: 222 90% 66%;
+    --primary: 222 90% 66%;
+    --primary-foreground: 222 47% 11%;
+
+    --success: 142 60% 45%;
+    --warning: 38 92% 55%;
+    --danger: 0 72% 58%;
+    --info: 210 90% 62%;
+
+    --stage-conoscitiva: 210 80% 66%;
+    --stage-business-info: 200 75% 60%;
+    --stage-follow-up: 265 65% 68%;
+    --stage-closing: 38 88% 60%;
+    --stage-check-soldi: 25 85% 62%;
+    --stage-iscrizione: 142 60% 50%;
+
+    --branch-global: 222 90% 66%;
+    --branch-left: 265 65% 68%;
+    --branch-right: 170 65% 52%;
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+  /* tabular numerals for all metric/ID displays */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}

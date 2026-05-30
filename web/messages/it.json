@@ -1,0 +1,96 @@
+{
+  "common": {
+    "appName": "CRM Networker",
+    "loading": "Caricamento…",
+    "configMissingTitle": "Configurazione mancante",
+    "configMissingBody": "Le variabili d'ambiente di Supabase non sono impostate. Copia .env.example in .env.local e inserisci NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY, poi riavvia il server di sviluppo.",
+    "comingSoon": "presto"
+  },
+  "auth": {
+    "loginTitle": "Accedi",
+    "loginSubtitle": "Entra nel tuo CRM",
+    "email": "Email",
+    "emailPlaceholder": "nome@azienda.it",
+    "password": "Password",
+    "passwordPlaceholder": "La tua password",
+    "submit": "Accedi",
+    "submitting": "Accesso in corso…",
+    "forgotPassword": "Password dimenticata?",
+    "oauthGoogle": "Accedi con Google (presto)",
+    "oauthMicrosoft": "Accedi con Microsoft (presto)",
+    "orDivider": "oppure",
+    "genericError": "Credenziali non valide. Riprova.",
+    "successRedirect": "Accesso effettuato. Reindirizzamento…"
+  },
+  "topbar": {
+    "search_placeholder": "Cerca…",
+    "notifications": "Notifiche",
+    "locale": "Lingua",
+    "user_menu": "Account",
+    "my_profile": "Il mio profilo",
+    "account_settings": "Impostazioni account",
+    "logout": "Esci",
+    "scope_node": "Vista: {nome}",
+    "reset_scope": "Torna a me",
+    "toggle_sidebar": "Comprimi menu"
+  },
+  "branch": {
+    "global": "Globale",
+    "left": "Ramo Sinistro",
+    "right": "Ramo Destro",
+    "not_applicable": "Non disponibile in questa sezione"
+  },
+  "nav": {
+    "section": {
+      "overview": "Panoramica",
+      "network": "Rete",
+      "crm": "CRM",
+      "analytics": "Analisi",
+      "resources": "Risorse",
+      "executive": "Direzione",
+      "admin": "Amministrazione"
+    },
+    "dashboard": "Dashboard",
+    "notifications": "Notifiche",
+    "tree": "Genealogia",
+    "contacts": "Contatti",
+    "prospects": "Percorso Prospect",
+    "calls": "Chiamate",
+    "centos": "Centos List",
+    "seven_whys": "Sette Perché",
+    "documents": "Documenti interni",
+    "analytics": "Analytics",
+    "leaderboards": "Classifiche",
+    "reports": "Report",
+    "settings": "Impostazioni",
+    "my_profile": "Il mio profilo",
+    "collapse": "Comprimi menu",
+    "admin_dashboard": "Direzione (CEO)",
+    "admin_marketer": "Marketer",
+    "admin_marketer_new": "Pre-registrazione",
+    "admin_activations": "Attivazioni CRM",
+    "admin_ranks": "Gradi & Storico",
+    "admin_audit": "Registro attività",
+    "admin_org_settings": "Impostazioni organizzazione",
+    "platform": "Piattaforma"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Bentornato",
+    "signedInAs": "Accesso effettuato come",
+    "placeholderTitle": "Dashboard (placeholder)",
+    "placeholderBody": "Questa è una dashboard segnaposto. Le schede KPI, il funnel personale, i follow-up e le classifiche verranno aggiunti nelle fasi successive.",
+    "noSession": "Nessuna sessione attiva.",
+    "session": "Sessione"
+  },
+  "error": {
+    "notFoundTitle": "Pagina non trovata",
+    "notFoundBody": "La pagina che cerchi non esiste o non è accessibile.",
+    "unauthorizedTitle": "Non autorizzato",
+    "unauthorizedBody": "Non hai i permessi per accedere a questa sezione.",
+    "genericTitle": "Si è verificato un errore",
+    "genericBody": "Qualcosa è andato storto. Riprova più tardi.",
+    "retry": "Riprova",
+    "backHome": "Torna alla dashboard"
+  }
+}

@@ -1,0 +1,77 @@
+# =============================================================================
+# .gitignore — CRM Networker (Next.js 14 + Supabase)
+# =============================================================================
+
+# --- Node ---
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm/
+
+# --- Next.js ---
+.next/
+out/
+build/
+dist/
+next-env.d.ts
+.vercel
+*.tsbuildinfo
+
+# --- Testing / coverage ---
+coverage/
+.nyc_output/
+
+# --- Supabase (CLI local state — never commit) ---
+# Keep: config.toml, migrations/, seed.sql, functions/  (these ARE versioned).
+# Ignore: linked-project secrets, local branch state, generated temp files.
+supabase/.branches/
+supabase/.temp/
+supabase/.env
+.branches/
+.temp/
+
+# Generated TypeScript types from the DB schema (regenerate via
+# `npx supabase gen types typescript`). Commit only if your team prefers a
+# checked-in artifact; ignored by default to avoid drift.
+types/supabase.ts
+src/lib/database.types.ts
+
+# --- Environment files (NEVER commit real secrets) ---
+.env
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+.env*.local
+# .env.example IS committed (placeholders only).
+!.env.example
+
+# --- Editors / tooling ---
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+*.swo
+
+# --- OS files ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini

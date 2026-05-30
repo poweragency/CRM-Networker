@@ -1,0 +1,194 @@
+# =============================================================================
+# Supabase CLI configuration — CRM Networker
+# Multi-tenant CRM + BI platform for network marketing (Postgres 15 + RLS).
+#
+# Reference: https://supabase.com/docs/guides/local-development/cli/config
+# This file is consumed by `npx supabase start` / `db reset` / `db push`.
+# Locked stack per docs/architecture/00-README.md and 16-decision-log.md.
+# =============================================================================
+
+# A string used to distinguish different Supabase projects on the same host.
+# Defaults to the working directory name when running `supabase init`.
+project_id = "crm-networker"
+
+# -----------------------------------------------------------------------------
+# [api] — PostgREST auto-API (the default data path; RLS-enforced).
+# -----------------------------------------------------------------------------
+[api]
+enabled = true
+# Port to use for the local API URL.
+port = 54321
+# Schemas exposed via the Data API. `public` holds all tenant tables + INVOKER
+# RPCs. `app_private` is deliberately NOT exposed (SECURITY DEFINER helpers /
+# dirty-metric queue only — see migration 0001). `graphql_public` is Supabase's
+# default GraphQL schema.
+schemas = ["public", "graphql_public"]
+# Extra schemas added to the search_path of every request.
+extra_search_path = ["public", "extensions"]
+# Max rows returned from a view, table, or stored procedure. Keyset pagination
+# is used on hot lists (contacts, calls, journey events) — doc 07 §3.3.
+max_rows = 1000
+
+[api.tls]
+# Enable HTTPS for the local API (self-signed). Off for local dev convenience.
+enabled = false
+
+# -----------------------------------------------------------------------------
+# [db] — local Postgres. major_version MUST match the locked stack (Postgres 15).
+# -----------------------------------------------------------------------------
+[db]
+# Port to use for the local database URL.
+port = 54322
+# Port used by db diff command to initialize the shadow database.
+shadow_port = 54320
+# The database major version to use. This has to be the same as your remote
+# database's. Locked: Postgres 15 (docs/architecture/07-backend-architecture.md).
+major_version = 15
+
+[db.pooler]
+# Supavisor connection pooler (doc 12 — scalability). Off locally; enabled on the
+# hosted project. transaction mode is the default for serverless/Edge clients.
+enabled = false
+port = 54329
+pool_mode = "transaction"
+default_pool_size = 20
+max_client_conn = 100
+
+[db.migrations]
+# Run every file in supabase/migrations in filename order on `db reset`. The
+# migrations are authored so a clean reset succeeds top-to-bottom (0001..00NN).
+enabled = true
+schema_paths = []
+
+[db.seed]
+# Dev seed (supabase/seed.sql): one demo org + a small binary tree built via
+# place_marketer(). Applied automatically after migrations on `db reset`.
+enabled = true
+sql_paths = ["./seed.sql"]
+
+# -----------------------------------------------------------------------------
+# [realtime] — Supabase Realtime (logical replication; RLS-filtered, transport
+# only). Streams notifications / bottleneck findings / marketers / prospects.
+# -----------------------------------------------------------------------------
+[realtime]
+enabled = true
+
+# -----------------------------------------------------------------------------
+# [studio] — local Studio dashboard.
+# -----------------------------------------------------------------------------
+[studio]
+enabled = true
+# Port to use for Supabase Studio.
+port = 54323
+# External URL of the API server that frontend connects to.
+api_url = "http://127.0.0.1"
+
+# -----------------------------------------------------------------------------
+# [inbucket] — local email testing (captures invitation / recovery emails so the
+# "Activate CRM Access" flow can be exercised without a real SMTP provider).
+# -----------------------------------------------------------------------------
+[inbucket]
+enabled = true
+port = 54324
+
+# -----------------------------------------------------------------------------
+# [storage] — object storage. The `reports` bucket (PDF/XLSX/CSV exports,
+# doc 15) is created by a later migration / dashboard, not declared here.
+# -----------------------------------------------------------------------------
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
+# -----------------------------------------------------------------------------
+# [auth] — Supabase Auth (GoTrue). Public signup is DISABLED: accounts are
+# created only via the rank-gated "Activate CRM Access" flow (ADR-003), which
+# attaches a login to an EXISTING marketers profile. Profile != account.
+# -----------------------------------------------------------------------------
+[auth]
+enabled = true
+# The base URL of your website. Used as an allow-list for redirects and in
+# emailed magic links / recovery / invitation links.
+site_url = "http://127.0.0.1:3000"
+# A list of *exact* URLs that auth providers are permitted to redirect to.
+additional_redirect_urls = ["http://127.0.0.1:3000", "http://localhost:3000"]
+# How long tokens are valid for, in seconds. 3600 = 1 hour access-token TTL
+# (doc 10 / ADR-004: 1h TTL + live membership_status re-check on writes).
+jwt_expiry = 3600
+# Allow/disallow new user signups to your project. FALSE by design — see above.
+enable_signup = false
+# Allow/disallow anonymous sign-ins. Off: every session must map to a membership.
+enable_anonymous_sign_ins = false
+# Allow/disallow testing manual linking of accounts. Off in v1.
+enable_manual_linking = false
+
+[auth.email]
+# Allow/disallow new user signups via email. Off — provisioning is invite-only.
+enable_signup = false
+# Require email confirmation. Invitation flow delivers a verified address, so the
+# invite link doubles as confirmation.
+enable_confirmations = true
+# Allow a user to change their email; requires re-confirmation of the new address.
+double_confirm_changes = true
+# If enabled, a user will be required to set a new password on first sign-in via
+# a recovery/invite link.
+secure_password_change = false
+
+[auth.sms]
+# SMS auth is not used in v1.
+enable_signup = false
+enable_confirmations = false
+
+[auth.mfa]
+# MFA is OPTIONAL / phased in v1 (ADR-004): available + self-enrollable, NOT
+# enforced. No mandatory aal2 for admins at launch.
+max_enrolled_factors = 10
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+# OAuth providers (Google / Microsoft) ship visible-but-disabled in v1 (ADR-004).
+[auth.external.google]
+enabled = false
+client_id = ""
+secret = ""
+
+[auth.external.azure]
+enabled = false
+client_id = ""
+secret = ""
+
+# -----------------------------------------------------------------------------
+# [auth.hook.custom_access_token] — the ADR-007 access-token hook. At token
+# issuance it calls public.custom_access_token_hook(event), which stamps the
+# canonical claim set onto the JWT:
+#   org_id, marketer_id, role, rank, crm_access, membership_status,
+#   is_platform_admin   (role is a TOP-LEVEL claim).
+# The function is defined in supabase/migrations/0005_auth_visibility.sql and is
+# EXECUTE-granted only to supabase_auth_admin. RLS reads these via current_*()
+# accessors / can_see_marketer().
+# -----------------------------------------------------------------------------
+[auth.hook.custom_access_token]
+enabled = true
+uri = "pg-functions://postgres/public/custom_access_token_hook"
+
+# -----------------------------------------------------------------------------
+# [functions] — Edge Functions (Deno). Declared as they are implemented
+# (activate-account, generate-report-export, branch-analytics, bottleneck-engine,
+# notification-fanout — doc 07 §4). None are required for `db reset`.
+# -----------------------------------------------------------------------------
+[functions]
+
+# -----------------------------------------------------------------------------
+# [analytics] — local analytics/logging backend (Logflare). Off for dev.
+# -----------------------------------------------------------------------------
+[analytics]
+enabled = false
+
+# -----------------------------------------------------------------------------
+# [edge_runtime] — Deno runtime for local Edge Functions.
+# -----------------------------------------------------------------------------
+[edge_runtime]
+enabled = true
+# "oneshot" for fast hot-reload during development; "per_worker" for load testing.
+policy = "oneshot"
