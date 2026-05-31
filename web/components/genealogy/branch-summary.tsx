@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Globe, PanelLeft, PanelRight, UserCheck, UserPlus, Users } from 'lucide-react';
+import { Globe, PanelLeft, PanelRight, UserCheck, Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn, formatNumber } from '@/lib/utils';
 import type { BranchScope, PlacementLeg, TreeNode } from '@/lib/types/db';
@@ -151,7 +151,7 @@ export function BranchSummary({
           {meta.label}
         </span>
       </div>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         <StatPill
           icon={Users}
           label={t('summary_total')}
@@ -163,12 +163,6 @@ export function BranchSummary({
           label={t('summary_active')}
           value={stats.active}
           accent="bg-success/12 text-success"
-        />
-        <StatPill
-          icon={UserPlus}
-          label={t('kpi_iscrizioni')}
-          value={stats.iscrizioni}
-          accent="bg-info/12 text-info"
         />
       </div>
     </div>
