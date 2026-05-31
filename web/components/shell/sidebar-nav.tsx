@@ -124,17 +124,20 @@ function NavLink({ href, label, Icon, active, collapsed, onNavigate }: NavLinkPr
       onClick={onNavigate}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'group relative flex items-center rounded-lg text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
+        'group relative flex items-center rounded-lg text-sm font-medium outline-none transition-colors duration-base ease-standard focus-visible:ring-2 focus-visible:ring-ring',
         collapsed ? 'h-9 w-9 justify-center' : 'gap-2.5 px-2.5 py-2',
         active
-          ? 'bg-primary/10 text-primary'
+          ? 'bg-primary/[0.08] text-primary'
           : 'text-muted-foreground hover:bg-muted hover:text-foreground',
       )}
     >
-      {/* active rail accent */}
-      {active && !collapsed && (
+      {/* active rail accent — present in BOTH states (cross-collapse continuity) */}
+      {active && (
         <span
-          className="absolute inset-y-1 left-0 w-0.5 rounded-full bg-primary"
+          className={cn(
+            'absolute left-0 w-0.5 rounded-full bg-primary',
+            collapsed ? 'inset-y-1.5' : 'inset-y-1',
+          )}
           aria-hidden
         />
       )}
