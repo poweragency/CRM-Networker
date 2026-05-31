@@ -47,25 +47,31 @@ export default async function InformativaPage() {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {PACKAGE_INFO.map((p) => (
-            <Card
+            <div
               key={p.key}
               className={cn(
-                'flex flex-col',
-                p.featured && 'border-primary/50 ring-1 ring-primary/20',
+                'relative flex flex-col overflow-hidden rounded-xl border bg-card p-5 shadow-sm transition-[box-shadow,transform] duration-base ease-standard hover:-translate-y-0.5 hover:shadow-md',
+                p.featured && 'border-primary/40 ring-1 ring-primary/15',
               )}
             >
-              <CardHeader className="space-y-2 p-5">
-                <CardTitle>{STARTING_PACKAGE_LABELS[p.key]}</CardTitle>
-                <p className="flex items-baseline gap-1.5">
-                  <span className="text-2xl font-semibold tracking-tight text-foreground">
-                    {p.price}
-                  </span>
-                  <span className="text-xs font-medium text-muted-foreground">
-                    {t('vat')}
-                  </span>
-                </p>
-              </CardHeader>
-            </Card>
+              {p.featured && (
+                <div
+                  className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/[0.08] to-transparent"
+                  aria-hidden
+                />
+              )}
+              <span className="relative text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                {STARTING_PACKAGE_LABELS[p.key]}
+              </span>
+              <p className="relative mt-2 flex items-baseline gap-1.5">
+                <span className="text-3xl font-semibold tabular-nums tracking-tight text-foreground">
+                  {p.price}
+                </span>
+                <span className="text-xs font-medium text-muted-foreground">
+                  {t('vat')}
+                </span>
+              </p>
+            </div>
           ))}
         </div>
       </section>

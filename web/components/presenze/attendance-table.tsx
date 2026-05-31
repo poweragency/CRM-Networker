@@ -138,14 +138,30 @@ export function AttendanceTable({
             const presentCount = members.filter(
               (m) => state[m.id]?.[c],
             ).length;
+            const pct = members.length
+              ? Math.round((presentCount / members.length) * 100)
+              : 0;
             return (
-              <section key={c} className="space-y-2">
-                <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                  {ZOOM_CALL_LABELS[c]}
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
-                    {presentCount}/{members.length}
-                  </span>
-                </h2>
+              <section
+                key={c}
+                className="space-y-3 rounded-xl border bg-card p-4 shadow-sm"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-sm font-semibold tracking-tight text-foreground">
+                    {ZOOM_CALL_LABELS[c]}
+                  </h2>
+                  <div className="flex items-center gap-2.5">
+                    <span className="h-1.5 w-24 overflow-hidden rounded-full bg-muted">
+                      <span
+                        className="block h-full rounded-full bg-success transition-all"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </span>
+                    <span className="text-xs font-medium tabular-nums text-muted-foreground">
+                      {presentCount}/{members.length}
+                    </span>
+                  </div>
+                </div>
                 {/* Dense, wrapping grid: each cell = name + presence toggle. */}
                 <div className="grid gap-1.5 [grid-template-columns:repeat(auto-fill,minmax(12rem,1fr))]">
                   {members.map((m) => {
@@ -153,7 +169,7 @@ export function AttendanceTable({
                     return (
                       <div
                         key={m.id}
-                        className="flex items-center justify-between gap-2 rounded-md border bg-card py-1 pl-2.5 pr-1"
+                        className="flex items-center justify-between gap-2 rounded-md border bg-background py-1 pl-2.5 pr-1"
                       >
                         <Link
                           href={`/team/${m.id}`}
