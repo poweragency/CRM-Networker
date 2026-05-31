@@ -5,8 +5,8 @@ import {
   getSubtree,
   searchMarketers,
 } from '@/lib/data/genealogy';
-import { createMarketer } from '@/lib/data/admin';
 import { updateMarketerExtra } from '@/lib/data/team';
+import { addRuntimeNode, nextRuntimeId } from '@/lib/data/mock/runtime';
 import type {
   BranchScope,
   PlacementLeg,
@@ -74,37 +74,21 @@ export interface AddMemberResult {
 }
 
 /**
- * Place a new marketer in an empty leg directly from the tree viewer. Reuses the
- * demo-safe `place_marketer` path (admin layer) and stamps the pacchetto/click
- * extras (mock-backed for now). Returns a TreeNode the client can insert into the
- * canvas immediately. The new member starts at rank `no_rank`, status `active`,
- * sponsored by the parent.
+ * Place a new marketer in an empty leg directly from the tree viewer. Writes to
+ * the shared demo RUNTIME store (`lib/data/mock/runtime.ts`) so the new member is
+ * immediately visible everywhere the data layer reads — the Binary Viewer (incl.
+ * on reload), Statistiche and Presenze — not just in the client tree cache. Also
+ * stamps the pacchetto/click extras. The member starts at rank `no_rank`, status
+ * `active`, sponsored by the parent. In-memory (resets on restart) until a DB
+ * lands, at which point this becomes the `place_marketer` RPC call.
  */
 export async function addMarketerAction(
   input: AddMemberInput,
 ): Promise<AddMemberResult> {
-  const created = await createMarketer({
-    firstName: input.firstName,
-    lastName: input.lastName,
-    parentId: input.parentId,
-    leg: input.leg,
-    sponsorId: input.parentId,
-    rank: 'no_rank',
-    status: 'active',
-  });
-  if (!created.ok || !created.id) {
-    return { node: null, demo: created.demo, ok: false };
-  }
-
-  // Stamp the anagrafica extras chosen in the dialog (frontend + mock for now).
-  await updateMarketerExtra(created.id, {
-    starting_package: input.pack,
-    platform_click: input.click,
-  });
-
+  const id = nextRuntimeId();
   const display = `${input.firstName} ${input.lastName}`.trim();
   const node: TreeNode = {
-    id: created.id,
+    id,
     first_name: input.firstName,
     last_name: input.lastName,
     display_name: display,
@@ -122,5 +106,13 @@ export async function addMarketerAction(
     kpis: { prospects: 0, calls: 0, iscrizioni: 0, conversion_rate: 0 },
     children_loaded: true,
   };
-  return { node, demo: created.demo, ok: true };
+
+  addRuntimeNode(node);
+  // Stamp the anagrafica extras chosen in the dialog (frontend + mock for now).
+  await updateMarketerExtra(id, {
+    starting_package: input.pack,
+    platform_click: input.click,
+  });
+
+  return { node, demo: true, ok: true };
 }

@@ -9,6 +9,7 @@ import type {
 } from '@/lib/types/db';
 import { RANK_ORDER } from '@/lib/types/db';
 import { MOCK_NODES, MOCK_ROOT_ID } from '@/lib/data/mock-genealogy';
+import { getRuntimeNodes } from '@/lib/data/mock/runtime';
 import { daysAgo } from '@/lib/data/mock/_shared';
 
 /**
@@ -45,7 +46,7 @@ const ACCOUNT: Record<string, { status: AccountStatus; role: MembershipRole | nu
 };
 
 export function mockMarketerRows(): AdminMarketerRow[] {
-  return MOCK_NODES.map((n) => {
+  const seeded = MOCK_NODES.map((n) => {
     const acct = ACCOUNT[n.id] ?? { status: 'none' as AccountStatus, role: null };
     const rankIndex = RANK_ORDER.indexOf(n.rank);
     const hasAccount = acct.status !== 'none';
@@ -65,6 +66,25 @@ export function mockMarketerRows(): AdminMarketerRow[] {
       created_at: daysAgo(120 - rankIndex * 8),
     };
   });
+
+  // Runtime-added marketers (placed from the tree) — no account yet, today's date.
+  const runtime: AdminMarketerRow[] = getRuntimeNodes().map((n) => ({
+    id: n.id,
+    display_name: n.display_name,
+    first_name: n.first_name,
+    last_name: n.last_name,
+    email: null,
+    rank: n.rank,
+    status: n.status,
+    account_status: 'none' as AccountStatus,
+    role: null,
+    crm_access: false,
+    team_size: n.team_size,
+    registration_date: daysAgo(0).slice(0, 10),
+    created_at: daysAgo(0),
+  }));
+
+  return [...seeded, ...runtime];
 }
 
 /** A marketer picker option list (placement parent / sponsor selection). */
