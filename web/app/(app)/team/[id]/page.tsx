@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { PanelLeft, PanelRight, Users } from 'lucide-react';
 import { getNode } from '@/lib/data/genealogy';
 import { getCurrentClaims } from '@/lib/data/session';
 import { listProspectBoard } from '@/lib/data/prospects';
@@ -9,22 +8,17 @@ import { listCentos } from '@/lib/data/centos';
 import { getSevenWhysFor } from '@/lib/data/seven-whys';
 import { getMarketerProfile } from '@/lib/data/team';
 import { getWishlist } from '@/lib/data/wishlist';
-import { RANK_ORDER, STATUS_LABELS } from '@/lib/types/db';
+import { RANK_ORDER } from '@/lib/types/db';
 import { ConfigNotice } from '@/components/config-notice';
-import { PageHeader } from '@/components/crm/page-header';
 import { EmptyState } from '@/components/crm/empty-state';
-import { Card, CardContent } from '@/components/ui/card';
-import { Avatar } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { RankBadge } from '@/components/ui/rank-badge';
 import { ProspectBoard } from '@/components/prospects/prospect-board';
 import type { BoardView, ProspectView } from '@/components/prospects/types';
 import { CentosManager } from '@/components/centos/centos-manager';
 import { SevenWhysDetail } from '@/components/seven-whys/seven-whys-detail';
 import { MarketerProfileTabs } from '@/components/team/marketer-profile-tabs';
 import { MarketerAnagrafica } from '@/components/team/marketer-anagrafica';
+import { MarketerHero } from '@/components/team/marketer-hero';
 import { PersonalFiles } from '@/components/team/personal-files';
-import { formatNumber } from '@/lib/utils';
 
 /**
  * /team/[id] — the single-marketer profile hub (the "person card"). RSC.
@@ -63,7 +57,6 @@ export default async function MarketerProfilePage({
   searchParams?: { tab?: string | string[] };
 }) {
   const t = await getTranslations('team');
-  const tc = await getTranslations('crm');
 
   const nodeRes = await getNode(params.id);
   const node = nodeRes.data;
@@ -135,68 +128,10 @@ export default async function MarketerProfilePage({
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        title={node.display_name}
-        description={isSelf ? t('subtitle_self') : t('subtitle_other')}
-        breadcrumbs={[
-          { label: t('breadcrumb'), href: '/statistiche' },
-          { label: node.display_name },
-        ]}
-      />
-
       {demo && <ConfigNotice variant="inline" />}
 
-      {/* Profile header */}
-      <Card>
-        <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <Avatar name={node.display_name} size="lg" />
-            <div className="min-w-0">
-              <p className="truncate text-base font-semibold text-foreground">
-                {node.display_name}
-                {isSelf && (
-                  <Badge variant="default" className="ml-2 px-1.5 py-0">
-                    {t('you')}
-                  </Badge>
-                )}
-              </p>
-              <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                <RankBadge rank={node.rank} />
-                <Badge
-                  variant={
-                    node.status === 'active'
-                      ? 'success'
-                      : node.status === 'suspended'
-                        ? 'danger'
-                        : node.status === 'pending'
-                          ? 'warning'
-                          : 'secondary'
-                  }
-                >
-                  {STATUS_LABELS[node.status]}
-                </Badge>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-4 text-sm">
-            <span className="inline-flex items-center gap-1.5 text-branch-left">
-              <PanelLeft className="h-4 w-4" aria-hidden />
-              <span className="font-semibold tabular-nums">{formatNumber(node.left_count)}</span>
-            </span>
-            <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-              <Users className="h-4 w-4" aria-hidden />
-              <span className="font-semibold tabular-nums text-foreground">
-                {formatNumber(node.team_size)}
-              </span>{' '}
-              {tc('all').toLowerCase()}
-            </span>
-            <span className="inline-flex items-center gap-1.5 text-branch-right">
-              <PanelRight className="h-4 w-4" aria-hidden />
-              <span className="font-semibold tabular-nums">{formatNumber(node.right_count)}</span>
-            </span>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Hero masthead: identity + rank/status + KPI strip */}
+      <MarketerHero node={node} isSelf={isSelf} />
 
       {/* Anagrafica — the member's primary data (nome, sponsor, pacchetto, … ) */}
       {profile && <MarketerAnagrafica profile={profile} canEdit={canEdit} />}
