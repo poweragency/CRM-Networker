@@ -31,7 +31,8 @@ export function Sidebar({ viewer, collapsed, onToggleCollapsed }: SidebarProps) 
   return (
     <aside
       className={cn(
-        'hidden shrink-0 border-r bg-card transition-[width] duration-200 ease-out md:flex md:flex-col',
+        // Pinned to the viewport: stays put while the main content scrolls.
+        'sticky top-0 hidden h-screen shrink-0 self-start border-r bg-card transition-[width] duration-200 ease-out md:flex md:flex-col',
         collapsed ? 'w-[4.25rem]' : 'w-64',
       )}
       data-collapsed={collapsed}

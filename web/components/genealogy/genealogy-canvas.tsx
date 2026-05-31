@@ -31,12 +31,10 @@ import {
  * - d3-hierarchy tidy layout (LEFT forced left, RIGHT forced right) → React Flow
  *   nodes/edges; pan/zoom/drag, fit-view, a minimap and a controls bar are all
  *   provided by React Flow over our positioned geometry.
- * - Nodes are draggable for inspection only, with a CONSTRAINT (see
- *   `constrainChanges`): the vertical axis is locked (no top↔bottom moves) and the
- *   horizontal move is clamped so a node can never cross the central axis — a RIGHT
- *   node stays right of the midline, a LEFT node stays left, and the root is pinned
- *   on the axis. Placement MOVE (drag-to-replace) is operator/admin-driven and
- *   intentionally not wired here; the drag never mutates the placement model.
+ * - Nodes are STATIC (not draggable): the layout is the single source of truth, so
+ *   the tree never reflows under the cursor. Clicking a node selects it (opens the
+ *   detail panel); pan/zoom move the whole canvas. Placement MOVE (drag-to-replace)
+ *   is operator/admin-driven and intentionally not wired here.
  * - Performance: only nodes inside the *expanded* window are ever laid out
  *   (server-side lazy expand + client collapse), and beyond a threshold the canvas
  *   suppresses the minimap/animated edges to stay light (doc 14 §7.6).
@@ -94,7 +92,7 @@ function toFlow(
     width: NODE_WIDTH,
     height: NODE_HEIGHT,
     selectable: true,
-    draggable: true,
+    draggable: false,
     selected: ctx.selectedId === p.node.id,
     data: {
       node: p.node,
@@ -174,53 +172,6 @@ function CanvasInner(
     setFlowEdges(rfEdges);
   }, [rfEdges, setFlowEdges]);
 
-  // The central vertical axis = the layout root's center x.
-  const midX = React.useMemo(() => {
-    const r = positioned.find((p) => p.node.id === layoutRootId);
-    return r ? r.x + NODE_WIDTH / 2 : 0;
-  }, [positioned, layoutRootId]);
-
-  // Original geometry per node + which HALF it naturally sits in. The side is
-  // derived from the node's REAL layout position, not from `branchLeg`: that field
-  // is the node's slot under its *parent* (a right-branch node can still be a LEFT
-  // child), so clamping by it dragged border nodes across the axis and glitched
-  // them onto the wrong side. A node whose center is on the axis (the root) is
-  // pinned horizontally.
-  const geom = React.useMemo(() => {
-    const m = new Map<
-      string,
-      { x: number; y: number; side: 'left' | 'right' | 'axis' }
-    >();
-    const EPS = 1;
-    for (const p of positioned) {
-      const center = p.x + NODE_WIDTH / 2;
-      const side =
-        Math.abs(center - midX) <= EPS ? 'axis' : center > midX ? 'right' : 'left';
-      m.set(p.node.id, { x: p.x, y: p.y, side });
-    }
-    return m;
-  }, [positioned, midX]);
-
-  // Constrain drag: lock the vertical axis (no top↔bottom) and clamp horizontally
-  // so a node never crosses the midline — it stays in its own half (right stays
-  // right, left stays left, root pinned). Non-position changes pass through.
-  const handleNodesChange = React.useCallback<typeof onNodesChange>(
-    (changes) => {
-      const constrained = changes.map((change) => {
-        if (change.type !== 'position' || !change.position) return change;
-        const g = geom.get(change.id);
-        if (!g) return change;
-        let x = change.position.x;
-        if (g.side === 'right') x = Math.max(x, midX);
-        else if (g.side === 'left') x = Math.min(x, midX - NODE_WIDTH);
-        else x = g.x; // on the central axis (root) → no horizontal move
-        return { ...change, position: { x, y: g.y } };
-      });
-      onNodesChange(constrained);
-    },
-    [geom, midX, onNodesChange],
-  );
-
   // Imperative handle: fit + center, used by the toolbar and search jump.
   React.useImperativeHandle(
     ref,
@@ -267,8 +218,9 @@ function CanvasInner(
       <ReactFlow
         nodes={flowNodes}
         edges={flowEdges}
-        onNodesChange={handleNodesChange}
+        onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        nodesDraggable={false}
         nodeTypes={NODE_TYPES}
         onInit={(instance) => {
           instance.fitView({ padding: 0.2, maxZoom: 1 });
