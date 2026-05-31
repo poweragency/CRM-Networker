@@ -3,17 +3,24 @@ import { getTranslations } from 'next-intl/server';
 import { Eye, Route, TrendingUp } from 'lucide-react';
 import { getCurrentClaims } from '@/lib/data/session';
 import { getMonthlyTopMarketers } from '@/lib/data/dashboard';
+import type { TopMarketerEntry } from '@/lib/data/mock/dashboard';
 import { ConfigNotice } from '@/components/config-notice';
 import { PageHeader } from '@/components/crm/page-header';
-import { TopMarketersCard } from '@/components/dashboard/top-marketers-card';
-import { formatPercent } from '@/lib/utils';
+import {
+  LeaderboardCard,
+  SpotlightCard,
+  type Accent,
+} from '@/components/dashboard/dashboard-leaders';
+import { formatNumber, formatPercent } from '@/lib/utils';
 
 /**
- * /dashboard — "migliori marketer del mese" (RSC). Ranks the team across three
- * categories: chi ha visto più Zoom di team, chi ha fatto più percorsi, e chi ha
- * il tasso di conversione più alto da Business Info a Closing. Rankings are
- * mock/derived for now (see `lib/data/dashboard.ts`); each entry links to the
- * member's profile. Fully server-rendered; builds and runs with no env.
+ * /dashboard — "migliori marketer del mese" (RSC). Two tiers: a Spotlight row
+ * (the #1 of each category as a hero card) and the full per-category leaderboards
+ * (podium 1/2/3 + value bars). The three categories are chi ha visto più Zoom di
+ * team, chi ha fatto più percorsi, e la conversione Business Info → Closing.
+ * Rankings are mock/derived for now (see `lib/data/dashboard.ts`); each entry
+ * links to the member's profile. Fully server-rendered; builds and runs with no
+ * env.
  */
 export const dynamic = 'force-dynamic';
 
@@ -37,44 +44,109 @@ export default async function DashboardPage() {
   const youLabel = t('you_badge');
   const emptyLabel = t('top_empty');
 
+  // One config per category drives both the Spotlight hero and the leaderboard.
+  const categories: ReadonlyArray<{
+    key: string;
+    label: string;
+    description: string;
+    icon: typeof Eye;
+    accent: Accent;
+    entries: TopMarketerEntry[];
+    formatValue: (value: number) => string;
+    spotlightValue: (value: number) => string;
+    shortUnit: string;
+  }> = [
+    {
+      key: 'zoom',
+      label: t('cat_zoom'),
+      description: t('cat_zoom_desc'),
+      icon: Eye,
+      accent: 'info',
+      entries: top.data.zoom,
+      formatValue: (n) => t('cat_zoom_unit', { count: n }),
+      spotlightValue: (n) => formatNumber(n),
+      shortUnit: t('cat_zoom_short'),
+    },
+    {
+      key: 'percorsi',
+      label: t('cat_percorsi'),
+      description: t('cat_percorsi_desc'),
+      icon: Route,
+      accent: 'primary',
+      entries: top.data.percorsi,
+      formatValue: (n) => t('cat_percorsi_unit', { count: n }),
+      spotlightValue: (n) => formatNumber(n),
+      shortUnit: t('cat_percorsi_short'),
+    },
+    {
+      key: 'conversion',
+      label: t('cat_conversion'),
+      description: t('cat_conversion_desc'),
+      icon: TrendingUp,
+      accent: 'success',
+      entries: top.data.conversion,
+      formatValue: (n) => formatPercent(n),
+      spotlightValue: (n) => formatPercent(n),
+      shortUnit: t('cat_conversion_short'),
+    },
+  ];
+
   return (
-    <div className="space-y-6">
-      <PageHeader eyebrow="Dashboard" title={t('top_title')} description={t('top_subtitle', { month })} />
+    <div className="space-y-8">
+      <PageHeader
+        eyebrow="Dashboard"
+        title={t('top_title')}
+        description={t('top_subtitle', { month })}
+      />
 
       {isDemo && <ConfigNotice variant="inline" />}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <TopMarketersCard
-          title={t('cat_zoom')}
-          description={t('cat_zoom_desc')}
-          icon={Eye}
-          accent="info"
-          entries={top.data.zoom}
-          formatValue={(n) => t('cat_zoom_unit', { count: n })}
-          youLabel={youLabel}
-          emptyLabel={emptyLabel}
-        />
-        <TopMarketersCard
-          title={t('cat_percorsi')}
-          description={t('cat_percorsi_desc')}
-          icon={Route}
-          accent="primary"
-          entries={top.data.percorsi}
-          formatValue={(n) => t('cat_percorsi_unit', { count: n })}
-          youLabel={youLabel}
-          emptyLabel={emptyLabel}
-        />
-        <TopMarketersCard
-          title={t('cat_conversion')}
-          description={t('cat_conversion_desc')}
-          icon={TrendingUp}
-          accent="success"
-          entries={top.data.conversion}
-          formatValue={(n) => formatPercent(n)}
-          youLabel={youLabel}
-          emptyLabel={emptyLabel}
-        />
-      </div>
+      {/* Tier 1 — Spotlight: the #1 of each category */}
+      <section className="space-y-3">
+        <div className="space-y-0.5">
+          <h2 className="text-lg font-semibold tracking-tight text-foreground">
+            {t('spotlight_title')}
+          </h2>
+          <p className="text-sm text-muted-foreground">{t('spotlight_subtitle')}</p>
+        </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          {categories.map((c) => (
+            <SpotlightCard
+              key={c.key}
+              label={c.label}
+              icon={c.icon}
+              accent={c.accent}
+              entry={c.entries[0]}
+              valueText={c.entries[0] ? c.spotlightValue(c.entries[0].value) : ''}
+              unitLabel={c.shortUnit}
+              youLabel={youLabel}
+              emptyLabel={emptyLabel}
+            />
+          ))}
+        </div>
+      </section>
+
+      {/* Tier 2 — Full leaderboards (podium + value bars) */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">
+          {t('leaderboards_title')}
+        </h2>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          {categories.map((c) => (
+            <LeaderboardCard
+              key={c.key}
+              label={c.label}
+              description={c.description}
+              icon={c.icon}
+              accent={c.accent}
+              entries={c.entries}
+              formatValue={c.formatValue}
+              youLabel={youLabel}
+              emptyLabel={emptyLabel}
+            />
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
