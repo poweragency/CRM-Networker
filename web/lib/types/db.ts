@@ -676,3 +676,553 @@ export interface DocumentVersion {
   created_by: string | null;
   created_at: string;
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+ * ANALYTICS DOMAIN (doc 11 / doc 15). Mirrors the analytics fact layer
+ * (`0016`), the secured scope functions (`subtree_metrics`, `branch_metrics`,
+ * `funnel_totals_subtree`, `stage_conversion_subtree`), the leaderboard /
+ * bottleneck tables (`0018`), the reporting tables (`0019`) and the
+ * `notifications` inbox (`0014`). Enum *values* are the canonical DB strings.
+ * ════════════════════════════════════════════════════════════════════════ */
+
+/* ─────────────────────── Activity / subtree metrics ─────────────────────── */
+
+/**
+ * The scope-aggregated activity totals returned by `subtree_metrics()` /
+ * `branch_metrics()` over a period (doc 11 §4.2). One stage column per funnel
+ * stage = entries INTO that stage (additive throughput), plus call activity and
+ * recruiting. All counts are non-negative integers.
+ */
+export interface SubtreeMetrics {
+  calls_total: number;
+  calls_connected: number;
+  calls_duration_secs: number;
+  new_prospects: number;
+  conoscitiva: number;
+  business_info: number;
+  follow_up: number;
+  closing: number;
+  check_soldi: number;
+  iscrizione: number;
+  new_recruits: number;
+}
+
+/** Per-stage entry counts of a {@link SubtreeMetrics}, in canonical funnel order. */
+export function stageThroughput(m: SubtreeMetrics): Record<ProspectStage, number> {
+  return {
+    conoscitiva: m.conoscitiva,
+    business_info: m.business_info,
+    follow_up: m.follow_up,
+    closing: m.closing,
+    check_soldi: m.check_soldi,
+    iscrizione: m.iscrizione,
+  };
+}
+
+/** Derived 0..1 connect rate (connected / total calls). */
+export function connectRate(m: SubtreeMetrics): number {
+  return m.calls_total > 0 ? m.calls_connected / m.calls_total : 0;
+}
+
+/**
+ * Derived 0..1 overall funnel conversion = iscrizione / conoscitiva (doc 11
+ * §9.2 `conv_overall`). Guards a zero denominator.
+ */
+export function overallConversion(m: SubtreeMetrics): number {
+  return m.conoscitiva > 0 ? m.iscrizione / m.conoscitiva : 0;
+}
+
+/** A node's branch breakdown: one {@link SubtreeMetrics} per branch side. */
+export type BranchMetrics = Record<BranchScope, SubtreeMetrics>;
+
+/** A single day of activity for the trend chart (own/subtree aggregate). */
+export interface MetricDayPoint {
+  /** Org-local calendar day (ISO `YYYY-MM-DD`). */
+  date: string;
+  calls: number;
+  new_prospects: number;
+  iscrizioni: number;
+}
+
+/* ───────────────────────── Funnel & conversion ───────────────────────── */
+
+/** Current funnel occupancy: how many OPEN prospects sit in each stage now. */
+export interface FunnelStageOccupancy {
+  stage: ProspectStage;
+  /** Open prospects currently parked in this stage. */
+  open: number;
+  /** Cumulative prospects that ever reached this stage (entries, throughput). */
+  reached: number;
+}
+
+/** Per-stage conversion totals (from `stage_conversion_subtree`, doc 11 §5.4). */
+export interface StageConversion {
+  stage: ProspectStage;
+  entered: number;
+  exited: number;
+  avg_time_in_stage_secs: number;
+}
+
+/* ───────────────────────── Leaderboards (doc 11 §11) ───────────────────────── */
+
+/** `leaderboard_metric` — the ranked dimension. */
+export type LeaderboardMetric =
+  | 'calls'
+  | 'new_prospects'
+  | 'conversion_rate'
+  | 'enrollments'
+  | 'team_growth';
+
+export const LEADERBOARD_METRIC_ORDER: readonly LeaderboardMetric[] = [
+  'enrollments',
+  'new_prospects',
+  'calls',
+  'conversion_rate',
+  'team_growth',
+] as const;
+
+export const LEADERBOARD_METRIC_LABELS: Record<LeaderboardMetric, string> = {
+  calls: 'Chiamate',
+  new_prospects: 'Nuovi prospect',
+  conversion_rate: 'Tasso di conversione',
+  enrollments: 'Iscrizioni',
+  team_growth: 'Crescita team',
+};
+
+/** True when the metric value is a 0..1 ratio (→ render as a percentage). */
+export function isRatioMetric(metric: LeaderboardMetric): boolean {
+  return metric === 'conversion_rate';
+}
+
+/** `leaderboard_scope` — the population ranked. */
+export type LeaderboardScope = 'org' | 'team' | 'branch';
+
+export const LEADERBOARD_SCOPE_LABELS: Record<LeaderboardScope, string> = {
+  org: 'Organizzazione',
+  team: 'Il mio team',
+  branch: 'Per ramo',
+};
+
+/** One ranked marketer in a leaderboard snapshot (doc 01 §6.5). */
+export interface LeaderboardEntry {
+  marketer_id: string;
+  display_name: string;
+  rank: MarketerRank;
+  rank_position: number;
+  value: number;
+  /** Marks the viewer's own row so the UI can highlight it. */
+  is_self: boolean;
+}
+
+/* ─────────────────────── Bottlenecks (doc 11 §10) ─────────────────────── */
+
+/** `bottleneck_type` — the detected weakness category. */
+export type BottleneckType =
+  | 'weak_conversion'
+  | 'stage_delay'
+  | 'inactivity'
+  | 'followup_overdue';
+
+export const BOTTLENECK_TYPE_LABELS: Record<BottleneckType, string> = {
+  weak_conversion: 'Conversione debole',
+  stage_delay: 'Fase in stallo',
+  inactivity: 'Inattività',
+  followup_overdue: 'Follow-up in ritardo',
+};
+
+/** `bottleneck_severity`. */
+export type BottleneckSeverity = 'info' | 'warning' | 'critical';
+
+export const BOTTLENECK_SEVERITY_LABELS: Record<BottleneckSeverity, string> = {
+  info: 'Informativo',
+  warning: 'Attenzione',
+  critical: 'Critico',
+};
+
+export const BOTTLENECK_SEVERITY_TONE: Record<
+  BottleneckSeverity,
+  'info' | 'warning' | 'danger'
+> = {
+  info: 'info',
+  warning: 'warning',
+  critical: 'danger',
+};
+
+/** A row of `bottleneck_findings` (enriched with the affected marketer name). */
+export interface BottleneckFinding {
+  id: string;
+  marketer_id: string;
+  marketer_name: string | null;
+  type: BottleneckType;
+  severity: BottleneckSeverity;
+  stage: ProspectStage | null;
+  metric_value: number | null;
+  threshold_value: number | null;
+  title_it: string;
+  recommendation_it: string;
+  detected_at: string;
+  period_start: string;
+  period_end: string;
+  resolved_at: string | null;
+}
+
+/* ─────────────────────── Notifications (doc 01 §6.7) ─────────────────────── */
+
+/** `notification_type`. */
+export type NotificationType =
+  | 'follow_up_due'
+  | 'rank_changed'
+  | 'bottleneck_alert'
+  | 'monthly_report_ready'
+  | 'invitation'
+  | 'system';
+
+export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
+  follow_up_due: 'Follow-up in scadenza',
+  rank_changed: 'Cambio di grado',
+  bottleneck_alert: 'Avviso collo di bottiglia',
+  monthly_report_ready: 'Report disponibile',
+  invitation: 'Invito',
+  system: 'Sistema',
+};
+
+/** A row of `notifications` (in-app inbox, Realtime-subscribed). */
+export interface AppNotification {
+  id: string;
+  type: NotificationType;
+  title_it: string;
+  body_it: string | null;
+  payload: Record<string, unknown>;
+  read_at: string | null;
+  created_at: string;
+  deleted_at: string | null;
+}
+
+/**
+ * Resolve a click-through href from a notification's type + payload deep-link
+ * refs (doc 01 §6.7). Falls back to the section index for the type.
+ */
+export function notificationHref(n: AppNotification): string {
+  const p = n.payload ?? {};
+  const prospectId = typeof p.prospect_id === 'string' ? p.prospect_id : null;
+  const reportId = typeof p.report_id === 'string' ? p.report_id : null;
+  switch (n.type) {
+    case 'follow_up_due':
+      return prospectId ? `/percorso-prospect/${prospectId}` : '/percorso-prospect';
+    case 'bottleneck_alert':
+      return '/analytics';
+    case 'monthly_report_ready':
+      return reportId ? `/report?id=${reportId}` : '/report';
+    case 'rank_changed':
+      return '/genealogia';
+    case 'invitation':
+      return '/admin/attivazioni';
+    case 'system':
+    default:
+      return '/notifiche';
+  }
+}
+
+/* ───────────────────── Reporting & export (doc 15) ───────────────────── */
+
+/** `report_period`. */
+export type ReportPeriod = 'monthly' | 'quarterly';
+
+export const REPORT_PERIOD_LABELS: Record<ReportPeriod, string> = {
+  monthly: 'Mensile',
+  quarterly: 'Trimestrale',
+};
+
+/** `export_format` — rendered artifact format. */
+export type ExportFormat = 'pdf' | 'xlsx' | 'csv';
+
+export const EXPORT_FORMAT_ORDER: readonly ExportFormat[] = [
+  'pdf',
+  'xlsx',
+  'csv',
+] as const;
+
+export const EXPORT_FORMAT_LABELS: Record<ExportFormat, string> = {
+  pdf: 'PDF',
+  xlsx: 'Excel',
+  csv: 'CSV',
+};
+
+/** `export_status` — async export job lifecycle. */
+export type ExportStatus =
+  | 'queued'
+  | 'rendering'
+  | 'ready'
+  | 'failed'
+  | 'expired';
+
+export const EXPORT_STATUS_LABELS: Record<ExportStatus, string> = {
+  queued: 'In coda',
+  rendering: 'In elaborazione',
+  ready: 'Pronto',
+  failed: 'Errore',
+  expired: 'Scaduto',
+};
+
+export const EXPORT_STATUS_TONE: Record<
+  ExportStatus,
+  'secondary' | 'info' | 'success' | 'danger' | 'warning'
+> = {
+  queued: 'secondary',
+  rendering: 'info',
+  ready: 'success',
+  failed: 'danger',
+  expired: 'warning',
+};
+
+/**
+ * The doc 11 §9.2 fixed-key metrics payload stored on `monthly_reports.metrics`
+ * (produced by `subtree_metrics_json()`). Numeric throughout; `conv_overall` is
+ * a 0..1 ratio.
+ */
+export interface MetricsPayload {
+  calls_total: number;
+  calls_connected: number;
+  calls_duration_secs: number;
+  new_prospects: number;
+  conoscitiva: number;
+  business_info: number;
+  follow_up: number;
+  closing: number;
+  check_soldi: number;
+  iscrizione: number;
+  enrollments: number;
+  new_recruits: number;
+  team_size: number;
+  active_members: number;
+  conv_overall: number;
+}
+
+/** A row of `monthly_reports` (immutable per-subject performance snapshot). */
+export interface MonthlyReport {
+  id: string;
+  marketer_id: string | null;
+  /** Resolved subject name; null for the org-level roll-up. */
+  subject_name: string | null;
+  period: ReportPeriod;
+  period_start: string;
+  period_end: string;
+  metrics: MetricsPayload;
+  previous_metrics: MetricsPayload | null;
+  /** Absolute MoM/QoQ diff per numeric key (null when no prior snapshot). */
+  deltas: Partial<Record<keyof MetricsPayload, number>> | null;
+  /** % MoM/QoQ change per numeric key (0..1-ish ratio, null when no prior). */
+  delta_pct: Partial<Record<keyof MetricsPayload, number>> | null;
+  generated_at: string;
+}
+
+/** A row of `report_export_jobs` (async large-export queue, doc 15 §11.2). */
+export interface ExportJob {
+  id: string;
+  report_type: string;
+  format: ExportFormat;
+  status: ExportStatus;
+  row_count: number | null;
+  bytes: number | null;
+  error_code: string | null;
+  created_at: string;
+  finished_at: string | null;
+  expires_at: string | null;
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+ * ADMIN DOMAIN (doc 01 §1–3 / §6.8 / doc 10). Mirrors `organizations`,
+ * `memberships`, `account_invitations` (`0007`), `rank_history` (`0004`) and
+ * `audit_log` (`0015`). Enum *values* are the canonical DB strings.
+ * ════════════════════════════════════════════════════════════════════════ */
+
+/* ─────────────── Account / membership account status ─────────────── */
+
+/**
+ * Account status of a marketer profile = its `memberships.status`, with an extra
+ * `none` for profiles that have no login yet (pre-registered, not invited).
+ */
+export type AccountStatus =
+  | 'active'
+  | 'invited'
+  | 'suspended'
+  | 'disabled'
+  | 'none';
+
+export const ACCOUNT_STATUS_LABELS: Record<AccountStatus, string> = {
+  active: 'Attivo',
+  invited: 'Invitato',
+  suspended: 'Sospeso',
+  disabled: 'Disabilitato',
+  none: 'Nessun accesso',
+};
+
+export const ACCOUNT_STATUS_TONE: Record<
+  AccountStatus,
+  'success' | 'info' | 'warning' | 'danger' | 'secondary'
+> = {
+  active: 'success',
+  invited: 'info',
+  suspended: 'warning',
+  disabled: 'danger',
+  none: 'secondary',
+};
+
+/** A marketer registry row for /admin/marketer (profile + account projection). */
+export interface AdminMarketerRow {
+  id: string;
+  display_name: string;
+  first_name: string;
+  last_name: string;
+  email: string | null;
+  rank: MarketerRank;
+  status: MarketerStatus;
+  account_status: AccountStatus;
+  role: MembershipRole | null;
+  crm_access: boolean;
+  team_size: number;
+  registration_date: string | null;
+  created_at: string;
+}
+
+/* ─────────────────────── Invitations (doc 01 §3) ─────────────────────── */
+
+/** `invitation_status`. */
+export type InvitationStatus = 'pending' | 'accepted' | 'expired' | 'revoked';
+
+export const INVITATION_STATUS_LABELS: Record<InvitationStatus, string> = {
+  pending: 'In attesa',
+  accepted: 'Accettato',
+  expired: 'Scaduto',
+  revoked: 'Revocato',
+};
+
+export const INVITATION_STATUS_TONE: Record<
+  InvitationStatus,
+  'info' | 'success' | 'secondary' | 'danger'
+> = {
+  pending: 'info',
+  accepted: 'success',
+  expired: 'secondary',
+  revoked: 'danger',
+};
+
+/** A row of `account_invitations` (enriched with profile + issuer names). */
+export interface AccountInvitation {
+  id: string;
+  marketer_id: string;
+  marketer_name: string;
+  email: string;
+  role: MembershipRole;
+  status: InvitationStatus;
+  invited_by_name: string | null;
+  expires_at: string;
+  accepted_at: string | null;
+  created_at: string;
+}
+
+/* ─────────────────────── Rank history (doc 01 §2) ─────────────────────── */
+
+/** A row of `rank_history` (immutable rank-change audit, enriched with names). */
+export interface RankHistoryEntry {
+  id: string;
+  marketer_id: string;
+  marketer_name: string;
+  previous_rank: MarketerRank | null;
+  new_rank: MarketerRank;
+  changed_at: string;
+  changed_by_name: string | null;
+  notes: string | null;
+}
+
+/* ─────────────────────── Audit log (doc 01 §6.8 / doc 10 §5) ─────────────────────── */
+
+/** `audit_action` — the canonical sensitive-action vocabulary. */
+export type AuditAction =
+  | 'marketer.create'
+  | 'marketer.place'
+  | 'marketer.move'
+  | 'marketer.status_change'
+  | 'rank.change'
+  | 'prospect.stage_change'
+  | 'invitation.create'
+  | 'invitation.revoke'
+  | 'account.activate'
+  | 'membership.role_change'
+  | 'membership.permissions_change'
+  | 'membership.status_change'
+  | 'contacts.bulk_update'
+  | 'contacts.bulk_delete'
+  | 'document.publish'
+  | 'document.archive'
+  | 'organization.update'
+  | 'auth.email_change'
+  | 'auth.refresh_reuse';
+
+export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
+  'marketer.create': 'Profilo creato',
+  'marketer.place': 'Profilo posizionato',
+  'marketer.move': 'Profilo spostato',
+  'marketer.status_change': 'Stato profilo modificato',
+  'rank.change': 'Cambio di grado',
+  'prospect.stage_change': 'Cambio fase prospect',
+  'invitation.create': 'Invito creato',
+  'invitation.revoke': 'Invito revocato',
+  'account.activate': 'Accesso CRM attivato',
+  'membership.role_change': 'Cambio ruolo',
+  'membership.permissions_change': 'Permessi modificati',
+  'membership.status_change': 'Stato account modificato',
+  'contacts.bulk_update': 'Aggiornamento contatti in blocco',
+  'contacts.bulk_delete': 'Eliminazione contatti in blocco',
+  'document.publish': 'Documento pubblicato',
+  'document.archive': 'Documento archiviato',
+  'organization.update': 'Impostazioni organizzazione',
+  'auth.email_change': 'Cambio email di accesso',
+  'auth.refresh_reuse': 'Riuso token rilevato',
+};
+
+/** Coarse category of an audit action (drives the timeline icon/tone). */
+export type AuditCategory =
+  | 'marketer'
+  | 'rank'
+  | 'prospect'
+  | 'invitation'
+  | 'account'
+  | 'membership'
+  | 'contacts'
+  | 'document'
+  | 'organization'
+  | 'auth';
+
+export function auditCategory(action: AuditAction): AuditCategory {
+  return action.split('.')[0] as AuditCategory;
+}
+
+/** A row of `audit_log` (enriched with the actor's display name). */
+export interface AuditLogEntry {
+  id: string;
+  actor_name: string | null;
+  action: AuditAction;
+  entity_type: string;
+  entity_id: string | null;
+  created_at: string;
+}
+
+/* ─────────────────────── Organization settings (doc 01 §1.1) ─────────────────────── */
+
+/** Bottleneck-engine thresholds (org override of the ADR-009 #8 defaults). */
+export interface BottleneckThresholds {
+  inactivity_days: number;
+  followup_overdue_count: number;
+  min_volume_conoscitiva: number;
+}
+
+/** A projection of `organizations` (+ the bottleneck settings sub-object). */
+export interface OrgSettings {
+  id: string;
+  name: string;
+  slug: string;
+  locale: string;
+  timezone: string;
+  bottleneck: BottleneckThresholds;
+}
