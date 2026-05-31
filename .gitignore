@@ -75,3 +75,4 @@ src/lib/database.types.ts
 ehthumbs.db
 Thumbs.db
 desktop.ini
+*.orig
