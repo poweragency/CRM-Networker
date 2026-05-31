@@ -61,7 +61,6 @@ export function NewProspectSheet({
   const [fullName, setFullName] = React.useState('');
   const [contactId, setContactId] = React.useState('');
   const [stage, setStage] = React.useState<ProspectStage>(defaultStage);
-  const [expectedValue, setExpectedValue] = React.useState('');
   const [notes, setNotes] = React.useState('');
   const [error, setError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
@@ -72,7 +71,6 @@ export function NewProspectSheet({
       setFullName('');
       setContactId('');
       setStage(defaultStage);
-      setExpectedValue('');
       setNotes('');
       setError(null);
       setSubmitting(false);
@@ -98,16 +96,10 @@ export function NewProspectSheet({
     setError(null);
     setSubmitting(true);
 
-    const parsedValue = expectedValue.trim()
-      ? Number(expectedValue.replace(',', '.'))
-      : null;
-
     const res = await createProspectAction({
       full_name: name,
       contact_id: contactId || null,
       current_stage: stage,
-      expected_value:
-        parsedValue != null && !Number.isNaN(parsedValue) ? parsedValue : null,
       notes: notes.trim() || null,
     });
 
@@ -223,29 +215,6 @@ export function NewProspectSheet({
               </option>
             ))}
           </select>
-        </div>
-
-        {/* Expected value */}
-        <div>
-          <Label htmlFor="np-value" className={fieldLabel}>
-            Valore atteso
-          </Label>
-          <div className="relative">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-              €
-            </span>
-            <Input
-              id="np-value"
-              type="number"
-              inputMode="decimal"
-              min="0"
-              step="50"
-              value={expectedValue}
-              onChange={(e) => setExpectedValue(e.target.value)}
-              placeholder="0"
-              className="pl-7 tabular-nums"
-            />
-          </div>
         </div>
 
         {/* Notes */}

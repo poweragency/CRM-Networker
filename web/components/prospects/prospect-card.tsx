@@ -4,16 +4,16 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { CalendarClock, Euro, GripVertical } from 'lucide-react';
-import { cn, formatNumber } from '@/lib/utils';
+import { CalendarClock, GripVertical } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Avatar } from '@/components/ui/avatar';
 import { StatusPill } from '@/components/crm/status-pill';
 import type { ProspectView } from './types';
 
 /**
  * ProspectCard — a single prospect on the kanban board. Shows the name, the
- * owner (avatar + chip), the expected value, how long it has sat in the current
- * stage, and the outcome pill for non-open prospects.
+ * owner (avatar + chip), how long it has sat in the current stage, and the
+ * outcome pill for non-open prospects.
  *
  * Interaction split (avoids the classic drag-vs-click conflict): the left grip
  * is the ONLY drag handle (dnd-kit listeners bound there), while the card body
@@ -82,12 +82,6 @@ export const ProspectCardBody = React.forwardRef<
 
         {/* Meta row */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-          {prospect.expected_value != null && (
-            <span className="inline-flex items-center gap-1 font-medium tabular-nums text-foreground">
-              <Euro className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
-              {formatNumber(prospect.expected_value)}
-            </span>
-          )}
           <span
             className={cn(
               'inline-flex items-center gap-1 tabular-nums',

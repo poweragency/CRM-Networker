@@ -12,12 +12,10 @@ export interface ProspectView extends Prospect {
   owner_name: string;
 }
 
-/** A board column ready for render: stage + its prospect views + aggregates. */
+/** A board column ready for render: stage + its prospect views. */
 export interface StageColumnView {
   stage: ProspectStage;
   prospects: ProspectView[];
-  /** sum of expected_value across the column (nulls treated as 0). */
-  value_total: number;
 }
 
 /** The serialized board envelope handed to the client orchestrator. */

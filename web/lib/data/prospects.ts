@@ -30,7 +30,7 @@ import { demoId } from '@/lib/data/mock/_shared';
  */
 
 const SELECT =
-  'id,org_id,owner_marketer_id,contact_id,full_name,current_stage,outcome,current_stage_since,entered_funnel_at,closed_at,expected_value,notes,created_by,updated_by,created_at,updated_at,deleted_at';
+  'id,org_id,owner_marketer_id,contact_id,full_name,current_stage,outcome,current_stage_since,entered_funnel_at,closed_at,notes,created_by,updated_by,created_at,updated_at,deleted_at';
 
 export interface ProspectFilters {
   search?: string;
@@ -154,7 +154,6 @@ export interface ProspectInput {
   full_name: string;
   contact_id?: string | null;
   current_stage?: ProspectStage;
-  expected_value?: number | null;
   notes?: string | null;
   owner_marketer_id?: string;
 }
@@ -178,7 +177,6 @@ export async function createProspect(
     current_stage_since: nowIso(),
     entered_funnel_at: nowIso(),
     closed_at: null,
-    expected_value: input.expected_value ?? null,
     notes: input.notes ?? null,
     created_by: marketerId,
     updated_by: marketerId,

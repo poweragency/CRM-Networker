@@ -138,6 +138,34 @@ export interface TeamMemberRow {
   team_size: number;
 }
 
+/* ─────────────────── 100's list (bucket list / lista dei desideri) ─────────────────── */
+
+/**
+ * `wishlist_horizon` — how near the goal is, so the 100 things can be catalogued
+ * "da più vicine a più lontane" (nearest → furthest).
+ */
+export type WishlistHorizon = 'vicino' | 'medio' | 'lontano';
+
+export const WISHLIST_HORIZON_ORDER: readonly WishlistHorizon[] = [
+  'vicino',
+  'medio',
+  'lontano',
+] as const;
+
+export const WISHLIST_HORIZON_LABELS: Record<WishlistHorizon, string> = {
+  vicino: 'Vicino',
+  medio: 'Medio termine',
+  lontano: 'Lontano',
+};
+
+/** One entry of the personal 100's list (a thing the person wants to do/have). */
+export interface WishlistItem {
+  id: string;
+  title: string;
+  horizon: WishlistHorizon;
+  done: boolean;
+}
+
 /** `marketer_status` — lifecycle of a marketer profile. */
 export type MarketerStatus = 'pending' | 'active' | 'inactive' | 'suspended';
 
@@ -460,7 +488,6 @@ export interface Prospect {
   current_stage_since: string;
   entered_funnel_at: string;
   closed_at: string | null;
-  expected_value: number | null;
   notes: string | null;
   created_by: string | null;
   updated_by: string | null;

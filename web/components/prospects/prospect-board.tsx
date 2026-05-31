@@ -61,10 +61,6 @@ function findStageOf(map: StageMap, id: string): ProspectStage | null {
   return null;
 }
 
-function sumValue(prospects: ProspectView[]): number {
-  return prospects.reduce((acc, p) => acc + (p.expected_value ?? 0), 0);
-}
-
 export function ProspectBoard({
   board,
   demo,
@@ -253,7 +249,6 @@ export function ProspectBoard({
                 column={{
                   stage,
                   prospects,
-                  value_total: sumValue(prospects),
                 }}
                 isDraggingActive={activeId !== null}
                 busy={busyId !== null}

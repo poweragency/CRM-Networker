@@ -3,6 +3,7 @@ import {
   Network,
   BarChart3,
   BookOpen,
+  ClipboardCheck,
   Settings,
   type LucideIcon,
 } from 'lucide-react';
@@ -56,10 +57,11 @@ export const ROLE_ORDER: readonly MembershipRole[] = [
 
 /**
  * The sidebar is intentionally reduced to four destinations (product decision):
- *   1. Statistiche  — the team roster (each member → /team/[id])
- *   2. Genealogia   — the binary tree viewer (unchanged)
- *   3. Dashboard    — best marketers of the month, by category
- *   4. Informativa  — package prices + useful materials
+ *   1. Statistiche    — the team roster (each member → /team/[id])
+ *   2. Genealogia     — the binary tree viewer (unchanged)
+ *   3. Dashboard      — best marketers of the month, by category
+ *   4. Presenze Zoom  — per-day attendance for the 3 calls (own subtree)
+ *   5. Informativa    — package prices + useful materials
  * 100's list, Sette Perché and i percorsi informativi are PER-PERSON files and
  * live INSIDE the single marketer profile (/team/[id]), not in the menu. The
  * legacy CRM/Analisi/Admin pages still exist in the codebase but are no longer
@@ -72,6 +74,7 @@ export const navSections: NavSection[] = [
       { href: '/statistiche', labelKey: 'statistics', icon: BarChart3 },
       { href: '/genealogia', labelKey: 'tree', icon: Network },
       { href: '/dashboard', labelKey: 'dashboard', icon: LayoutDashboard },
+      { href: '/presenze', labelKey: 'attendance', icon: ClipboardCheck },
       { href: '/informativa', labelKey: 'informativa', icon: BookOpen },
     ],
   },

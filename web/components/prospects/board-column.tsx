@@ -6,7 +6,7 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { cn, formatNumber } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { STAGE_DESCRIPTIONS, STAGE_LABELS, stageIndex } from '@/lib/types/db';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Info } from 'lucide-react';
@@ -15,9 +15,8 @@ import type { StageColumnView } from './types';
 
 /**
  * BoardColumn — one of the 6 canonical funnel columns. A droppable target whose
- * header shows the stage label, the prospect count and the summed expected
- * value of the column. Cards inside are a vertical sortable list. The column
- * highlights while a card is dragged over it.
+ * header shows the stage label and the prospect count. Cards inside are a
+ * vertical sortable list. The column highlights while a card is dragged over it.
  */
 
 export interface BoardColumnProps {
@@ -29,7 +28,7 @@ export interface BoardColumnProps {
 }
 
 export function BoardColumn({ column, isDraggingActive, busy }: BoardColumnProps) {
-  const { stage, prospects, value_total } = column;
+  const { stage, prospects } = column;
   const { setNodeRef, isOver } = useDroppable({
     id: stage,
     data: { type: 'column', stage },
@@ -80,18 +79,6 @@ export function BoardColumn({ column, isDraggingActive, busy }: BoardColumnProps
             {prospects.length}
           </span>
         </div>
-        <p className="mt-1 pl-7 text-xs tabular-nums text-muted-foreground">
-          {value_total > 0 ? (
-            <>
-              <span className="font-medium text-foreground">
-                € {formatNumber(value_total)}
-              </span>{' '}
-              pipeline
-            </>
-          ) : (
-            <span className="text-muted-foreground/70">Nessun valore</span>
-          )}
-        </p>
       </div>
 
       {/* Droppable body */}

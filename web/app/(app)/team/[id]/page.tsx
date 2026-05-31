@@ -8,6 +8,7 @@ import { listProspectBoard } from '@/lib/data/prospects';
 import { listCentos } from '@/lib/data/centos';
 import { getSevenWhysFor } from '@/lib/data/seven-whys';
 import { getMarketerProfile } from '@/lib/data/team';
+import { getWishlist } from '@/lib/data/wishlist';
 import { RANK_ORDER, STATUS_LABELS } from '@/lib/types/db';
 import { ConfigNotice } from '@/components/config-notice';
 import { PageHeader } from '@/components/crm/page-header';
@@ -22,6 +23,7 @@ import { CentosManager } from '@/components/centos/centos-manager';
 import { SevenWhysDetail } from '@/components/seven-whys/seven-whys-detail';
 import { MarketerProfileTabs } from '@/components/team/marketer-profile-tabs';
 import { MarketerAnagrafica } from '@/components/team/marketer-anagrafica';
+import { PersonalFiles } from '@/components/team/personal-files';
 import { formatNumber } from '@/lib/utils';
 
 /**
@@ -45,7 +47,7 @@ export async function generateMetadata({
   return { title: node?.display_name ?? 'Marketer' };
 }
 
-const TABS = ['prospects', 'centos', 'seven-whys'] as const;
+const TABS = ['prospects', 'centos'] as const;
 type Tab = (typeof TABS)[number];
 
 function parseTab(value: string | string[] | undefined): Tab {
@@ -67,13 +69,15 @@ export default async function MarketerProfilePage({
   const node = nodeRes.data;
   if (!node) notFound();
 
-  const [claimsRes, boardRes, centosRes, whysRes, profileRes] = await Promise.all([
-    getCurrentClaims(),
-    listProspectBoard({ ownerMarketerId: node.id }),
-    listCentos(node.id),
-    getSevenWhysFor(node.id),
-    getMarketerProfile(node.id),
-  ]);
+  const [claimsRes, boardRes, centosRes, whysRes, profileRes, wishlistRes] =
+    await Promise.all([
+      getCurrentClaims(),
+      listProspectBoard({ ownerMarketerId: node.id }),
+      listCentos(node.id),
+      getSevenWhysFor(node.id),
+      getMarketerProfile(node.id),
+      getWishlist(node.id),
+    ]);
 
   const isSelf = claimsRes.claims.marketer_id === node.id;
   const claims = claimsRes.claims;
@@ -104,7 +108,6 @@ export default async function MarketerProfilePage({
       return {
         stage: col.stage,
         prospects,
-        value_total: prospects.reduce((acc, p) => acc + (p.expected_value ?? 0), 0),
       };
     }),
   };
@@ -202,7 +205,14 @@ export default async function MarketerProfilePage({
         defaultTab={parseTab(searchParams?.tab)}
         prospects={prospectsPanel}
         centos={centosPanel}
+      />
+
+      {/* Secondary personal files: 7 Perché + 100's list (open in a window) */}
+      <PersonalFiles
         sevenWhys={sevenWhysPanel}
+        wishlistItems={wishlistRes.items}
+        marketerId={node.id}
+        canEdit={isSelf}
       />
     </div>
   );

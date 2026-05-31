@@ -59,10 +59,6 @@ export default async function PercorsoProspectPage() {
       return {
         stage: col.stage,
         prospects,
-        value_total: prospects.reduce(
-          (acc, p) => acc + (p.expected_value ?? 0),
-          0,
-        ),
       };
     }),
   };

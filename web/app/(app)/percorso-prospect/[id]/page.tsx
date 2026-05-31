@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { Clock, Euro, History, Phone, User } from 'lucide-react';
+import { Clock, History, Phone, User } from 'lucide-react';
 import { PageHeader } from '@/components/crm/page-header';
 import { StatusPill } from '@/components/crm/status-pill';
 import { ConfigNotice } from '@/components/config-notice';
@@ -15,7 +15,7 @@ import { ProspectCalls } from '@/components/prospects/prospect-calls';
 import { FunnelProgress } from '@/components/prospects/funnel-progress';
 import { StageChanger } from '@/components/prospects/stage-changer';
 import { stageIndex, type ProspectJourneyEvent } from '@/lib/types/db';
-import { formatDate, formatNumber, formatRelativeTime } from '@/lib/utils';
+import { formatDate, formatRelativeTime } from '@/lib/utils';
 
 /**
  * /percorso-prospect/[id] — the prospect detail (RSC).
@@ -96,7 +96,7 @@ export default async function ProspectDetailPage({
 
           <Separator />
 
-          <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <dl className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="space-y-1">
               <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <User className="h-3.5 w-3.5" aria-hidden />
@@ -105,18 +105,6 @@ export default async function ProspectDetailPage({
               <dd className="flex items-center gap-1.5 text-sm font-medium text-foreground">
                 <Avatar name={ownerName} size="sm" className="h-5 w-5 text-[9px]" />
                 <span className="truncate">{ownerName}</span>
-              </dd>
-            </div>
-
-            <div className="space-y-1">
-              <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Euro className="h-3.5 w-3.5" aria-hidden />
-                Valore atteso
-              </dt>
-              <dd className="text-sm font-medium tabular-nums text-foreground">
-                {prospect.expected_value != null
-                  ? `€ ${formatNumber(prospect.expected_value)}`
-                  : '—'}
               </dd>
             </div>
 
