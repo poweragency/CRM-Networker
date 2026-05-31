@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { createHash } from 'node:crypto';
 import type { MarketerRank, MembershipRole } from '@/lib/types/db';
 import { mockNode } from '@/lib/data/mock-genealogy';
 import { createClient } from '@/lib/supabase/server';
@@ -63,54 +64,39 @@ export async function getInvitation(token: string): Promise<InvitationResult> {
   }
 
   try {
-    // doc 09: an invitation row carries the target marketer + org + role.
-    // RLS allows an anonymous read scoped to a valid, unexpired token.
-    const { data, error } = await supabase
-      .from('invitations')
-      .select(
-        'marketer_id, role, expires_at, accepted_at, marketers(display_name, email, rank), organizations(name)',
-      )
-      .eq('token', token)
-      .maybeSingle();
+    // The raw token is the bearer proof; the DB stores only its SHA-256 hash.
+    // `invitation_context` (migration 0021, SECURITY DEFINER) resolves the
+    // invited-profile preview from the hash for a PENDING, unexpired invitation —
+    // an anon-safe read (no enumeration: keyed by the secret 256-bit hash).
+    const tokenHash = createHash('sha256').update(token).digest('hex');
 
-    if (error || !data) {
+    const { data, error } = await supabase.rpc('invitation_context', {
+      p_token_hash: tokenHash,
+    });
+
+    if (error) {
       return { context: null, demo: false };
     }
 
-    // Reject expired or already-accepted invitations.
-    const expired =
-      typeof data.expires_at === 'string' &&
-      new Date(data.expires_at).getTime() < Date.now();
-    if (expired || data.accepted_at) {
-      return { context: null, demo: false };
-    }
-
-    // Supabase embeds to-one relations as objects (or arrays depending on FK
-    // shape); normalize defensively without assuming generated types.
-    const marketer = Array.isArray(data.marketers)
-      ? data.marketers[0]
-      : data.marketers;
-    const org = Array.isArray(data.organizations)
-      ? data.organizations[0]
-      : data.organizations;
-
-    if (!marketer) {
+    // The RPC returns a set; take the first row (zero rows => invalid/expired).
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) {
       return { context: null, demo: false };
     }
 
     return {
       context: {
-        marketerId: data.marketer_id as string,
-        displayName: (marketer.display_name as string) ?? '—',
-        email: (marketer.email as string | null) ?? null,
-        rank: (marketer.rank as MarketerRank) ?? 'executive',
-        role: (data.role as MembershipRole) ?? 'member',
-        orgName: (org?.name as string) ?? '—',
+        marketerId: row.marketer_id as string,
+        displayName: (row.display_name as string) ?? '—',
+        email: (row.email as string | null) ?? null,
+        rank: (row.rank as MarketerRank) ?? 'executive',
+        role: (row.role as MembershipRole) ?? 'member',
+        orgName: (row.org_name as string) ?? '—',
       },
       demo: false,
     };
   } catch {
-    // Schema not present / network error → degrade to demo rather than crash.
+    // RPC not present / network error → degrade to demo rather than crash.
     return { context: mockInvitation(token), demo: true };
   }
 }

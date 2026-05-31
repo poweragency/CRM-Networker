@@ -34,10 +34,12 @@ type InviteValues = z.infer<typeof inviteSchema>;
  * swap cleanly between the activation form and the success state.
  *
  * Activation flow:
- *  - With env: calls the `accept_invitation` RPC (doc 09) with the token + the
- *    chosen password to bind a login to the invited (existing) profile.
- *  - Without env (or demo context): the activation is simulated so the landing
- *    is fully walkable (RESILIENCE).
+ *  - With env: invokes the `activate-account` Edge Function (doc 07 §4.1) with the
+ *    raw token + chosen password. The function creates the auth.users login and
+ *    calls accept_invitation(token_hash, user_id), binding the login to the
+ *    EXISTING marketers profile (profile != account).
+ *  - Without env: the activation is simulated so the landing is fully walkable
+ *    (RESILIENCE).
  * Validation mirrors /reimposta-password (min length + match).
  */
 export function InviteForm({
@@ -72,17 +74,16 @@ export function InviteForm({
     }
 
     const supabase = createClient();
-    if (!supabase || demo) {
-      // Demo mode: simulate a successful activation.
+    if (!supabase) {
+      // No env: simulate a successful activation so the landing stays walkable.
       setDone(true);
       return;
     }
 
-    // doc 09: accept_invitation binds the auth user to the invited marketer
-    // profile and activates CRM access, given a valid token + chosen password.
-    const { error } = await supabase.rpc('accept_invitation', {
-      invitation_token: token,
-      new_password: parsed.data.password,
+    // doc 07 §4.1: the activate-account Edge Function creates the login and runs
+    // accept_invitation(token_hash, user_id), binding it to the invited profile.
+    const { error } = await supabase.functions.invoke('activate-account', {
+      body: { token, password: parsed.data.password },
     });
 
     if (error) {

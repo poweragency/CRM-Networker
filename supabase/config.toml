@@ -174,10 +174,25 @@ uri = "pg-functions://postgres/public/custom_access_token_hook"
 
 # -----------------------------------------------------------------------------
 # [functions] — Edge Functions (Deno). Declared as they are implemented
-# (activate-account, generate-report-export, branch-analytics, bottleneck-engine,
-# notification-fanout — doc 07 §4). None are required for `db reset`.
+# (branch-analytics, bottleneck-engine, notification-fanout still pending —
+# doc 07 §4). None are required for `db reset`. Source in supabase/functions/.
 # -----------------------------------------------------------------------------
 [functions]
+
+# Issue an "Activate CRM Access" invitation (mint+hash token, create_invitation
+# RPC, optional email). Requires an authenticated admin/leader JWT (ADR-003 gate
+# is enforced inside the RPC under the caller's identity).
+[functions.create-invitation]
+verify_jwt = true
+
+# Profile-preserving activation: create the auth.users login + accept_invitation.
+# verify_jwt = false because the invitee has NO session yet (token is the proof).
+[functions.activate-account]
+verify_jwt = false
+
+# Synchronous report renderer: assemble_report_dataset (caller RLS) -> CSV/JSON.
+[functions.generate-report-export]
+verify_jwt = true
 
 # -----------------------------------------------------------------------------
 # [analytics] — local analytics/logging backend (Logflare). Off for dev.
