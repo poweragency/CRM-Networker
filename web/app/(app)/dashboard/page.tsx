@@ -39,7 +39,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t('top_title')} description={t('top_subtitle', { month })} />
+      <PageHeader eyebrow="Dashboard" title={t('top_title')} description={t('top_subtitle', { month })} />
 
       {isDemo && <ConfigNotice variant="inline" />}
 
