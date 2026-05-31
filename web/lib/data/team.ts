@@ -49,6 +49,8 @@ export async function listTeamMembers(): Promise<TeamResult<TeamMemberRow[]>> {
       team_size: m.team_size,
     };
   });
+  // Alphabetical by name (it-IT), not by rank/registry order.
+  rows.sort((a, b) => a.display_name.localeCompare(b.display_name, 'it'));
   return { data: rows, demo };
 }
 

@@ -61,17 +61,20 @@ export async function getZoomAttendance(
 ): Promise<AttendanceResult> {
   const { claims, demo } = await getCurrentClaims();
   const sub = await getSubtree(claims.marketer_id, 'GLOBAL');
-  const members: AttendanceMember[] = sub.data.map((n) => ({
-    id: n.id,
-    display_name: n.display_name,
-    rank: n.rank,
-    status: n.status,
-    present: {
-      wake_up: resolve(n.id, date, 'wake_up'),
-      golden: resolve(n.id, date, 'golden'),
-      join_the_dream: resolve(n.id, date, 'join_the_dream'),
-    },
-  }));
+  const members: AttendanceMember[] = sub.data
+    .map((n) => ({
+      id: n.id,
+      display_name: n.display_name,
+      rank: n.rank,
+      status: n.status,
+      present: {
+        wake_up: resolve(n.id, date, 'wake_up'),
+        golden: resolve(n.id, date, 'golden'),
+        join_the_dream: resolve(n.id, date, 'join_the_dream'),
+      },
+    }))
+    // Alphabetical by name (it-IT), not by tree/rank order.
+    .sort((a, b) => a.display_name.localeCompare(b.display_name, 'it'));
   return { date, members, demo: demo || sub.demo };
 }
 
