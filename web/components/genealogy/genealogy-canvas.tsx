@@ -18,10 +18,12 @@ import {
 import { useTranslations } from 'next-intl';
 import type { BranchScope, PlacementLeg, TreeNode } from '@/lib/types/db';
 import { MarketerNode, type MarketerNodeData } from './marketer-node';
+import { AddSlotNode, type AddSlotNodeData } from './add-slot-node';
 import {
   NODE_HEIGHT,
   NODE_WIDTH,
   layoutTree,
+  type PositionedAddSlot,
   type PositionedNode,
 } from './layout';
 
@@ -43,7 +45,7 @@ import {
  * data, only the React Flow view of it.
  */
 
-const NODE_TYPES = { marketer: MarketerNode } as const;
+const NODE_TYPES = { marketer: MarketerNode, add: AddSlotNode } as const;
 /** Above this visible-node count we drop heavyweight chrome for performance. */
 const PERF_THRESHOLD = 600;
 
@@ -69,11 +71,16 @@ export interface GenealogyCanvasProps {
   onSelect: (node: TreeNode) => void;
   onToggle: (node: TreeNode) => void;
   hasChildren: (node: TreeNode) => boolean;
+  /** Node id whose empty legs render as "+" add-slots (null = none). */
+  addSlotsForId: string | null;
+  /** Open the add-member dialog for an empty (parent, leg) slot. */
+  onAddSlot: (parentId: string, leg: PlacementLeg) => void;
 }
 
 /** Build React Flow nodes/edges from the positioned layout. */
 function toFlow(
   positioned: PositionedNode[],
+  addSlots: PositionedAddSlot[],
   edges: { id: string; source: string; target: string; leg: PlacementLeg | null }[],
   ctx: {
     selectedId: string | null;
@@ -82,9 +89,10 @@ function toFlow(
     onSelect: (n: TreeNode) => void;
     onToggle: (n: TreeNode) => void;
     hasChildren: (n: TreeNode) => boolean;
+    onAddSlot: (parentId: string, leg: PlacementLeg) => void;
   },
-): { rfNodes: Node<MarketerNodeData>[]; rfEdges: Edge[] } {
-  const rfNodes: Node<MarketerNodeData>[] = positioned.map((p) => ({
+): { rfNodes: Node<MarketerNodeData | AddSlotNodeData>[]; rfEdges: Edge[] } {
+  const marketerNodes: Node<MarketerNodeData>[] = positioned.map((p) => ({
     id: p.node.id,
     type: 'marketer',
     position: { x: p.x, y: p.y },
@@ -105,20 +113,35 @@ function toFlow(
     },
   }));
 
-  const rfEdges: Edge[] = edges.map((e) => ({
-    id: e.id,
-    source: e.source,
-    target: e.target,
-    type: 'smoothstep',
-    animated: ctx.animate,
-    style: {
-      stroke: legStroke[e.leg ?? 'root'],
-      strokeWidth: 1.75,
-      opacity: 0.55,
-    },
+  const addNodes: Node<AddSlotNodeData>[] = addSlots.map((s) => ({
+    id: s.id,
+    type: 'add',
+    position: { x: s.x, y: s.y },
+    width: NODE_WIDTH,
+    height: NODE_HEIGHT,
+    selectable: false,
+    draggable: false,
+    data: { parentId: s.parentId, leg: s.leg, onAdd: ctx.onAddSlot },
   }));
 
-  return { rfNodes, rfEdges };
+  const rfEdges: Edge[] = edges.map((e) => {
+    const isAdd = e.target.includes('__add_');
+    return {
+      id: e.id,
+      source: e.source,
+      target: e.target,
+      type: 'smoothstep',
+      animated: ctx.animate && !isAdd,
+      style: {
+        stroke: legStroke[e.leg ?? 'root'],
+        strokeWidth: 1.75,
+        opacity: isAdd ? 0.4 : 0.55,
+        strokeDasharray: isAdd ? '4 4' : undefined,
+      },
+    };
+  });
+
+  return { rfNodes: [...marketerNodes, ...addNodes], rfEdges };
 }
 
 function CanvasInner(
@@ -131,6 +154,8 @@ function CanvasInner(
     onSelect,
     onToggle,
     hasChildren,
+    addSlotsForId,
+    onAddSlot,
   }: GenealogyCanvasProps,
   ref: React.Ref<GenealogyCanvasHandle>,
 ) {
@@ -138,9 +163,9 @@ function CanvasInner(
   const rf = useReactFlow();
 
   // Compute layout (memoized on the inputs that affect geometry).
-  const { positioned, edges } = React.useMemo(
-    () => layoutTree(nodes, layoutRootId, expanded),
-    [nodes, layoutRootId, expanded],
+  const { positioned, addSlots, edges } = React.useMemo(
+    () => layoutTree(nodes, layoutRootId, expanded, addSlotsForId),
+    [nodes, layoutRootId, expanded, addSlotsForId],
   );
 
   const animate = positioned.length <= 80;
@@ -148,15 +173,27 @@ function CanvasInner(
 
   const { rfNodes, rfEdges } = React.useMemo(
     () =>
-      toFlow(positioned, edges, {
+      toFlow(positioned, addSlots, edges, {
         selectedId,
         expanded,
         animate,
         onSelect,
         onToggle,
         hasChildren,
+        onAddSlot,
       }),
-    [positioned, edges, selectedId, expanded, animate, onSelect, onToggle, hasChildren],
+    [
+      positioned,
+      addSlots,
+      edges,
+      selectedId,
+      expanded,
+      animate,
+      onSelect,
+      onToggle,
+      hasChildren,
+      onAddSlot,
+    ],
   );
 
   // Controlled node/edge state so nodes stay draggable for inspection while the

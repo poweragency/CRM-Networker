@@ -5,7 +5,7 @@ import '@xyflow/react/dist/style.css';
 import { useScope } from '@/lib/scope/scope-provider';
 import { ConfigNotice } from '@/components/config-notice';
 import { Card } from '@/components/ui/card';
-import type { SessionClaims, TreeNode } from '@/lib/types/db';
+import type { PlacementLeg, SessionClaims, TreeNode } from '@/lib/types/db';
 import {
   layoutRootForScope,
   useGenealogyTree,
@@ -14,6 +14,10 @@ import { GenealogyToolbar } from './genealogy-toolbar';
 import { BranchSummary } from './branch-summary';
 import { NodeDetailPanel } from './node-detail-panel';
 import { canActivateCrm } from './permissions';
+import {
+  AddMemberDialog,
+  type AddMemberTarget,
+} from './add-member-dialog';
 import {
   GenealogyCanvas,
   type GenealogyCanvasHandle,
@@ -59,9 +63,39 @@ export function GenealogyView({
   const selectedNode = selectedId ? tree.getNode(selectedId) ?? null : null;
   const canActivate = canActivateCrm(claims);
 
+  // Add-from-tree: the "+" slots are offered (to authorized viewers) on the
+  // selected node, or the layout root when nothing is selected (a fresh tree
+  // then shows its open slots, like the reference). Dialog target holds the
+  // chosen empty (parent, leg).
+  const [addTarget, setAddTarget] = React.useState<AddMemberTarget | null>(null);
+  const addSlotsForId = canActivate ? selectedId ?? layoutRootId : null;
+
   const handleSelect = React.useCallback((node: TreeNode) => {
     setSelectedId(node.id);
   }, []);
+
+  const handleAddSlot = React.useCallback(
+    (parentId: string, leg: PlacementLeg) => {
+      const parent = tree.getNode(parentId);
+      setAddTarget({
+        parentId,
+        leg,
+        parentName: parent?.display_name ?? '',
+      });
+    },
+    [tree],
+  );
+
+  const handleAdded = React.useCallback(
+    (node: TreeNode) => {
+      if (!addTarget) return;
+      tree.addChild(addTarget.parentId, addTarget.leg, node);
+      setSelectedId(node.id);
+      setAddTarget(null);
+      window.setTimeout(() => canvasRef.current?.centerOn(node.id), 140);
+    },
+    [addTarget, tree],
+  );
 
   const handlePick = React.useCallback(
     async (node: TreeNode) => {
@@ -113,6 +147,8 @@ export function GenealogyView({
             onSelect={handleSelect}
             onToggle={tree.toggle}
             hasChildren={tree.hasChildren}
+            addSlotsForId={addSlotsForId}
+            onAddSlot={handleAddSlot}
           />
         </Card>
 
@@ -150,6 +186,16 @@ export function GenealogyView({
           </>
         )}
       </div>
+
+      {/* Add-a-member dialog (opened from a "+" slot in the tree) */}
+      <AddMemberDialog
+        open={addTarget !== null}
+        onOpenChange={(o) => {
+          if (!o) setAddTarget(null);
+        }}
+        target={addTarget}
+        onAdded={handleAdded}
+      />
     </div>
   );
 }

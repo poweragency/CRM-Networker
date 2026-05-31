@@ -49,6 +49,8 @@ export interface UseGenealogyTree {
   /** Look a node up in the loaded cache. */
   getNode: (id: string) => TreeNode | undefined;
   search: (q: string) => Promise<TreeNode[]>;
+  /** Insert a freshly created child under a parent leg (add-from-tree). */
+  addChild: (parentId: string, leg: PlacementLeg, node: TreeNode) => void;
 }
 
 function indexById(nodes: Iterable<TreeNode>): Map<string, TreeNode> {
@@ -229,6 +231,36 @@ export function useGenealogyTree({
     return res.nodes;
   }, [mergeNodes]);
 
+  // Insert a freshly created child into the cache and bump the parent's counts /
+  // slot flags, then keep the parent expanded so the new node shows immediately.
+  const addChild = React.useCallback(
+    (parentId: string, leg: PlacementLeg, node: TreeNode) => {
+      setCache((prev) => {
+        const next = new Map(prev);
+        next.set(node.id, { ...node, parent_id: parentId, leg });
+        const parent = next.get(parentId);
+        if (parent) {
+          next.set(parentId, {
+            ...parent,
+            has_left_child: leg === 'LEFT' ? true : parent.has_left_child,
+            has_right_child: leg === 'RIGHT' ? true : parent.has_right_child,
+            left_count: leg === 'LEFT' ? parent.left_count + 1 : parent.left_count,
+            right_count: leg === 'RIGHT' ? parent.right_count + 1 : parent.right_count,
+            team_size: parent.team_size + 1,
+            children_loaded: true,
+          });
+        }
+        return next;
+      });
+      setExpanded((prev) => {
+        const nextSet = new Set(prev);
+        nextSet.add(parentId);
+        return nextSet;
+      });
+    },
+    [],
+  );
+
   // Resolve the layout root + the visible window for the current (handled by the
   // consumer via scope). Here we expose the GLOBAL window; branch trimming is done
   // by the canvas using `layoutRootForScope`.
@@ -251,6 +283,7 @@ export function useGenealogyTree({
     revealNode,
     getNode,
     search,
+    addChild,
   };
 }
 
