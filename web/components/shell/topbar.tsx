@@ -4,7 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Bell, LogOut, Menu, Search, Settings, UserRound } from 'lucide-react';
+import { Bell, LogOut, Menu, Settings, UserRound } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { ScopeSwitcher } from '@/components/scope-switcher';
 import { Avatar } from '@/components/ui/avatar';
@@ -88,32 +88,8 @@ export function Topbar({ orgName, user, unreadCount = 0, onOpenMobileNav }: Topb
         </span>
       </div>
 
-      {/* Search affordance */}
-      <div className="ml-2 hidden flex-1 justify-center lg:flex">
-        <button
-          type="button"
-          aria-label={t('search_aria')}
-          className="group inline-flex w-full max-w-md items-center gap-2 rounded-lg border bg-background px-3 py-1.5 text-sm text-muted-foreground outline-none transition-colors hover:border-ring/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <Search className="h-4 w-4 shrink-0" aria-hidden />
-          <span className="truncate">{t('search_hint')}</span>
-          <kbd className="ml-auto hidden items-center gap-0.5 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground xl:inline-flex">
-            Ctrl K
-          </kbd>
-        </button>
-      </div>
-
       {/* Right cluster */}
       <div className="ml-auto flex items-center gap-1 sm:gap-1.5">
-        {/* Search icon (small screens) */}
-        <button
-          type="button"
-          aria-label={t('search_aria')}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
-        >
-          <Search className="h-[18px] w-[18px]" aria-hidden />
-        </button>
-
         <ScopeSwitcher className="hidden sm:inline-flex" />
 
         <ThemeToggle />

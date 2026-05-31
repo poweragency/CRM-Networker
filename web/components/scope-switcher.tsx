@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Globe, PanelLeft, PanelRight } from 'lucide-react';
 import { useScope } from '@/lib/scope/scope-provider';
@@ -39,6 +40,11 @@ export function ScopeSwitcher({
 }: ScopeSwitcherProps) {
   const t = useTranslations('branch');
   const { scope, setScope } = useScope();
+  const pathname = usePathname();
+
+  // The Global/Left/Right scope only applies to the genealogy tree, so the
+  // control is surfaced there alone — elsewhere it would be inert/confusing.
+  if (!pathname.startsWith('/genealogia')) return null;
 
   return (
     <div

@@ -16,7 +16,7 @@ export interface PackageInfo {
 
 /** Highest → lowest, matching STARTING_PACKAGE_ORDER. */
 export const PACKAGE_INFO: PackageInfo[] = [
-  { key: 'signature', price: '$ 1.999', featured: true },
+  { key: 'signature', price: '$ 1.799', featured: true },
   { key: 'premium', price: '$ 999' },
   { key: 'standard', price: '$ 499' },
   { key: 'starter', price: '$ 199' },
