@@ -147,11 +147,11 @@ function MarketerNodeImpl({ data, selected: rfSelected }: NodeProps) {
 
       {/* Binary counts */}
       <div className="flex items-center gap-1 px-3 text-[11px] text-muted-foreground">
-        <span className="inline-flex items-center gap-1 rounded bg-branch-left/10 px-1.5 py-0.5 font-medium text-branch-left">
+        <span className="inline-flex items-center gap-1 rounded bg-branch-left/10 px-1.5 py-0.5 font-medium text-branch-left-foreground">
           <PanelLeft className="h-3 w-3" aria-hidden />
           {formatNumber(node.left_count)}
         </span>
-        <span className="inline-flex items-center gap-1 rounded bg-branch-right/10 px-1.5 py-0.5 font-medium text-branch-right">
+        <span className="inline-flex items-center gap-1 rounded bg-branch-right/10 px-1.5 py-0.5 font-medium text-branch-right-foreground">
           <PanelRight className="h-3 w-3" aria-hidden />
           {formatNumber(node.right_count)}
         </span>
@@ -162,7 +162,7 @@ function MarketerNodeImpl({ data, selected: rfSelected }: NodeProps) {
       </div>
 
       {/* KPI strip */}
-      <div className="mt-auto grid grid-cols-3 items-center gap-1 border-t px-1 py-2">
+      <div className="mt-auto grid grid-cols-3 items-center gap-1 rounded-b-[inherit] border-t bg-muted/30 px-1 py-2">
         <KpiCell
           icon={Target}
           value={formatNumber(node.kpis.prospects)}
