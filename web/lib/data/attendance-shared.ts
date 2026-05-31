@@ -21,6 +21,30 @@ export const ZOOM_CALL_LABELS: Record<ZoomCall, string> = {
   join_the_dream: 'Join The Dream',
 };
 
+/**
+ * Each call runs on ONE fixed weekday (0=Sun … 6=Sat):
+ *  - Wake Up Call → Monday
+ *  - Golden Call → Thursday
+ *  - Join The Dream → Sunday
+ */
+export const ZOOM_CALL_WEEKDAY: Record<ZoomCall, number> = {
+  wake_up: 1,
+  golden: 4,
+  join_the_dream: 0,
+};
+
+/** Weekday (0=Sun … 6=Sat) of an ISO `YYYY-MM-DD` — timezone-stable. */
+export function weekdayOf(isoDate: string): number {
+  const [y, m, d] = isoDate.split('-').map(Number);
+  return new Date(Date.UTC(y!, (m ?? 1) - 1, d ?? 1)).getUTCDay();
+}
+
+/** The calls scheduled on the given ISO day, in canonical order (0, 1 or more). */
+export function callsForDate(isoDate: string): ZoomCall[] {
+  const wd = weekdayOf(isoDate);
+  return ZOOM_CALLS.filter((c) => ZOOM_CALL_WEEKDAY[c] === wd);
+}
+
 export interface AttendanceMember {
   id: string;
   display_name: string;

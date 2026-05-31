@@ -11,8 +11,8 @@ import { EmptyState } from '@/components/crm/empty-state';
 import { useToast } from '@/components/crm/toaster';
 import { cn, initials } from '@/lib/utils';
 import {
-  ZOOM_CALLS,
   ZOOM_CALL_LABELS,
+  callsForDate,
   type AttendanceMember,
   type ZoomCall,
 } from '@/lib/data/attendance-shared';
@@ -20,10 +20,12 @@ import { setZoomAttendanceAction } from '@/app/(app)/presenze/actions';
 
 /**
  * AttendanceTable — the Presenze Zoom grid for one day. Rows are the viewer's
- * subtree (themselves + everyone below); columns are the three calls (Wake Up,
- * Golden, Join The Dream) with a present/absent toggle each. The day is driven by
- * the `?date=` URL param (the table is "divided by days"): prev/next/today + a
- * date picker re-navigate. Toggles are optimistic and demo-safe.
+ * subtree (themselves + everyone below). Each call runs on a FIXED weekday — Wake
+ * Up Call on Monday, Golden Call on Thursday, Join The Dream on Sunday — so the
+ * table only shows the column(s) for the call(s) scheduled on the selected day
+ * (and a notice when none). The day is driven by the `?date=` URL param (the
+ * table is "divided by days"): prev/next/today + a date picker re-navigate.
+ * Toggles are optimistic and demo-safe.
  */
 
 function shiftDay(iso: string, delta: number): string {
@@ -83,6 +85,9 @@ export function AttendanceTable({
     year: 'numeric',
   }).format(new Date(`${date}T00:00:00`));
 
+  // Only the call(s) that actually run on this weekday get a column.
+  const calls = callsForDate(date);
+
   return (
     <div className="space-y-4">
       {/* Day navigator */}
@@ -119,13 +124,19 @@ export function AttendanceTable({
           title={t('empty_title')}
           description={t('empty_body')}
         />
+      ) : calls.length === 0 ? (
+        <EmptyState
+          icon={<CalendarDays />}
+          title={t('no_call_title')}
+          description={t('no_call_body')}
+        />
       ) : (
         <div className="overflow-x-auto rounded-xl border bg-card">
           <table className="w-full caption-bottom text-sm">
             <thead className="bg-muted/60">
               <tr className="border-b text-xs font-medium text-muted-foreground">
                 <th className="h-11 px-3 text-left">{t('col_member')}</th>
-                {ZOOM_CALLS.map((c) => (
+                {calls.map((c) => (
                   <th key={c} className="h-11 px-3 text-center">
                     {ZOOM_CALL_LABELS[c]}
                   </th>
@@ -154,7 +165,7 @@ export function AttendanceTable({
                       </span>
                     </span>
                   </td>
-                  {ZOOM_CALLS.map((c) => {
+                  {calls.map((c) => {
                     const present = state[m.id]?.[c] ?? false;
                     return (
                       <td key={c} className="px-3 py-2.5 text-center">
