@@ -39,10 +39,10 @@ export async function MarketerTable({ rows }: { rows: AdminMarketerRow[] }) {
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border bg-card">
+    <div className="overflow-x-auto rounded-xl border bg-card shadow-sm">
       <table className="w-full caption-bottom text-sm">
         <thead className="bg-muted/60">
-          <tr className="border-b text-xs font-medium text-muted-foreground">
+          <tr className="border-b text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
             <th className="h-11 px-3 text-left">{t('col_name')}</th>
             <th className="h-11 px-3 text-left">{t('col_rank')}</th>
             <th className="h-11 px-3 text-left">{t('col_status')}</th>
