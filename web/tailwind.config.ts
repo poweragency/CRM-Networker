@@ -22,6 +22,10 @@ const config: Config = {
         primary: {
           DEFAULT: 'hsl(var(--primary))',
           foreground: 'hsl(var(--primary-foreground))',
+          50: 'hsl(var(--primary-50))',
+          100: 'hsl(var(--primary-100))',
+          600: 'hsl(var(--primary-600))',
+          700: 'hsl(var(--primary-700))',
         },
         muted: {
           DEFAULT: 'hsl(var(--muted))',
@@ -30,10 +34,22 @@ const config: Config = {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
-        success: 'hsl(var(--success))',
-        warning: 'hsl(var(--warning))',
-        danger: 'hsl(var(--danger))',
-        info: 'hsl(var(--info))',
+        success: {
+          DEFAULT: 'hsl(var(--success))',
+          foreground: 'hsl(var(--on-success))',
+        },
+        warning: {
+          DEFAULT: 'hsl(var(--warning))',
+          foreground: 'hsl(var(--on-warning))',
+        },
+        danger: {
+          DEFAULT: 'hsl(var(--danger))',
+          foreground: 'hsl(var(--on-danger))',
+        },
+        info: {
+          DEFAULT: 'hsl(var(--info))',
+          foreground: 'hsl(var(--on-info))',
+        },
         stage: {
           conoscitiva: 'hsl(var(--stage-conoscitiva))',
           businessInfo: 'hsl(var(--stage-business-info))',
@@ -46,6 +62,8 @@ const config: Config = {
           global: 'hsl(var(--branch-global))',
           left: 'hsl(var(--branch-left))',
           right: 'hsl(var(--branch-right))',
+          'left-foreground': 'hsl(var(--branch-left-foreground))',
+          'right-foreground': 'hsl(var(--branch-right-foreground))',
         },
         rank: {
           executive: 'hsl(var(--rank-executive))',
@@ -67,6 +85,27 @@ const config: Config = {
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
         xl: 'calc(var(--radius) + 0.25rem)',
+      },
+      boxShadow: {
+        // Low-chrome elevation ramp (premium SaaS). Dark relies on borders.
+        xs: '0 1px 2px rgba(16, 24, 40, 0.04)',
+        sm: '0 1px 3px rgba(16, 24, 40, 0.06)',
+        md: '0 4px 12px rgba(16, 24, 40, 0.08)',
+        lg: '0 12px 32px rgba(16, 24, 40, 0.12)',
+      },
+      transitionDuration: {
+        fast: '80ms',
+        base: '150ms',
+      },
+      transitionTimingFunction: {
+        standard: 'cubic-bezier(0.2, 0, 0, 1)',
+        emphasized: 'cubic-bezier(0.16, 1, 0.3, 1)',
+      },
+      spacing: {
+        rail: 'var(--rail-w)',
+        side: 'var(--side-w)',
+        drawer: 'var(--drawer-w)',
+        topbar: 'var(--topbar-h)',
       },
       fontFamily: {
         sans: ['var(--font-sans)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
