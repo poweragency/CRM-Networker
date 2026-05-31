@@ -43,42 +43,39 @@ export function Sidebar({ viewer, collapsed, onToggleCollapsed }: SidebarProps) 
           collapsed ? 'justify-center px-2' : 'justify-between px-4',
         )}
       >
-        <Link
-          href="/dashboard"
-          className="flex items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          aria-label={tc('appName')}
-        >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-            <Network className="h-[18px] w-[18px]" aria-hidden />
-          </span>
-          {!collapsed && (
-            <span className="truncate text-sm font-semibold tracking-tight text-card-foreground">
-              {tc('appName')}
-            </span>
-          )}
-        </Link>
-
-        {!collapsed && (
-          <CollapseButton
-            collapsed={collapsed}
-            label={t('toggle_sidebar')}
-            onClick={onToggleCollapsed}
-          />
-        )}
-      </div>
-
-      <SidebarNav viewer={viewer} collapsed={collapsed} />
-
-      {/* Expand affordance pinned at the bottom when collapsed */}
-      {collapsed && (
-        <div className="flex justify-center border-t px-2 py-3">
+        {collapsed ? (
+          // Collapsed rail: the header IS the expand control, so reopening sits
+          // exactly where the collapse button was (top), not hidden at the bottom.
           <CollapseButton
             collapsed={collapsed}
             label={t('open_menu')}
             onClick={onToggleCollapsed}
           />
-        </div>
-      )}
+        ) : (
+          <>
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label={tc('appName')}
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+                <Network className="h-[18px] w-[18px]" aria-hidden />
+              </span>
+              <span className="truncate text-sm font-semibold tracking-tight text-card-foreground">
+                {tc('appName')}
+              </span>
+            </Link>
+
+            <CollapseButton
+              collapsed={collapsed}
+              label={t('toggle_sidebar')}
+              onClick={onToggleCollapsed}
+            />
+          </>
+        )}
+      </div>
+
+      <SidebarNav viewer={viewer} collapsed={collapsed} />
     </aside>
   );
 }
