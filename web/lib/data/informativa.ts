@@ -1,92 +1,65 @@
 import type { StartingPackage } from '@/lib/types/db';
 
 /**
- * Static content for the Informativa section: package prices + useful materials.
- * Prices and materials are placeholders for now (to be replaced with the official
- * values/files) — pure data, no env required.
+ * Static content for the Informativa section: package prices + downloadable PDFs.
+ * Prices are shown in dollars (+ IVA); PDF urls are placeholders for now (to be
+ * replaced with the official files) — pure data, no env required.
  */
 
 export interface PackageInfo {
   key: StartingPackage;
-  /** Display price (indicative — replace with official figures). */
+  /** Display price in dollars (the "+ IVA" suffix is added by the UI). */
   price: string;
-  tagline: string;
-  features: string[];
   /** Highlight the flagship package. */
   featured?: boolean;
 }
 
 /** Highest → lowest, matching STARTING_PACKAGE_ORDER. */
 export const PACKAGE_INFO: PackageInfo[] = [
-  {
-    key: 'signature',
-    price: '€ 1.999',
-    tagline: 'Il pacchetto completo, top di gamma.',
-    featured: true,
-    features: [
-      'Accesso completo alla piattaforma',
-      'Tutti i percorsi formativi',
-      'Materiali premium e bonus',
-      'Supporto prioritario',
-    ],
-  },
-  {
-    key: 'premium',
-    price: '€ 999',
-    tagline: 'Per chi vuole accelerare sul serio.',
-    features: [
-      'Accesso alla piattaforma',
-      'Percorsi formativi avanzati',
-      'Materiali premium',
-    ],
-  },
-  {
-    key: 'standard',
-    price: '€ 499',
-    tagline: 'Tutto l’essenziale per partire bene.',
-    features: ['Accesso alla piattaforma', 'Percorsi formativi base'],
-  },
-  {
-    key: 'starter',
-    price: '€ 199',
-    tagline: 'Il primo passo, per iniziare.',
-    features: ['Accesso base alla piattaforma'],
-  },
+  { key: 'signature', price: '$ 1.999', featured: true },
+  { key: 'premium', price: '$ 999' },
+  { key: 'standard', price: '$ 499' },
+  { key: 'starter', price: '$ 199' },
 ];
 
-export type MaterialType = 'pdf' | 'video' | 'link';
+export type MaterialType = 'pdf' | 'link';
 
-export interface MaterialInfo {
+export interface MaterialItem {
   title: string;
   type: MaterialType;
-  description: string;
   /** Placeholder until the real assets are uploaded. */
   url: string;
 }
 
-export const MATERIALS: MaterialInfo[] = [
+/** A named folder grouping downloadable materials. */
+export interface MaterialFolder {
+  title: string;
+  items: MaterialItem[];
+}
+
+/** The PDF section: downloadable materials organised in folders. */
+export const MATERIAL_FOLDERS: MaterialFolder[] = [
   {
-    title: 'Presentazione aziendale',
-    type: 'pdf',
-    description: 'La presentazione ufficiale del business (PDF).',
-    url: '#',
+    title: 'Business Info',
+    items: [
+      { title: 'Business Info', type: 'pdf', url: '#' },
+      { title: 'Linktree materiale post Business Info', type: 'link', url: '#' },
+    ],
   },
   {
-    title: 'Listino pacchetti',
-    type: 'pdf',
-    description: 'Il dettaglio completo dei pacchetti e dei prezzi (PDF).',
-    url: '#',
+    title: 'Follow Up',
+    items: [
+      { title: 'Follow Up', type: 'pdf', url: '#' },
+      { title: 'Linktree materiale post Follow Up', type: 'link', url: '#' },
+    ],
   },
   {
-    title: 'Guida ai percorsi formativi',
-    type: 'pdf',
-    description: 'Come funzionano i percorsi informativi (PDF).',
-    url: '#',
-  },
-  {
-    title: 'Video introduttivo',
-    type: 'video',
-    description: 'Una panoramica in pochi minuti.',
-    url: '#',
+    title: 'GPS',
+    items: [
+      { title: 'GPS 1', type: 'pdf', url: '#' },
+      { title: 'GPS 2', type: 'pdf', url: '#' },
+      { title: 'GPS 3', type: 'pdf', url: '#' },
+      { title: 'GPS Freddi', type: 'pdf', url: '#' },
+    ],
   },
 ];

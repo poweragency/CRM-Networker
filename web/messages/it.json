@@ -1001,11 +1001,11 @@
     "subtitle": "Prezzi dei pacchetti e materiali utili.",
     "packages_title": "Prezzi pacchetti",
     "packages_subtitle": "I quattro pacchetti di partenza, dal più alto.",
-    "package_features": "Cosa include",
-    "materials_title": "Materiali utili",
-    "materials_subtitle": "Documenti, PDF e risorse da consultare.",
-    "download": "Apri",
+    "vat": "+ IVA",
     "price_note": "Prezzi indicativi — da aggiornare con i valori ufficiali.",
-    "materials_empty": "Nessun materiale disponibile."
+    "pdf_title": "PDF",
+    "pdf_subtitle": "Documenti scaricabili, organizzati per cartella.",
+    "download": "Scarica",
+    "open": "Apri"
   }
 }
