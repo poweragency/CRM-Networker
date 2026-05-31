@@ -59,9 +59,9 @@ export const ROLE_ORDER: readonly MembershipRole[] = [
 
 /**
  * The sidebar is intentionally reduced to four destinations (product decision):
- *   1. Statistiche    — the team roster (each member → /team/[id])
+ *   1. Dashboard      — best marketers of the month, by category
  *   2. Genealogia     — the binary tree viewer (unchanged)
- *   3. Dashboard      — best marketers of the month, by category
+ *   3. Statistiche    — the team roster (each member → /team/[id])
  *   4. Presenze Zoom  — per-day attendance for the 3 calls (own subtree)
  * Informativa + Impostazioni live in the footer group at the very bottom
  * (Informativa above Impostazioni, separated by a divider). 100's list, Sette
@@ -73,9 +73,9 @@ export const navSections: NavSection[] = [
   {
     titleKey: 'principale',
     items: [
-      { href: '/statistiche', labelKey: 'statistics', icon: BarChart3 },
-      { href: '/genealogia', labelKey: 'tree', icon: Network },
       { href: '/dashboard', labelKey: 'dashboard', icon: LayoutDashboard },
+      { href: '/genealogia', labelKey: 'tree', icon: Network },
+      { href: '/statistiche', labelKey: 'statistics', icon: BarChart3 },
       { href: '/presenze', labelKey: 'attendance', icon: ClipboardCheck },
     ],
   },
