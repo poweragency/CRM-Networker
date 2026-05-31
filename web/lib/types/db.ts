@@ -10,8 +10,14 @@
 
 /* ───────────────────────────── Enums ───────────────────────────── */
 
-/** `marketer_rank` — ordered ascending by seniority (index = rank order). */
+/**
+ * `marketer_rank` — ordered ascending by seniority (index = rank order).
+ * `cliente` and `no_rank` sit BELOW `executive` (a customer / a not-yet-ranked
+ * marketer); they are NOT a starting package (those are {@link StartingPackage}).
+ */
 export type MarketerRank =
+  | 'cliente'
+  | 'no_rank'
   | 'executive'
   | 'consultant'
   | 'team_leader'
@@ -21,6 +27,8 @@ export type MarketerRank =
 
 /** Canonical seniority order (low → high). Use for `>=` rank gating. */
 export const RANK_ORDER: readonly MarketerRank[] = [
+  'cliente',
+  'no_rank',
   'executive',
   'consultant',
   'team_leader',
@@ -31,6 +39,8 @@ export const RANK_ORDER: readonly MarketerRank[] = [
 
 /** Italian display labels for ranks (mirrors `ranks_meta.label_it`). */
 export const RANK_LABELS: Record<MarketerRank, string> = {
+  cliente: 'Cliente',
+  no_rank: 'No Rank',
   executive: 'Executive',
   consultant: 'Consultant',
   team_leader: 'Team Leader',
@@ -38,6 +48,95 @@ export const RANK_LABELS: Record<MarketerRank, string> = {
   executive_team_leader: 'Executive Team Leader',
   vice_president: 'Vice President',
 };
+
+/* ─────────────────── Marketer profile extras (anagrafica) ─────────────────── */
+
+/**
+ * `starting_package` — the membership pack chosen at enrolment, highest → lowest.
+ * NOTE: a package is NOT a rank (see {@link MarketerRank}); the two are
+ * independent dimensions of a profile.
+ */
+export type StartingPackage = 'signature' | 'premium' | 'standard' | 'starter';
+
+/** Starting packages, highest → lowest (display order). */
+export const STARTING_PACKAGE_ORDER: readonly StartingPackage[] = [
+  'signature',
+  'premium',
+  'standard',
+  'starter',
+] as const;
+
+export const STARTING_PACKAGE_LABELS: Record<StartingPackage, string> = {
+  signature: 'Signature',
+  premium: 'Premium',
+  standard: 'Standard',
+  starter: 'Starter',
+};
+
+/** What the member currently does (studia/lavora) — free anagrafica field. */
+export type Occupation = 'studia' | 'lavora' | 'entrambi' | 'nessuno';
+
+export const OCCUPATION_ORDER: readonly Occupation[] = [
+  'studia',
+  'lavora',
+  'entrambi',
+  'nessuno',
+] as const;
+
+export const OCCUPATION_LABELS: Record<Occupation, string> = {
+  studia: 'Studia',
+  lavora: 'Lavora',
+  entrambi: 'Studia e lavora',
+  nessuno: 'Né studia né lavora',
+};
+
+/**
+ * The editable, per-marketer anagrafica extras shown on /team/[id]. Frontend +
+ * mock only for now (no DB columns yet) — see `lib/data/team.ts`. The base
+ * identity (nome/cognome/sponsor/rank/data iscrizione) comes from the genealogy
+ * node + registry; these are the additional fields the profile collects.
+ */
+export interface MarketerExtra {
+  starting_package: StartingPackage | null;
+  /** Free text for now (the addon catalogue is defined later). */
+  addon: string | null;
+  /** "click" — accesso alla piattaforma aziendale (sì/no). */
+  platform_click: boolean;
+  /** Città di provenienza. */
+  city: string | null;
+  region: string | null;
+  /** ISO `YYYY-MM-DD`. */
+  birth_date: string | null;
+  occupation: Occupation | null;
+  /** Note a parte (campo libero). */
+  notes: string | null;
+}
+
+/** Full team-member profile = identity + sponsor/registration + {@link MarketerExtra}. */
+export interface TeamMemberProfile extends MarketerExtra {
+  id: string;
+  first_name: string;
+  last_name: string;
+  display_name: string;
+  rank: MarketerRank;
+  status: MarketerStatus;
+  sponsor_id: string | null;
+  sponsor_name: string | null;
+  registration_date: string | null;
+}
+
+/** One row of the Statistiche roster (compact, clickable → /team/[id]). */
+export interface TeamMemberRow {
+  id: string;
+  display_name: string;
+  rank: MarketerRank;
+  status: MarketerStatus;
+  starting_package: StartingPackage | null;
+  city: string | null;
+  region: string | null;
+  registration_date: string | null;
+  team_size: number;
+}
 
 /** `marketer_status` — lifecycle of a marketer profile. */
 export type MarketerStatus = 'pending' | 'active' | 'inactive' | 'suspended';

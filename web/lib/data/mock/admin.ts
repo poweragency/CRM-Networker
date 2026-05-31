@@ -19,9 +19,9 @@ import { daysAgo } from '@/lib/data/mock/_shared';
  * server-only data layer.
  */
 
-/** CRM-eligible = consultant..vice_president (rank index >= 1). */
+/** CRM-eligible = consultant..vice_president (rank index >= consultant's index). */
 function crmEligible(rankIndex: number): boolean {
-  return rankIndex >= 1;
+  return rankIndex >= RANK_ORDER.indexOf('consultant');
 }
 
 function email(first: string, last: string): string {

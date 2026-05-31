@@ -20,28 +20,40 @@ import { demoId } from '@/lib/data/mock/_shared';
 const SELECT =
   'id,org_id,owner_marketer_id,position,full_name,phone,relationship,rating,contacted,promoted_contact_id,notes,created_at,updated_at,deleted_at';
 
-/** List the caller's Centos entries, ordered by position. */
-export async function listCentos(): Promise<CrmResult<CentosEntry[]>> {
+/**
+ * List Centos entries ordered by position. Defaults to the caller's own list;
+ * pass `ownerMarketerId` for the per-person profile view (RLS scopes reads to the
+ * caller's visible subtree). The mock list is owned by the demo caller, so other
+ * marketers degrade to an empty list in demo mode.
+ */
+export async function listCentos(
+  ownerMarketerId?: string,
+): Promise<CrmResult<CentosEntry[]>> {
   const supabase = getClient();
   if (!supabase) {
-    const rows = MOCK_CENTOS.filter((e) => !e.deleted_at).sort(
-      (a, b) => a.position - b.position,
-    );
+    const rows = MOCK_CENTOS.filter((e) => !e.deleted_at)
+      .filter((e) => (ownerMarketerId ? e.owner_marketer_id === ownerMarketerId : true))
+      .sort((a, b) => a.position - b.position);
     return ok(rows, true);
   }
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('centos_list_entries')
       .select(SELECT)
-      .is('deleted_at', null)
-      .order('position', { ascending: true });
+      .is('deleted_at', null);
+    if (ownerMarketerId) query = query.eq('owner_marketer_id', ownerMarketerId);
+    const { data, error } = await query.order('position', { ascending: true });
     if (error || !data) {
-      const rows = [...MOCK_CENTOS].sort((a, b) => a.position - b.position);
+      const rows = [...MOCK_CENTOS]
+        .filter((e) => (ownerMarketerId ? e.owner_marketer_id === ownerMarketerId : true))
+        .sort((a, b) => a.position - b.position);
       return ok(rows, true);
     }
     return ok(data as CentosEntry[], false);
   } catch {
-    const rows = [...MOCK_CENTOS].sort((a, b) => a.position - b.position);
+    const rows = [...MOCK_CENTOS]
+      .filter((e) => (ownerMarketerId ? e.owner_marketer_id === ownerMarketerId : true))
+      .sort((a, b) => a.position - b.position);
     return ok(rows, true);
   }
 }

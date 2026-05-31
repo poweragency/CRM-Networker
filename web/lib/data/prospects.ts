@@ -36,6 +36,8 @@ export interface ProspectFilters {
   search?: string;
   /** restrict to open prospects (exclude enrolled/lost). default false. */
   openOnly?: boolean;
+  /** scope to one owner marketer (the per-person profile view). default = all visible. */
+  ownerMarketerId?: string;
 }
 
 /** A board column: one stage + its prospects, in canonical order. */
@@ -51,8 +53,9 @@ export interface ProspectBoard {
 }
 
 function filterMock(filters: ProspectFilters): Prospect[] {
-  const { search = '', openOnly = false } = filters;
+  const { search = '', openOnly = false, ownerMarketerId } = filters;
   return MOCK_PROSPECTS.filter((p) => !p.deleted_at)
+    .filter((p) => (ownerMarketerId ? p.owner_marketer_id === ownerMarketerId : true))
     .filter((p) => (openOnly ? p.outcome === 'open' : true))
     .filter((p) => matchesText(p.full_name, search));
 }
@@ -81,6 +84,8 @@ export async function listProspectBoard(
   }
   try {
     let query = supabase.from('prospects').select(SELECT).is('deleted_at', null);
+    if (filters.ownerMarketerId)
+      query = query.eq('owner_marketer_id', filters.ownerMarketerId);
     if (filters.openOnly) query = query.eq('outcome', 'open');
     if (filters.search) query = query.ilike('full_name', `%${filters.search}%`);
     const { data, error } = await query;

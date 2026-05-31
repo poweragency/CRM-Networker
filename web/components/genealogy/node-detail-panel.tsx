@@ -1,7 +1,9 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import {
+  FolderOpen,
   KeyRound,
   Locate,
   PanelLeft,
@@ -16,7 +18,7 @@ import {
 import { useTranslations } from 'next-intl';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { RankBadge } from '@/components/ui/rank-badge';
 import { Separator } from '@/components/ui/separator';
 import { StatusDot } from '@/components/ui/status-dot';
@@ -220,6 +222,11 @@ export function NodeDetailPanel({
 
       {/* Footer actions */}
       <div className="space-y-2 border-t p-4">
+        <Link href={`/team/${node.id}`} className={cn(buttonVariants(), 'w-full')}>
+          <FolderOpen aria-hidden />
+          {t('open_profile')}
+        </Link>
+
         <Button
           variant="outline"
           className="w-full"

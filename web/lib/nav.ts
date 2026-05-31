@@ -1,23 +1,9 @@
 import {
   LayoutDashboard,
   Network,
-  Users,
-  KanbanSquare,
-  Phone,
-  ListChecks,
-  HelpCircle,
-  FileText,
   BarChart3,
-  Trophy,
-  FileBarChart,
-  Bell,
+  BookOpen,
   Settings,
-  ShieldCheck,
-  UserPlus,
-  KeyRound,
-  Medal,
-  ScrollText,
-  Building2,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -68,62 +54,25 @@ export const ROLE_ORDER: readonly MembershipRole[] = [
   'owner',
 ];
 
+/**
+ * The sidebar is intentionally reduced to four destinations (product decision):
+ *   1. Statistiche  — the team roster (each member → /team/[id])
+ *   2. Genealogia   — the binary tree viewer (unchanged)
+ *   3. Dashboard    — best marketers of the month, by category
+ *   4. Informativa  — package prices + useful materials
+ * 100's list, Sette Perché and i percorsi informativi are PER-PERSON files and
+ * live INSIDE the single marketer profile (/team/[id]), not in the menu. The
+ * legacy CRM/Analisi/Admin pages still exist in the codebase but are no longer
+ * surfaced here; only Impostazioni remains in the footer.
+ */
 export const navSections: NavSection[] = [
   {
     titleKey: 'principale',
     items: [
-      { href: '/dashboard', labelKey: 'dashboard', icon: LayoutDashboard },
+      { href: '/statistiche', labelKey: 'statistics', icon: BarChart3 },
       { href: '/genealogia', labelKey: 'tree', icon: Network },
-      { href: '/notifiche', labelKey: 'notifications', icon: Bell },
-    ],
-  },
-  {
-    titleKey: 'crm',
-    gate: { requireCrmAccess: true },
-    items: [
-      { href: '/contatti', labelKey: 'contacts', icon: Users },
-      { href: '/percorso-prospect', labelKey: 'prospects', icon: KanbanSquare },
-      { href: '/chiamate', labelKey: 'calls', icon: Phone },
-      { href: '/centos', labelKey: 'centos', icon: ListChecks },
-      { href: '/sette-perche', labelKey: 'seven_whys', icon: HelpCircle },
-      { href: '/documenti', labelKey: 'documents', icon: FileText },
-    ],
-  },
-  {
-    titleKey: 'analisi',
-    items: [
-      { href: '/analytics', labelKey: 'analytics', icon: BarChart3 },
-      { href: '/classifiche', labelKey: 'leaderboards', icon: Trophy },
-      { href: '/report', labelKey: 'reports', icon: FileBarChart },
-    ],
-  },
-  {
-    titleKey: 'admin',
-    // Whole section is admin/owner; the Attivazioni item additionally accepts
-    // rank ≥ team_leader within own subtree (ADR-003) — see `attivazioniGate`.
-    gate: { minRole: 'admin' },
-    items: [
-      { href: '/admin', labelKey: 'admin_dashboard', icon: ShieldCheck },
-      { href: '/admin/marketer', labelKey: 'admin_marketer', icon: Users },
-      {
-        href: '/admin/marketer/nuovo',
-        labelKey: 'admin_marketer_new',
-        icon: UserPlus,
-      },
-      {
-        href: '/admin/attivazioni',
-        labelKey: 'admin_activations',
-        icon: KeyRound,
-        // Overrides the section gate: admin/owner OR rank ≥ team_leader.
-        gate: { minRank: 'team_leader' },
-      },
-      { href: '/admin/ranghi', labelKey: 'admin_ranks', icon: Medal },
-      { href: '/admin/audit', labelKey: 'admin_audit', icon: ScrollText },
-      {
-        href: '/admin/impostazioni-org',
-        labelKey: 'admin_org_settings',
-        icon: Building2,
-      },
+      { href: '/dashboard', labelKey: 'dashboard', icon: LayoutDashboard },
+      { href: '/informativa', labelKey: 'informativa', icon: BookOpen },
     ],
   },
 ];

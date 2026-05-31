@@ -10,6 +10,16 @@ import { RANK_LABELS, type MarketerRank } from '@/lib/types/db';
  */
 
 const rankTone: Record<MarketerRank, { text: string; bg: string; dot: string }> = {
+  cliente: {
+    text: 'text-muted-foreground',
+    bg: 'bg-muted',
+    dot: 'bg-muted-foreground/60',
+  },
+  no_rank: {
+    text: 'text-muted-foreground',
+    bg: 'bg-muted',
+    dot: 'bg-muted-foreground',
+  },
   executive: {
     text: 'text-rank-executive',
     bg: 'bg-rank-executive/12',

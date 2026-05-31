@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { Users } from 'lucide-react';
 import {
@@ -59,9 +60,12 @@ export async function MarketerTable({ rows }: { rows: AdminMarketerRow[] }) {
                     {initials(r.display_name)}
                   </span>
                   <span className="min-w-0">
-                    <span className="block truncate font-medium text-foreground">
+                    <Link
+                      href={`/team/${r.id}`}
+                      className="block truncate font-medium text-foreground hover:text-primary hover:underline"
+                    >
                       {r.display_name}
-                    </span>
+                    </Link>
                     {r.email && (
                       <span className="block truncate text-xs text-muted-foreground">
                         {r.email}

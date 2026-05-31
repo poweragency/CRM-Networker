@@ -45,6 +45,8 @@ function asRole(value: unknown): MembershipRole {
 
 function asRank(value: unknown): MarketerRank {
   const ranks: MarketerRank[] = [
+    'cliente',
+    'no_rank',
     'executive',
     'consultant',
     'team_leader',
