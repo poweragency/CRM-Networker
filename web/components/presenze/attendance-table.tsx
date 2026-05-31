@@ -6,10 +6,9 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { RankBadge } from '@/components/ui/rank-badge';
 import { EmptyState } from '@/components/crm/empty-state';
 import { useToast } from '@/components/crm/toaster';
-import { cn, initials } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import {
   ZOOM_CALL_LABELS,
   callsForDate,
@@ -19,13 +18,16 @@ import {
 import { setZoomAttendanceAction } from '@/app/(app)/presenze/actions';
 
 /**
- * AttendanceTable — the Presenze Zoom grid for one day. Rows are the viewer's
- * subtree (themselves + everyone below). Each call runs on a FIXED weekday — Wake
- * Up Call on Monday, Golden Call on Thursday, Join The Dream on Sunday — so the
- * table only shows the column(s) for the call(s) scheduled on the selected day
- * (and a notice when none). The day is driven by the `?date=` URL param (the
- * table is "divided by days"): prev/next/today + a date picker re-navigate.
- * Toggles are optimistic and demo-safe.
+ * AttendanceTable — the Presenze Zoom grid for one day. The people are the
+ * viewer's subtree (themselves + everyone below — each person only ever sees
+ * their own downline). Each call runs on a FIXED weekday — Wake Up Call on
+ * Monday, Golden Call on Thursday, Join The Dream on Sunday — so only the call(s)
+ * scheduled on the selected day are shown (a notice when none).
+ *
+ * Layout is a dense horizontal grid of compact "Nome — presenza" cells that pack
+ * as many per row as fit and then wrap, so large teams stay readable at a glance.
+ * The day is driven by the `?date=` URL param (the table is "divided by days"):
+ * prev/next/today + a date picker re-navigate. Toggles are optimistic, demo-safe.
  */
 
 function shiftDay(iso: string, delta: number): string {
@@ -131,44 +133,35 @@ export function AttendanceTable({
           description={t('no_call_body')}
         />
       ) : (
-        <div className="overflow-x-auto rounded-xl border bg-card">
-          <table className="w-full caption-bottom text-sm">
-            <thead className="bg-muted/60">
-              <tr className="border-b text-xs font-medium text-muted-foreground">
-                <th className="h-11 px-3 text-left">{t('col_member')}</th>
-                {calls.map((c) => (
-                  <th key={c} className="h-11 px-3 text-center">
-                    {ZOOM_CALL_LABELS[c]}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {members.map((m) => (
-                <tr
-                  key={m.id}
-                  className="border-b transition-colors last:border-0 hover:bg-muted/40"
-                >
-                  <td className="px-3 py-2.5">
-                    <span className="flex items-center gap-2.5">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
-                        {initials(m.display_name)}
-                      </span>
-                      <span className="min-w-0">
+        <div className="space-y-5">
+          {calls.map((c) => {
+            const presentCount = members.filter(
+              (m) => state[m.id]?.[c],
+            ).length;
+            return (
+              <section key={c} className="space-y-2">
+                <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                  {ZOOM_CALL_LABELS[c]}
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
+                    {presentCount}/{members.length}
+                  </span>
+                </h2>
+                {/* Dense, wrapping grid: each cell = name + presence toggle. */}
+                <div className="grid gap-1.5 [grid-template-columns:repeat(auto-fill,minmax(12rem,1fr))]">
+                  {members.map((m) => {
+                    const present = state[m.id]?.[c] ?? false;
+                    return (
+                      <div
+                        key={m.id}
+                        className="flex items-center justify-between gap-2 rounded-md border bg-card py-1 pl-2.5 pr-1"
+                      >
                         <Link
                           href={`/team/${m.id}`}
-                          className="block truncate font-medium text-foreground hover:text-primary hover:underline"
+                          title={m.display_name}
+                          className="min-w-0 flex-1 truncate text-xs font-medium text-foreground hover:text-primary hover:underline"
                         >
                           {m.display_name}
                         </Link>
-                        <RankBadge rank={m.rank} variant="dot" className="text-[11px]" />
-                      </span>
-                    </span>
-                  </td>
-                  {calls.map((c) => {
-                    const present = state[m.id]?.[c] ?? false;
-                    return (
-                      <td key={c} className="px-3 py-2.5 text-center">
                         <button
                           type="button"
                           role="checkbox"
@@ -176,7 +169,7 @@ export function AttendanceTable({
                           aria-label={`${m.display_name} — ${ZOOM_CALL_LABELS[c]}`}
                           onClick={() => toggle(m, c)}
                           className={cn(
-                            'inline-flex h-7 min-w-[3.25rem] items-center justify-center rounded-full px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                            'inline-flex h-6 min-w-[2.75rem] shrink-0 items-center justify-center rounded-full px-2 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                             present
                               ? 'bg-success/15 text-success hover:bg-success/25'
                               : 'bg-muted text-muted-foreground hover:bg-muted/70',
@@ -184,13 +177,13 @@ export function AttendanceTable({
                         >
                           {present ? t('present') : t('absent')}
                         </button>
-                      </td>
+                      </div>
                     );
                   })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                </div>
+              </section>
+            );
+          })}
         </div>
       )}
     </div>

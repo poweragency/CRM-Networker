@@ -37,6 +37,8 @@ export interface NavItem {
   labelKey: string;
   icon: LucideIcon;
   gate?: NavGate;
+  /** Render a divider line above this item (used in the footer group). */
+  separatorBefore?: boolean;
 }
 
 export interface NavSection {
@@ -61,11 +63,11 @@ export const ROLE_ORDER: readonly MembershipRole[] = [
  *   2. Genealogia     — the binary tree viewer (unchanged)
  *   3. Dashboard      — best marketers of the month, by category
  *   4. Presenze Zoom  — per-day attendance for the 3 calls (own subtree)
- *   5. Informativa    — package prices + useful materials
- * 100's list, Sette Perché and i percorsi informativi are PER-PERSON files and
- * live INSIDE the single marketer profile (/team/[id]), not in the menu. The
- * legacy CRM/Analisi/Admin pages still exist in the codebase but are no longer
- * surfaced here; only Impostazioni remains in the footer.
+ * Informativa + Impostazioni live in the footer group at the very bottom
+ * (Informativa above Impostazioni, separated by a divider). 100's list, Sette
+ * Perché and i percorsi informativi are PER-PERSON files and live INSIDE the
+ * single marketer profile (/team/[id]), not in the menu. The legacy
+ * CRM/Analisi/Admin pages still exist in the codebase but are no longer surfaced.
  */
 export const navSections: NavSection[] = [
   {
@@ -75,14 +77,22 @@ export const navSections: NavSection[] = [
       { href: '/genealogia', labelKey: 'tree', icon: Network },
       { href: '/dashboard', labelKey: 'dashboard', icon: LayoutDashboard },
       { href: '/presenze', labelKey: 'attendance', icon: ClipboardCheck },
-      { href: '/informativa', labelKey: 'informativa', icon: BookOpen },
     ],
   },
 ];
 
-/** Footer items rendered below the sections (always present). */
+/**
+ * Footer items pinned at the bottom: Informativa, then Impostazioni below a
+ * divider so the two read as elegantly separated.
+ */
 export const navFooterItems: NavItem[] = [
-  { href: '/impostazioni', labelKey: 'settings', icon: Settings },
+  { href: '/informativa', labelKey: 'informativa', icon: BookOpen },
+  {
+    href: '/impostazioni',
+    labelKey: 'settings',
+    icon: Settings,
+    separatorBefore: true,
+  },
 ];
 
 /* ───────────────────────── gating helpers ───────────────────────── */

@@ -88,7 +88,10 @@ export function SidebarNav({ viewer, collapsed = false, onNavigate }: SidebarNav
       <div className={cn('border-t py-3', collapsed ? 'px-2' : 'px-3')}>
         <ul className="space-y-0.5">
           {navFooterItems.map((item) => (
-            <li key={item.href}>
+            <li
+              key={item.href}
+              className={cn(item.separatorBefore && 'mt-2 border-t pt-2')}
+            >
               <NavLink
                 href={item.href}
                 label={t(item.labelKey)}
