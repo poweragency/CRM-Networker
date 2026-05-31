@@ -41,7 +41,7 @@ export function KpiCard({
   return (
     <Card
       className={cn(
-        'flex flex-col gap-3 p-4 transition-shadow hover:shadow-md sm:p-5',
+        'flex flex-col gap-3 p-4 shadow-sm transition-[box-shadow,transform] duration-base ease-standard hover:-translate-y-px hover:shadow-md sm:p-5',
         className,
       )}
     >

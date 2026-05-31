@@ -129,7 +129,7 @@ export function DataTable<TData>({
 
   return (
     <div className={cn('w-full', className)}>
-      <div className="relative overflow-x-auto rounded-xl border bg-card">
+      <div className="relative overflow-x-auto rounded-xl border bg-card shadow-sm">
         <table className="w-full caption-bottom text-sm">
           <thead className="sticky top-0 z-10 bg-muted/60 backdrop-blur supports-[backdrop-filter]:bg-muted/40">
             {table.getHeaderGroups().map((hg) => (
@@ -141,7 +141,7 @@ export function DataTable<TData>({
                     <th
                       key={header.id}
                       style={{ width: header.getSize() ? header.getSize() : undefined }}
-                      className="h-11 px-3 text-left align-middle text-xs font-medium text-muted-foreground"
+                      className="h-11 px-3 text-left align-middle text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
                     >
                       {header.isPlaceholder ? null : canSort ? (
                         <button

@@ -40,7 +40,7 @@ export default async function PresenzePage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t('title')} description={t('subtitle')} />
+      <PageHeader eyebrow="Team" title={t('title')} description={t('subtitle')} />
       {demo && <ConfigNotice variant="inline" />}
       <AttendanceTable date={date} members={members} today={today} />
     </div>

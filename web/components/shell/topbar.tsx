@@ -22,11 +22,12 @@ import {
 import { ROLE_LABELS, type MarketerRank, type MembershipRole } from '@/lib/types/db';
 
 /**
- * Top application bar. Left: mobile hamburger + workspace identity. Center
- * (≥ lg): a search affordance that opens nothing yet (palette lands later) but
- * reads as a real control. Right: the first-class Scope switcher, theme toggle,
- * a notifications bell with a static unread count, and the account menu (avatar
- * + name + rank, with "Esci" wired to Supabase signOut).
+ * Top application bar — premium "glass plane" shared with the sidebar.
+ * Three clusters: LEFT = mobile hamburger + workspace pill (brand mark + org
+ * name); RIGHT = context (Scope switcher) | hairline divider | system (theme,
+ * notifications bell with unread count, account menu with rank + "Esci").
+ * Gap scale (gap-1 within a group, gap-3 between groups) keeps the actions from
+ * collapsing into a wall of icons.
  *
  * Pure presentational identity (org name / display name / rank / role) is passed
  * down from the server layout so this client component never re-reads claims.
@@ -64,7 +65,7 @@ export function Topbar({ orgName, user, unreadCount = 0, onOpenMobileNav }: Topb
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b bg-card/80 px-3 backdrop-blur supports-[backdrop-filter]:bg-card/70 sm:px-4">
+    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-border/70 bg-card/70 px-3 backdrop-blur-md sm:px-4">
       {/* Mobile hamburger */}
       <button
         type="button"
@@ -75,23 +76,34 @@ export function Topbar({ orgName, user, unreadCount = 0, onOpenMobileNav }: Topb
         <Menu className="h-5 w-5" aria-hidden />
       </button>
 
-      {/* Workspace identity */}
-      <div className="flex min-w-0 items-center gap-2">
-        <span className="hidden text-[11px] font-medium uppercase tracking-wider text-muted-foreground sm:inline">
-          {t('workspace')}
-        </span>
+      {/* Workspace pill: brand mark + org name */}
+      <div className="flex min-w-0 items-center gap-2.5">
         <span
-          className="truncate text-sm font-semibold text-foreground"
-          title={orgName}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary text-[11px] font-bold text-primary-foreground shadow-sm"
+          aria-hidden
         >
-          {orgName}
+          {orgInitials(orgName)}
+        </span>
+        <span className="min-w-0">
+          <span className="block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80">
+            {t('workspace')}
+          </span>
+          <span
+            className="block max-w-[12rem] truncate text-sm font-semibold leading-tight text-foreground"
+            title={orgName}
+          >
+            {orgName}
+          </span>
         </span>
       </div>
 
-      {/* Right cluster */}
-      <div className="ml-auto flex items-center gap-1 sm:gap-1.5">
+      {/* Right clusters: context (scope) | divider | system */}
+      <div className="ml-auto flex items-center gap-2">
         <ScopeSwitcher className="hidden sm:inline-flex" />
 
+        <span className="hidden h-6 w-px bg-border/70 sm:block" aria-hidden />
+
+        <div className="flex items-center gap-0.5">
         <ThemeToggle />
 
         {/* Notifications */}
@@ -173,7 +185,16 @@ export function Topbar({ orgName, user, unreadCount = 0, onOpenMobileNav }: Topb
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
       </div>
     </header>
   );
+}
+
+/** Up-to-2-letter initials from the org name for the brand mark. */
+function orgInitials(name: string): string {
+  const parts = name.replace(/[·.]/g, ' ').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'CN';
+  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
+  return (parts[0]![0]! + parts[1]![0]!).toUpperCase();
 }

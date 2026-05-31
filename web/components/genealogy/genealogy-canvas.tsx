@@ -49,10 +49,12 @@ const NODE_TYPES = { marketer: MarketerNode, add: AddSlotNode } as const;
 /** Above this visible-node count we drop heavyweight chrome for performance. */
 const PERF_THRESHOLD = 600;
 
+// AA-safe stroke/marker colors: use the *-foreground branch tokens so thin
+// connectors and minimap dots keep enough contrast on the canvas background.
 const legStroke: Record<'root' | PlacementLeg, string> = {
   root: 'hsl(var(--branch-global))',
-  LEFT: 'hsl(var(--branch-left))',
-  RIGHT: 'hsl(var(--branch-right))',
+  LEFT: 'hsl(var(--branch-left-foreground))',
+  RIGHT: 'hsl(var(--branch-right-foreground))',
 };
 
 export interface GenealogyCanvasHandle {

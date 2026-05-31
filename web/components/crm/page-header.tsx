@@ -22,6 +22,8 @@ export interface PageHeaderProps {
   actions?: React.ReactNode;
   /** Optional leading icon shown next to the title. */
   icon?: React.ReactNode;
+  /** Optional uppercase eyebrow shown above the title (premium SaaS pattern). */
+  eyebrow?: string;
   className?: string;
 }
 
@@ -31,6 +33,7 @@ export function PageHeader({
   breadcrumbs,
   actions,
   icon,
+  eyebrow,
   className,
 }: PageHeaderProps) {
   return (
@@ -66,6 +69,11 @@ export function PageHeader({
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-1">
+          {eyebrow && (
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
+              {eyebrow}
+            </p>
+          )}
           <div className="flex items-center gap-2.5">
             {icon && (
               <span className="text-muted-foreground [&_svg]:h-6 [&_svg]:w-6" aria-hidden>

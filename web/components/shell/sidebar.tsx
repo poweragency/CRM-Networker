@@ -31,16 +31,16 @@ export function Sidebar({ viewer, collapsed, onToggleCollapsed }: SidebarProps) 
   return (
     <aside
       className={cn(
-        // Pinned to the viewport: stays put while the main content scrolls.
-        'sticky top-0 hidden h-screen shrink-0 self-start border-r bg-card transition-[width] duration-200 ease-out md:flex md:flex-col',
-        collapsed ? 'w-[4.25rem]' : 'w-64',
+        // Pinned to the viewport, same "glass plane" as the topbar.
+        'sticky top-0 hidden h-screen shrink-0 self-start border-r border-border/70 bg-card/70 backdrop-blur-md transition-[width] duration-base ease-standard md:flex md:flex-col',
+        collapsed ? 'w-rail' : 'w-side',
       )}
       data-collapsed={collapsed}
     >
       {/* Brand header */}
       <div
         className={cn(
-          'flex h-14 shrink-0 items-center border-b',
+          'flex h-14 shrink-0 items-center border-b border-border/70',
           collapsed ? 'justify-center px-2' : 'justify-between px-4',
         )}
       >
@@ -59,7 +59,7 @@ export function Sidebar({ viewer, collapsed, onToggleCollapsed }: SidebarProps) 
               className="flex items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label={tc('appName')}
             >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm transition-transform hover:scale-105">
                 <Network className="h-[18px] w-[18px]" aria-hidden />
               </span>
               <span className="truncate text-sm font-semibold tracking-tight text-card-foreground">

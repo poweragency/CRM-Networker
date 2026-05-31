@@ -35,7 +35,7 @@ export default async function InformativaPage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader title={t('title')} description={t('subtitle')} />
+      <PageHeader eyebrow="Risorse" title={t('title')} description={t('subtitle')} />
 
       {/* Package prices */}
       <section className="space-y-4">
@@ -81,7 +81,7 @@ export default async function InformativaPage() {
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           {MATERIAL_FOLDERS.map((folder) => (
-            <Card key={folder.title} className="flex flex-col">
+            <Card key={folder.title} className="flex flex-col shadow-sm transition-[box-shadow,transform] duration-base ease-standard hover:-translate-y-px hover:shadow-md">
               <CardHeader className="flex-row items-center gap-2.5 space-y-0 p-5 pb-3">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
                   <Folder className="h-[18px] w-[18px]" aria-hidden />
