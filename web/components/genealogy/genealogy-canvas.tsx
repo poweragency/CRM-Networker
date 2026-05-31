@@ -174,22 +174,36 @@ function CanvasInner(
     setFlowEdges(rfEdges);
   }, [rfEdges, setFlowEdges]);
 
-  // Original geometry + leg per node, used to constrain dragging.
-  const geom = React.useMemo(() => {
-    const m = new Map<string, { x: number; y: number; leg: PlacementLeg | null }>();
-    for (const p of positioned) m.set(p.node.id, { x: p.x, y: p.y, leg: p.branchLeg });
-    return m;
-  }, [positioned]);
-
   // The central vertical axis = the layout root's center x.
   const midX = React.useMemo(() => {
     const r = positioned.find((p) => p.node.id === layoutRootId);
     return r ? r.x + NODE_WIDTH / 2 : 0;
   }, [positioned, layoutRootId]);
 
+  // Original geometry per node + which HALF it naturally sits in. The side is
+  // derived from the node's REAL layout position, not from `branchLeg`: that field
+  // is the node's slot under its *parent* (a right-branch node can still be a LEFT
+  // child), so clamping by it dragged border nodes across the axis and glitched
+  // them onto the wrong side. A node whose center is on the axis (the root) is
+  // pinned horizontally.
+  const geom = React.useMemo(() => {
+    const m = new Map<
+      string,
+      { x: number; y: number; side: 'left' | 'right' | 'axis' }
+    >();
+    const EPS = 1;
+    for (const p of positioned) {
+      const center = p.x + NODE_WIDTH / 2;
+      const side =
+        Math.abs(center - midX) <= EPS ? 'axis' : center > midX ? 'right' : 'left';
+      m.set(p.node.id, { x: p.x, y: p.y, side });
+    }
+    return m;
+  }, [positioned, midX]);
+
   // Constrain drag: lock the vertical axis (no top↔bottom) and clamp horizontally
-  // so a node never crosses the midline (RIGHT stays right, LEFT stays left, root
-  // pinned). Non-position changes pass through unchanged.
+  // so a node never crosses the midline — it stays in its own half (right stays
+  // right, left stays left, root pinned). Non-position changes pass through.
   const handleNodesChange = React.useCallback<typeof onNodesChange>(
     (changes) => {
       const constrained = changes.map((change) => {
@@ -197,9 +211,9 @@ function CanvasInner(
         const g = geom.get(change.id);
         if (!g) return change;
         let x = change.position.x;
-        if (g.leg === 'RIGHT') x = Math.max(x, midX);
-        else if (g.leg === 'LEFT') x = Math.min(x, midX - NODE_WIDTH);
-        else x = g.x; // root sits on the axis → no horizontal move
+        if (g.side === 'right') x = Math.max(x, midX);
+        else if (g.side === 'left') x = Math.min(x, midX - NODE_WIDTH);
+        else x = g.x; // on the central axis (root) → no horizontal move
         return { ...change, position: { x, y: g.y } };
       });
       onNodesChange(constrained);
