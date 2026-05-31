@@ -55,6 +55,29 @@
     --activity-warm: 38 92% 50%;
     --activity-cold: 210 90% 56%;
     --activity-dormant: 220 9% 60%;
+
+    /* ─── Redesign premium tokens (additive, non-breaking) ─────────────────── */
+    --primary-50: 222 90% 97%;
+    --primary-100: 222 88% 93%;
+    --primary-600: 222 80% 48%;
+    --primary-700: 222 80% 40%;
+
+    --on-primary: 0 0% 100%;
+    --on-success: 0 0% 100%;
+    --on-warning: 222 22% 11%;
+    --on-danger: 0 0% 100%;
+    --on-info: 0 0% 100%;
+
+    /* Branch identity foregrounds — AA contrast for thin connectors / text. */
+    --branch-left-foreground: 265 70% 42%;
+    --branch-right-foreground: 170 70% 30%;
+
+    /* Shell geometry. */
+    --rail-w: 3.5rem;
+    --side-w: 16rem;
+    --drawer-w: 18rem;
+    --topbar-h: 3.5rem;
+    --shell-icon: 1.125rem;
   }
 
   .dark {
@@ -97,6 +120,21 @@
     --activity-warm: 38 92% 58%;
     --activity-cold: 210 90% 64%;
     --activity-dormant: 217 12% 55%;
+
+    /* ─── Redesign premium tokens (dark, additive) ─────────────────────────── */
+    --primary-50: 222 40% 16%;
+    --primary-100: 222 44% 22%;
+    --primary-600: 222 90% 70%;
+    --primary-700: 222 90% 78%;
+
+    --on-primary: 222 47% 11%;
+    --on-success: 0 0% 100%;
+    --on-warning: 222 47% 11%;
+    --on-danger: 0 0% 100%;
+    --on-info: 0 0% 100%;
+
+    --branch-left-foreground: 265 65% 78%;
+    --branch-right-foreground: 170 60% 62%;
   }
 }
 
@@ -108,9 +146,21 @@
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
     font-feature-settings: 'rlig' 1, 'calt' 1;
+    text-rendering: optimizeLegibility;
   }
   /* tabular numerals for all metric/ID displays */
   .tabular-nums {
     font-variant-numeric: tabular-nums;
+  }
+  /* Respect reduced-motion: keep opacity fades, drop transforms/animations. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
