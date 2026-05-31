@@ -3,7 +3,6 @@ import { getTranslations } from 'next-intl/server';
 import { FileText, Folder, LinkIcon } from 'lucide-react';
 import { PageHeader } from '@/components/crm/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { STARTING_PACKAGE_LABELS } from '@/lib/types/db';
@@ -44,7 +43,6 @@ export default async function InformativaPage() {
           <h2 className="text-lg font-semibold tracking-tight text-foreground">
             {t('packages_title')}
           </h2>
-          <p className="text-sm text-muted-foreground">{t('packages_subtitle')}</p>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -57,10 +55,7 @@ export default async function InformativaPage() {
               )}
             >
               <CardHeader className="space-y-2 p-5">
-                <div className="flex items-center justify-between gap-2">
-                  <CardTitle>{STARTING_PACKAGE_LABELS[p.key]}</CardTitle>
-                  {p.featured && <Badge variant="default">Top</Badge>}
-                </div>
+                <CardTitle>{STARTING_PACKAGE_LABELS[p.key]}</CardTitle>
                 <p className="flex items-baseline gap-1.5">
                   <span className="text-2xl font-semibold tracking-tight text-foreground">
                     {p.price}
@@ -73,8 +68,6 @@ export default async function InformativaPage() {
             </Card>
           ))}
         </div>
-
-        <p className="text-xs text-muted-foreground">{t('price_note')}</p>
       </section>
 
       {/* PDF — downloadable materials grouped in folders */}
