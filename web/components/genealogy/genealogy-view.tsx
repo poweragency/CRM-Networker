@@ -136,7 +136,7 @@ export function GenealogyView({
 
       {/* Canvas + detail panel */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <Card className="relative h-[600px] overflow-hidden p-0">
+        <Card className="relative h-[600px] overflow-hidden p-0 shadow-sm">
           <GenealogyCanvas
             ref={canvasRef}
             nodes={tree.visibleNodes}
@@ -155,7 +155,7 @@ export function GenealogyView({
         {/* Detail panel: inline column on desktop, slide-over on mobile. */}
         {selectedNode && (
           <>
-            <Card className="hidden h-[600px] overflow-hidden p-0 lg:block">
+            <Card className="hidden h-[600px] overflow-hidden p-0 shadow-sm lg:block">
               <NodeDetailPanel
                 node={selectedNode}
                 canActivate={canActivate}
