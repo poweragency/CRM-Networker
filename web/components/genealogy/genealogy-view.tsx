@@ -10,7 +10,8 @@ import {
   layoutRootForScope,
   useGenealogyTree,
 } from './use-genealogy-tree';
-import { GenealogyToolbar } from './genealogy-toolbar';
+import { TopbarSlot } from '@/components/shell/topbar-slot';
+import { GenealogySearch } from './genealogy-search';
 import { NodeDetailPanel } from './node-detail-panel';
 import { canActivateCrm } from './permissions';
 import {
@@ -110,26 +111,18 @@ export function GenealogyView({
     canvasRef.current?.centerOn(node.id);
   }, []);
 
-  const handleFit = React.useCallback(() => {
-    canvasRef.current?.fitView();
-  }, []);
-
   return (
     <div className="space-y-3">
-      {tree.demo && <ConfigNotice variant="inline" />}
+      {/* Marketer search lives in the top navbar (only while this screen is up). */}
+      <TopbarSlot>
+        <GenealogySearch onSearch={tree.search} onPick={handlePick} className="sm:w-full sm:max-w-md" />
+      </TopbarSlot>
 
-      <GenealogyToolbar
-        onSearch={tree.search}
-        onPick={handlePick}
-        onExpandAll={tree.expandAll}
-        onCollapseAll={tree.collapseAll}
-        onFitView={handleFit}
-        loading={tree.loading}
-      />
+      {tree.demo && <ConfigNotice variant="inline" />}
 
       {/* Full-bleed canvas; the detail panel floats over it as an overlay so the
           tree always uses the whole width (no reserved empty column). */}
-      <Card className="relative h-[calc(100vh-12rem)] min-h-[520px] overflow-hidden p-0 shadow-sm">
+      <Card className="relative h-[calc(100vh-8rem)] min-h-[520px] overflow-hidden p-0 shadow-sm">
         <GenealogyCanvas
           ref={canvasRef}
           nodes={tree.visibleNodes}

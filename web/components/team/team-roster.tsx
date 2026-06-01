@@ -9,6 +9,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { RankBadge } from '@/components/ui/rank-badge';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/crm/empty-state';
+import { TopbarSlot } from '@/components/shell/topbar-slot';
 import { cn, formatDate, formatNumber } from '@/lib/utils';
 import {
   STARTING_PACKAGE_LABELS,
@@ -64,16 +65,9 @@ export function TeamRoster({ rows }: { rows: TeamMemberRow[] }) {
 
   return (
     <div className="space-y-4">
-      {/* Summary strip */}
-      <div className="grid grid-cols-3 gap-3">
-        <SummaryStat label={t('stat_members')} value={rows.length} />
-        <SummaryStat label={t('stat_active')} value={activeCount} tone="success" />
-        <SummaryStat label={t('stat_team')} value={teamTotal} tone="info" />
-      </div>
-
-      {/* Search */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="relative w-full max-w-sm">
+      {/* Search lives in the top navbar (only while this screen is up). */}
+      <TopbarSlot>
+        <div className="relative w-full max-w-md">
           <Search
             className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
             aria-hidden
@@ -96,12 +90,21 @@ export function TeamRoster({ rows }: { rows: TeamMemberRow[] }) {
             </button>
           )}
         </div>
-        <p className="text-sm text-muted-foreground" aria-live="polite">
-          {needle
-            ? t('count', { count: filtered.length })
-            : t('count', { count: rows.length })}
-        </p>
+      </TopbarSlot>
+
+      {/* Summary strip */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="grid flex-1 grid-cols-3 gap-3">
+          <SummaryStat label={t('stat_members')} value={rows.length} />
+          <SummaryStat label={t('stat_active')} value={activeCount} tone="success" />
+          <SummaryStat label={t('stat_team')} value={teamTotal} tone="info" />
+        </div>
       </div>
+      <p className="text-sm text-muted-foreground" aria-live="polite">
+        {needle
+          ? t('count', { count: filtered.length })
+          : t('count', { count: rows.length })}
+      </p>
 
       {filtered.length === 0 ? (
         <EmptyState

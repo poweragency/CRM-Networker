@@ -97,6 +97,12 @@ export function Topbar({ orgName, user, unreadCount = 0, onOpenMobileNav }: Topb
         </span>
       </div>
 
+      {/* Central slot: pages portal a contextual control here (e.g. search). */}
+      <div
+        id="topbar-search-slot"
+        className="ml-2 hidden min-w-0 flex-1 items-center md:flex"
+      />
+
       {/* Right clusters: context (scope) | divider | system */}
       <div className="ml-auto flex items-center gap-2">
         <ScopeSwitcher className="hidden sm:inline-flex" />
