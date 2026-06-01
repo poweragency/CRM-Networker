@@ -175,6 +175,46 @@ export function layoutTree(
   layout.separation((a, b) => (a.parent === b.parent ? 1 : 1.25));
   const laid = layout(root);
 
+  // ── Enforce the binary-side invariant ──────────────────────────────────────
+  // d3's tidy layout centers each parent over its children and minimizes width;
+  // it does NOT guarantee that the root's LEFT subtree stays entirely left of the
+  // center (and RIGHT entirely right). A deep, unbalanced chain can therefore
+  // creep across the midline. We post-process the two top-level subtrees: shift
+  // each rigidly OUTWARD until it clears the center by half a node slot. The shift
+  // preserves internal relative geometry and only moves the halves apart, so no
+  // overlaps/collisions are introduced.
+  const SLOT = NODE_WIDTH + H_GAP;
+  const rootX = laid.x;
+
+  const shiftSubtree = (d: HierarchyPointNode<LayoutDatum>, dx: number) => {
+    d.x += dx;
+    for (const c of d.children ?? []) shiftSubtree(c, dx);
+  };
+  const subtreeExtent = (
+    d: HierarchyPointNode<LayoutDatum>,
+  ): { min: number; max: number } => {
+    let min = d.x;
+    let max = d.x;
+    for (const c of d.children ?? []) {
+      const e = subtreeExtent(c);
+      if (e.min < min) min = e.min;
+      if (e.max > max) max = e.max;
+    }
+    return { min, max };
+  };
+
+  for (const child of laid.children ?? []) {
+    if (child.data.leg === 'LEFT') {
+      const limit = rootX - SLOT / 2; // whole LEFT half must end left of center
+      const { max } = subtreeExtent(child);
+      if (max > limit) shiftSubtree(child, limit - max);
+    } else if (child.data.leg === 'RIGHT') {
+      const limit = rootX + SLOT / 2; // whole RIGHT half must start right of center
+      const { min } = subtreeExtent(child);
+      if (min < limit) shiftSubtree(child, limit - min);
+    }
+  }
+
   // Normalize so the left-most node starts at x≈0.
   let minX = Infinity;
   let maxX = -Infinity;
