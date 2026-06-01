@@ -268,14 +268,14 @@
     "top_col_marketer": "Marketer",
     "top_col_value": "Valore",
     "top_empty": "Nessun dato per questo mese.",
-    "cat_zoom": "Più Zoom di team visti",
+    "cat_zoom": "Più Zoom di team viste",
     "cat_zoom_desc": "Chi ha seguito più Zoom di team nel mese.",
     "cat_zoom_unit": "{count} Zoom",
     "cat_percorsi": "Più percorsi fatti",
     "cat_percorsi_desc": "Chi ha completato più percorsi nel mese.",
     "cat_percorsi_unit": "{count} percorsi",
     "cat_conversion": "Conversione più alta",
-    "cat_conversion_desc": "Tasso di conversione da Business Info a Closing.",
+    "cat_conversion_desc": "Tasso di conversione più alto",
     "you_badge": "Tu"
   },
   "error": {

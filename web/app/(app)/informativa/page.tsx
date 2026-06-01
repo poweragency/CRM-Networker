@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { FileText, Folder, LinkIcon } from 'lucide-react';
-import { PageHeader } from '@/components/crm/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -35,8 +34,6 @@ export default async function InformativaPage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader eyebrow="Risorse" title={t('title')} description={t('subtitle')} />
-
       {/* Package prices */}
       <section className="space-y-4">
         <div className="space-y-1">

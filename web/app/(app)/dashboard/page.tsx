@@ -5,7 +5,6 @@ import { getCurrentClaims } from '@/lib/data/session';
 import { getMonthlyTopMarketers } from '@/lib/data/dashboard';
 import type { TopMarketerEntry } from '@/lib/data/mock/dashboard';
 import { ConfigNotice } from '@/components/config-notice';
-import { PageHeader } from '@/components/crm/page-header';
 import {
   LeaderboardCard,
   SpotlightCard,
@@ -35,11 +34,6 @@ export default async function DashboardPage() {
   const { demo } = await getCurrentClaims();
   const top = await getMonthlyTopMarketers(5);
   const isDemo = demo || top.demo;
-
-  const month = new Intl.DateTimeFormat('it-IT', {
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date());
 
   const youLabel = t('you_badge');
   const emptyLabel = t('top_empty');
@@ -89,12 +83,6 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader
-        eyebrow="Dashboard"
-        title={t('top_title')}
-        description={t('top_subtitle', { month })}
-      />
-
       {isDemo && <ConfigNotice variant="inline" />}
 
       {/* Tier 1 — Spotlight: the #1 of each category */}
