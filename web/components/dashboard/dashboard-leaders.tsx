@@ -64,7 +64,6 @@ export interface SpotlightCardProps {
   accent: Accent;
   entry: TopMarketerEntry | undefined;
   valueText: string;
-  unitLabel: string;
   youLabel: string;
   emptyLabel: string;
 }
@@ -75,7 +74,6 @@ export function SpotlightCard({
   accent,
   entry,
   valueText,
-  unitLabel,
   youLabel,
   emptyLabel,
 }: SpotlightCardProps) {
@@ -137,11 +135,10 @@ export function SpotlightCard({
         </div>
       </div>
 
-      <div className="relative flex items-baseline gap-1.5">
+      <div className="relative">
         <span className="text-3xl font-semibold tabular-nums tracking-tight text-foreground">
           {valueText}
         </span>
-        <span className="text-xs font-medium text-muted-foreground">{unitLabel}</span>
       </div>
     </Link>
   );
