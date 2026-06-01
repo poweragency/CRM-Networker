@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { getZoomAttendance } from '@/lib/data/attendance';
 import { ConfigNotice } from '@/components/config-notice';
-import { PageHeader } from '@/components/crm/page-header';
 import { AttendanceTable } from '@/components/presenze/attendance-table';
 
 /**
@@ -39,8 +38,7 @@ export default async function PresenzePage({
   const { members, demo } = await getZoomAttendance(date);
 
   return (
-    <div className="space-y-6">
-      <PageHeader eyebrow="Team" title={t('title')} description={t('subtitle')} />
+    <div className="space-y-4">
       {demo && <ConfigNotice variant="inline" />}
       <AttendanceTable date={date} members={members} today={today} />
     </div>

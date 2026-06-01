@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
-import { ScopeSwitcher } from '@/components/scope-switcher';
 import { Tooltip } from '@/components/ui/tooltip';
 import { GenealogySearch } from './genealogy-search';
 import { cn } from '@/lib/utils';
@@ -60,8 +59,6 @@ export function GenealogyToolbar({
       </div>
 
       <div className="flex items-center gap-2">
-        <ScopeSwitcher />
-
         <div className="flex items-center gap-1 rounded-lg border bg-muted/50 p-0.5">
           <Tooltip content={t('expand_all')} side="bottom">
             <Button

@@ -1,6 +1,4 @@
 import { Suspense } from 'react';
-import { getTranslations } from 'next-intl/server';
-import { Network } from 'lucide-react';
 import { getCurrentClaims } from '@/lib/data/session';
 import { getRootMarketer, getSubtree } from '@/lib/data/genealogy';
 import { GenealogyView } from '@/components/genealogy/genealogy-view';
@@ -22,8 +20,6 @@ import type { TreeNode } from '@/lib/types/db';
 export const dynamic = 'force-dynamic';
 
 export default async function GenealogiaPage() {
-  const t = await getTranslations('genealogia');
-
   const { claims, demo: claimsDemo } = await getCurrentClaims();
 
   // Seed the client with the root + a bounded subtree window. Both calls are
@@ -42,30 +38,13 @@ export default async function GenealogiaPage() {
   const initialDemo = claimsDemo || rootRes.demo || subtreeRes.demo;
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-branch-global/12 text-branch-global">
-            <Network className="h-5 w-5" aria-hidden />
-          </span>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-              {t('title')}
-            </h1>
-            <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
-          </div>
-        </div>
-      </div>
-
-      <Suspense fallback={<GenealogySkeleton />}>
-        <GenealogyView
-          initialNodes={initialNodes}
-          rootId={root.id}
-          initialDemo={initialDemo}
-          claims={{ role: claims.role, rank: claims.rank }}
-        />
-      </Suspense>
-    </div>
+    <Suspense fallback={<GenealogySkeleton />}>
+      <GenealogyView
+        initialNodes={initialNodes}
+        rootId={root.id}
+        initialDemo={initialDemo}
+        claims={{ role: claims.role, rank: claims.rank }}
+      />
+    </Suspense>
   );
 }

@@ -11,7 +11,6 @@ import {
   useGenealogyTree,
 } from './use-genealogy-tree';
 import { GenealogyToolbar } from './genealogy-toolbar';
-import { BranchSummary } from './branch-summary';
 import { NodeDetailPanel } from './node-detail-panel';
 import { canActivateCrm } from './permissions';
 import {
@@ -116,7 +115,7 @@ export function GenealogyView({
   }, []);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {tree.demo && <ConfigNotice variant="inline" />}
 
       <GenealogyToolbar
@@ -128,64 +127,40 @@ export function GenealogyView({
         loading={tree.loading}
       />
 
-      <BranchSummary
-        nodes={tree.visibleNodes}
-        rootId={rootId}
-        scope={scope}
-      />
+      {/* Full-bleed canvas; the detail panel floats over it as an overlay so the
+          tree always uses the whole width (no reserved empty column). */}
+      <Card className="relative h-[calc(100vh-12rem)] min-h-[520px] overflow-hidden p-0 shadow-sm">
+        <GenealogyCanvas
+          ref={canvasRef}
+          nodes={tree.visibleNodes}
+          layoutRootId={layoutRootId}
+          scope={scope}
+          expanded={tree.expanded}
+          selectedId={selectedId}
+          onSelect={handleSelect}
+          onToggle={tree.toggle}
+          hasChildren={tree.hasChildren}
+          addSlotsForId={addSlotsForId}
+          onAddSlot={handleAddSlot}
+        />
 
-      {/* Canvas + detail panel */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <Card className="relative h-[600px] overflow-hidden p-0 shadow-sm">
-          <GenealogyCanvas
-            ref={canvasRef}
-            nodes={tree.visibleNodes}
-            layoutRootId={layoutRootId}
-            scope={scope}
-            expanded={tree.expanded}
-            selectedId={selectedId}
-            onSelect={handleSelect}
-            onToggle={tree.toggle}
-            hasChildren={tree.hasChildren}
-            addSlotsForId={addSlotsForId}
-            onAddSlot={handleAddSlot}
-          />
-        </Card>
-
-        {/* Detail panel: inline column on desktop, slide-over on mobile. */}
+        {/* Detail panel: floating overlay (desktop) / bottom-anchored (mobile). */}
         {selectedNode && (
-          <>
-            <Card className="hidden h-[600px] overflow-hidden p-0 shadow-sm lg:block">
-              <NodeDetailPanel
-                node={selectedNode}
-                canActivate={canActivate}
-                demo={tree.demo}
-                onClose={() => setSelectedId(null)}
-                onLocate={handleLocate}
-              />
-            </Card>
-
-            {/* Mobile slide-over */}
-            <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true">
-              <button
-                type="button"
-                aria-label="Chiudi"
-                className="absolute inset-0 bg-foreground/40 backdrop-blur-sm animate-fade-in"
-                onClick={() => setSelectedId(null)}
-              />
-              <div className="absolute inset-y-0 right-0 w-[min(22rem,90vw)] border-l bg-card shadow-xl animate-fade-in">
-                <NodeDetailPanel
-                  node={selectedNode}
-                  canActivate={canActivate}
-                  demo={tree.demo}
-                  onClose={() => setSelectedId(null)}
-                  onLocate={handleLocate}
-                />
-              </div>
-            </div>
-          </>
+          <div
+            className="absolute inset-y-0 right-0 z-20 w-[min(22rem,92vw)] border-l bg-card/95 shadow-xl backdrop-blur-sm animate-slide-in-right"
+            role="dialog"
+            aria-modal="false"
+          >
+            <NodeDetailPanel
+              node={selectedNode}
+              canActivate={canActivate}
+              demo={tree.demo}
+              onClose={() => setSelectedId(null)}
+              onLocate={handleLocate}
+            />
+          </div>
         )}
-      </div>
+      </Card>
 
       {/* Add-a-member dialog (opened from a "+" slot in the tree) */}
       <AddMemberDialog
