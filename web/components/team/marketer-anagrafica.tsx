@@ -64,10 +64,13 @@ export function MarketerAnagrafica({
   /** Whether rank + renewal status can be changed (manager editing a downline,
    *  never the own profile). Server re-checks the self-guard regardless. */
   canEditIdentity = false,
+  /** Bare mode: drop the Card chrome + title (the host modal provides them). */
+  bare = false,
 }: {
   profile: TeamMemberProfile;
   canEdit: boolean;
   canEditIdentity?: boolean;
+  bare?: boolean;
 }) {
   const t = useTranslations('team');
   const { toast } = useToast();
@@ -130,12 +133,19 @@ export function MarketerAnagrafica({
   const RENEWAL_STATES: MarketerStatus[] = ['active', 'inactive'];
 
   return (
-    <Card>
-      <CardHeader className="flex-row items-center justify-between space-y-0 p-5 pb-3">
-        <div className="space-y-1">
-          <CardTitle>{t('anagrafica_title')}</CardTitle>
-          <p className="text-sm text-muted-foreground">{t('anagrafica_subtitle')}</p>
-        </div>
+    <Card className={cn(bare && 'border-0 bg-transparent shadow-none')}>
+      <CardHeader
+        className={cn(
+          'flex-row items-center justify-between space-y-0 p-5 pb-3',
+          bare && 'px-0 pt-0',
+        )}
+      >
+        {!bare && (
+          <div className="space-y-1">
+            <CardTitle>{t('anagrafica_title')}</CardTitle>
+            <p className="text-sm text-muted-foreground">{t('anagrafica_subtitle')}</p>
+          </div>
+        )}
         {canEdit && !editing && (
           <Button variant="outline" size="sm" onClick={startEdit}>
             <Pencil aria-hidden />
@@ -156,7 +166,7 @@ export function MarketerAnagrafica({
         )}
       </CardHeader>
 
-      <CardContent className="p-5 pt-0">
+      <CardContent className={cn('p-5 pt-0', bare && 'px-0 pb-0')}>
         <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
           {/* Read-only identity */}
           <ReadField label={t('f_first_name')} value={profile.first_name} />

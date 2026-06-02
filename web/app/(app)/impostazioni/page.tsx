@@ -19,8 +19,10 @@ import type { BoardView, ProspectView } from '@/components/prospects/types';
 import { CentosManager } from '@/components/centos/centos-manager';
 import { SevenWhysDetail } from '@/components/seven-whys/seven-whys-detail';
 import { MarketerProfileTabs } from '@/components/team/marketer-profile-tabs';
-import { MarketerAnagrafica } from '@/components/team/marketer-anagrafica';
+import { AnagraficaModal } from '@/components/team/anagrafica-modal';
 import { MarketerHero } from '@/components/team/marketer-hero';
+import { MarketerSections } from '@/components/team/marketer-sections';
+import { MarketerFormazione } from '@/components/team/marketer-formazione';
 import { PersonalFiles } from '@/components/team/personal-files';
 
 /**
@@ -147,22 +149,31 @@ export default async function ImpostazioniPage({
         />
       )}
 
-      {/* Editable personal anagrafica (own profile) */}
-      {profile && <MarketerAnagrafica profile={profile} canEdit />}
+      {/* Anagrafica → opens in a modal from a top button (no longer inline). */}
+      {profile && (
+        <div className="flex">
+          <AnagraficaModal profile={profile} canEdit />
+        </div>
+      )}
 
-      {/* Percorsi informativi + Lista contatti — same format as /team/[id] */}
-      <MarketerProfileTabs
-        defaultTab={parseTab(searchParams?.tab)}
-        prospects={prospectsPanel}
-        centos={centosPanel}
-      />
-
-      {/* Personal files: 7 Perché + 100's list (open in a window) */}
-      <PersonalFiles
-        sevenWhys={sevenWhysPanel}
-        wishlistItems={wishlistRes.items}
-        marketerId={meId}
-        canEdit
+      {/* Produzione (tutto l'operativo) + Formazione (playlist / libri). */}
+      <MarketerSections
+        production={
+          <>
+            <MarketerProfileTabs
+              defaultTab={parseTab(searchParams?.tab)}
+              prospects={prospectsPanel}
+              centos={centosPanel}
+            />
+            <PersonalFiles
+              sevenWhys={sevenWhysPanel}
+              wishlistItems={wishlistRes.items}
+              marketerId={meId}
+              canEdit
+            />
+          </>
+        }
+        formazione={<MarketerFormazione />}
       />
 
       {/* Account + appearance */}
