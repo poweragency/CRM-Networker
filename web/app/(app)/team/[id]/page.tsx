@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { getNode } from '@/lib/data/genealogy';
 import { getCurrentClaims } from '@/lib/data/session';
-import { listProspectBoard } from '@/lib/data/prospects';
+import { computeProspectKpis, listProspectBoard } from '@/lib/data/prospects';
 import { listCentos } from '@/lib/data/centos';
 import { getSevenWhysFor } from '@/lib/data/seven-whys';
 import { getMarketerProfile } from '@/lib/data/team';
@@ -90,6 +90,9 @@ export default async function MarketerProfilePage({
     whysRes.demo ||
     profileRes.demo;
 
+  // Personal funnel KPIs from this marketer's OWN board (not the downline).
+  const personalKpis = computeProspectKpis(boardRes.data);
+
   // Build the board view (single owner → all rows carry this marketer's name).
   const board: BoardView = {
     total: boardRes.data.total,
@@ -131,7 +134,12 @@ export default async function MarketerProfilePage({
       {demo && <ConfigNotice variant="inline" />}
 
       {/* Hero masthead: identity + rank/status + KPI strip */}
-      <MarketerHero node={node} isSelf={isSelf} crmAccess={profile?.crm_access ?? false} />
+      <MarketerHero
+        node={node}
+        isSelf={isSelf}
+        crmAccess={profile?.crm_access ?? false}
+        kpis={personalKpis}
+      />
 
       {/* Anagrafica — the member's primary data (nome, sponsor, pacchetto, … ).
           Rank + renewal are editable only on a DOWNLINE (never the own profile). */}

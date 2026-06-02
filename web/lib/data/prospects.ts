@@ -52,6 +52,44 @@ export interface ProspectBoard {
   total: number;
 }
 
+/** Personal funnel KPIs for ONE marketer (never an aggregate of the downline). */
+export interface ProspectKpis {
+  /** Prospects in this marketer's own pipeline. */
+  prospects: number;
+  /** How many of them reached the Business Info stage (or beyond). */
+  businessInfoReached: number;
+  /** Enrollments (iscrizioni). */
+  iscrizioni: number;
+  /** 0..1 — share of Business-Info prospects that went on to enroll. */
+  conversionRate: number;
+}
+
+const BUSINESS_INFO_INDEX = STAGE_ORDER.indexOf('business_info');
+
+/**
+ * Personal funnel KPIs derived from a marketer's OWN board — strictly their own
+ * prospects, never rolled up from the downline. Conversion is the share of
+ * prospects that reached Business Info and then enrolled (iscritti ÷ business
+ * info), so it answers "di quelli che hanno visto il business, quanti si sono
+ * iscritti". Pure + demo-safe.
+ */
+export function computeProspectKpis(board: ProspectBoard): ProspectKpis {
+  let businessInfoReached = 0;
+  let iscrizioni = 0;
+  for (const col of board.columns) {
+    const idx = STAGE_ORDER.indexOf(col.stage);
+    if (idx >= BUSINESS_INFO_INDEX) businessInfoReached += col.prospects.length;
+    if (col.stage === 'iscrizione') iscrizioni += col.prospects.length;
+  }
+  return {
+    prospects: board.total,
+    businessInfoReached,
+    iscrizioni,
+    conversionRate:
+      businessInfoReached > 0 ? iscrizioni / businessInfoReached : 0,
+  };
+}
+
 function filterMock(filters: ProspectFilters): Prospect[] {
   const { search = '', openOnly = false, ownerMarketerId } = filters;
   return MOCK_PROSPECTS.filter((p) => !p.deleted_at)

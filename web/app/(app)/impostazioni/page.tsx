@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { getCurrentClaims } from '@/lib/data/session';
 import { getNode } from '@/lib/data/genealogy';
-import { listProspectBoard } from '@/lib/data/prospects';
+import { computeProspectKpis, listProspectBoard } from '@/lib/data/prospects';
 import { listCentos } from '@/lib/data/centos';
 import { getSevenWhysFor } from '@/lib/data/seven-whys';
 import { getMarketerProfile } from '@/lib/data/team';
@@ -78,6 +78,9 @@ export default async function ImpostazioniPage({
 
   const ownerName = node?.display_name ?? (email ? email.split('@')[0]! : 'Profilo');
 
+  // Personal funnel KPIs from the caller's OWN board (not the downline).
+  const personalKpis = computeProspectKpis(boardRes.data);
+
   // Board view (single owner → all rows carry the caller's name).
   const board: BoardView = {
     total: boardRes.data.total,
@@ -130,7 +133,14 @@ export default async function ImpostazioniPage({
       {demo && <ConfigNotice variant="inline" />}
 
       {/* Hero masthead (own profile) */}
-      {node && <MarketerHero node={node} isSelf crmAccess={claims.crm_access} />}
+      {node && (
+        <MarketerHero
+          node={node}
+          isSelf
+          crmAccess={claims.crm_access}
+          kpis={personalKpis}
+        />
+      )}
 
       {/* Editable personal anagrafica (own profile) */}
       {profile && <MarketerAnagrafica profile={profile} canEdit />}
