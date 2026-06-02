@@ -7,6 +7,11 @@ import {
   type ChangeStageResult,
   type ProspectInput,
 } from '@/lib/data/prospects';
+import {
+  setProspectExtra,
+  type ProspectExtra,
+  type SaveProspectExtraResult,
+} from '@/lib/data/prospect-extras';
 import type { MutationResult } from '@/lib/data/crm-shared';
 import type { Prospect, ProspectStage } from '@/lib/types/db';
 
@@ -42,4 +47,12 @@ export async function createProspectAction(
     revalidatePath('/percorso-prospect');
   }
   return res;
+}
+
+/** Save the prospect's extra fields (profilazione, pacchetto, note). */
+export async function saveProspectExtraAction(
+  prospectId: string,
+  extra: ProspectExtra,
+): Promise<SaveProspectExtraResult> {
+  return setProspectExtra(prospectId, extra);
 }
