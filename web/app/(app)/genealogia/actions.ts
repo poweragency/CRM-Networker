@@ -6,7 +6,12 @@ import {
   searchMarketers,
 } from '@/lib/data/genealogy';
 import { updateMarketerExtra } from '@/lib/data/team';
-import { addRuntimeNode, nextRuntimeId } from '@/lib/data/mock/runtime';
+import {
+  addRuntimeNode,
+  nextRuntimeId,
+  setCrmAccess,
+} from '@/lib/data/mock/runtime';
+import { isSupabaseConfigured } from '@/lib/env';
 import type {
   BranchScope,
   PlacementLeg,
@@ -115,4 +120,49 @@ export async function addMarketerAction(
   });
 
   return { node, demo: true, ok: true };
+}
+
+/** Credentials captured by the "Attiva accesso CRM" dialog. */
+export interface ActivateCrmInput {
+  marketerId: string;
+  email: string;
+  password: string;
+}
+
+export interface ActivateCrmResult {
+  ok: boolean;
+  demo: boolean;
+  /** A validation message key (i18n under `genealogia`) when ok is false. */
+  errorKey?: 'email_invalid' | 'password_short';
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Grant CRM access to an existing marketer by creating a login (email + password).
+ *
+ * SECURITY: the password is NEVER stored in our own tables. In production this is
+ * a Supabase Auth user-creation / invitation call — Supabase hashes the password
+ * and owns the credential; we'd only persist the membership link + the login
+ * email for display. While Supabase env is missing (demo) we record just the
+ * email in the in-memory runtime store and discard the password. Demo-safe; never
+ * throws.
+ */
+export async function activateCrmAccessAction(
+  input: ActivateCrmInput,
+): Promise<ActivateCrmResult> {
+  const email = input.email.trim();
+  if (!EMAIL_RE.test(email)) {
+    return { ok: false, demo: !isSupabaseConfigured, errorKey: 'email_invalid' };
+  }
+  if (input.password.length < 8) {
+    return { ok: false, demo: !isSupabaseConfigured, errorKey: 'password_short' };
+  }
+
+  // Demo path: record the login email only (password intentionally discarded).
+  // Real path (Supabase configured) will call Supabase Auth here; the password is
+  // hashed by Supabase, never by us.
+  setCrmAccess(input.marketerId, email);
+
+  return { ok: true, demo: !isSupabaseConfigured };
 }

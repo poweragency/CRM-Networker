@@ -36,3 +36,20 @@ export function runtimeChildren(parentId: string): TreeNode[] {
 export function runtimeNode(id: string): TreeNode | undefined {
   return runtimeNodes.find((n) => n.id === id);
 }
+
+/* ─── CRM access credentials (demo runtime store) ──────────────────────────── */
+// Per-marketer CRM login granted from the tree's "Attiva accesso CRM". Demo-only,
+// in-memory. SECURITY: the password is NEVER persisted here; in production this
+// becomes a Supabase Auth call (the password is hashed by Supabase and never
+// stored in our own tables). We keep only the login email for display.
+const crmAccess = new Map<string, { email: string }>();
+
+/** Record CRM access (email) for a marketer (demo runtime). */
+export function setCrmAccess(marketerId: string, email: string): void {
+  crmAccess.set(marketerId, { email });
+}
+
+/** The CRM access record for a marketer, if granted. */
+export function getCrmAccess(marketerId: string): { email: string } | undefined {
+  return crmAccess.get(marketerId);
+}

@@ -31,3 +31,14 @@ export function canActivateCrm(claims: Pick<SessionClaims, 'role' | 'rank'>): bo
     rankAtLeast(claims.rank, MIN_RANK_FOR_ACTIVATION)
   );
 }
+
+/**
+ * The TARGET profile is eligible for a CRM access only from `consultant` upward
+ * (i.e. NOT executive, no_rank or cliente). CRM access is a marketer privilege,
+ * not for plain customers / unranked / entry-level executives.
+ */
+const MIN_TARGET_RANK_FOR_CRM: MarketerRank = 'consultant';
+
+export function isCrmEligibleRank(rank: MarketerRank): boolean {
+  return rankAtLeast(rank, MIN_TARGET_RANK_FOR_CRM);
+}

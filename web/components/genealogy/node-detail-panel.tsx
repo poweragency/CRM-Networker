@@ -24,15 +24,16 @@ import { Separator } from '@/components/ui/separator';
 import { StatusDot } from '@/components/ui/status-dot';
 import { cn, formatNumber, formatPercent } from '@/lib/utils';
 import { STATUS_LABELS, type TreeNode } from '@/lib/types/db';
+import { isCrmEligibleRank } from './permissions';
 
 /**
  * Side detail panel opened on node selection (doc 14 §7.1). Shows a profile
  * summary (identity, rank, status, binary team stats, KPI block) and the
- * "Attiva accesso CRM" action — surfaced only when the viewer is allowed
- * (role admin/owner OR rank ≥ team_leader) AND the target profile is not already
- * active (i.e. plausibly needs an access). The action is a stub that resolves to a
- * simulated success in demo mode; wiring to the activation RPC lands with the
- * admin slice.
+ * "Attiva accesso CRM" action. The action is surfaced only when: the viewer is
+ * allowed (role admin/owner OR rank ≥ team_leader), the TARGET rank is CRM-
+ * eligible (consultant upward — not executive/no_rank/cliente), and the target is
+ * not already active. Clicking it opens the activation dialog (email + password),
+ * handled by the parent.
  */
 
 export interface NodeDetailPanelProps {
@@ -41,6 +42,10 @@ export interface NodeDetailPanelProps {
   canActivate: boolean;
   /** True in demo / no-env mode (activation is simulated). */
   demo: boolean;
+  /** Target ids that already had CRM access granted this session. */
+  activatedIds: ReadonlySet<string>;
+  /** Open the activation dialog for this node. */
+  onActivate: (node: TreeNode) => void;
   onClose: () => void;
   /** Re-root / locate the node in the canvas. */
   onLocate: (node: TreeNode) => void;
@@ -75,6 +80,8 @@ export function NodeDetailPanel({
   node,
   canActivate,
   demo,
+  activatedIds,
+  onActivate,
   onClose,
   onLocate,
   className,
@@ -82,30 +89,17 @@ export function NodeDetailPanel({
   const t = useTranslations('genealogia');
   const tc = useTranslations('common');
 
-  const [activating, setActivating] = React.useState(false);
-  const [activated, setActivated] = React.useState(false);
-
-  // Reset the activation state when the selected node changes.
-  React.useEffect(() => {
-    setActivating(false);
-    setActivated(false);
-  }, [node?.id]);
-
   if (!node) return null;
 
-  // Already-active profiles are assumed to have CRM access; offer activation only
-  // for profiles that plausibly still need one.
-  const needsActivation = node.status !== 'active';
-  const showActivate = canActivate && needsActivation && !activated;
-
-  async function handleActivate() {
-    setActivating(true);
-    // Demo / scaffold: simulate the activation round-trip. The real call targets
-    // the activation RPC (admin slice) and is RLS-gated to the caller's subtree.
-    await new Promise((r) => setTimeout(r, 650));
-    setActivating(false);
-    setActivated(true);
-  }
+  const activated = activatedIds.has(node.id);
+  // Offer activation only when: the viewer is allowed, the TARGET rank is CRM-
+  // eligible (consultant+), the profile plausibly still needs one, and it wasn't
+  // just activated this session.
+  const showActivate =
+    canActivate &&
+    isCrmEligibleRank(node.rank) &&
+    node.status !== 'active' &&
+    !activated;
 
   return (
     <aside
@@ -243,13 +237,9 @@ export function NodeDetailPanel({
           </div>
         ) : showActivate ? (
           <div className="space-y-1.5">
-            <Button
-              className="w-full"
-              onClick={handleActivate}
-              disabled={activating}
-            >
+            <Button className="w-full" onClick={() => onActivate(node)}>
               <KeyRound aria-hidden />
-              {activating ? t('activate_crm_loading') : t('activate_crm')}
+              {t('activate_crm')}
             </Button>
             <p className="text-center text-[11px] text-muted-foreground">
               {demo ? t('activate_crm_demo') : t('activate_crm_hint')}
