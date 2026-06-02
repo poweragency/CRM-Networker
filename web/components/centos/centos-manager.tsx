@@ -163,6 +163,10 @@ export function CentosManager({
     null,
   );
   const [rowBusy, setRowBusy] = React.useState(false);
+  // Ids whose "Chi è" cell is expanded to show the full text inline.
+  const [expandedRel, setExpandedRel] = React.useState<Set<string>>(
+    () => new Set(),
+  );
 
   const openCreate = () => {
     setEditing(null);
@@ -340,12 +344,33 @@ export function CentosManager({
         id: 'relationship',
         accessorFn: (e) => e.relationship ?? '',
         header: t('col_relationship'),
+        size: 320,
         cell: ({ row }) => {
-          const rel = row.original.relationship;
-          return rel ? (
-            <span className="text-sm text-muted-foreground">{rel}</span>
-          ) : (
-            <span className="text-muted-foreground">—</span>
+          const e = row.original;
+          const rel = e.relationship;
+          if (!rel) return <span className="text-muted-foreground">—</span>;
+          const expanded = expandedRel.has(e.id);
+          return (
+            <button
+              type="button"
+              onClick={(ev) => {
+                // Toggle inline expand without opening the row detail sheet.
+                ev.stopPropagation();
+                setExpandedRel((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(e.id)) next.delete(e.id);
+                  else next.add(e.id);
+                  return next;
+                });
+              }}
+              title={expanded ? undefined : rel}
+              className={cn(
+                'block w-full max-w-[20rem] text-left text-sm text-muted-foreground transition-colors hover:text-foreground',
+                expanded ? 'whitespace-pre-wrap' : 'truncate',
+              )}
+            >
+              {rel}
+            </button>
           );
         },
       },
@@ -445,7 +470,7 @@ export function CentosManager({
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [t, tc, rowBusy],
+    [t, tc, rowBusy, expandedRel],
   );
 
   const hasFilters = search.length > 0 || Object.keys(filterValues).length > 0;

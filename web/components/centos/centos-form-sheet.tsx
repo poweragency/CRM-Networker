@@ -119,31 +119,33 @@ export function CentosFormSheet({
           <FieldError message={errors.full_name?.message} />
         </div>
 
-        {/* Phone + relationship */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor={`${formId}-phone`}>{t('phone')}</Label>
-            <Input
-              id={`${formId}-phone`}
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel"
-              placeholder="+39 …"
-              aria-invalid={Boolean(errors.phone)}
-              {...register('phone')}
-            />
-            <FieldError message={errors.phone?.message} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor={`${formId}-relationship`}>{t('relationship')}</Label>
-            <Input
-              id={`${formId}-relationship`}
-              placeholder={t('relationship_placeholder')}
-              aria-invalid={Boolean(errors.relationship)}
-              {...register('relationship')}
-            />
-            <FieldError message={errors.relationship?.message} />
-          </div>
+        {/* Phone */}
+        <div className="space-y-1.5">
+          <Label htmlFor={`${formId}-phone`}>{t('phone')}</Label>
+          <Input
+            id={`${formId}-phone`}
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="+39 …"
+            aria-invalid={Boolean(errors.phone)}
+            {...register('phone')}
+          />
+          <FieldError message={errors.phone?.message} />
+        </div>
+
+        {/* Chi è — a large free-text description */}
+        <div className="space-y-1.5">
+          <Label htmlFor={`${formId}-relationship`}>{t('relationship')}</Label>
+          <textarea
+            id={`${formId}-relationship`}
+            rows={5}
+            className="flex w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            placeholder={t('relationship_placeholder')}
+            aria-invalid={Boolean(errors.relationship)}
+            {...register('relationship')}
+          />
+          <FieldError message={errors.relationship?.message} />
         </div>
 
         {/* Rating */}

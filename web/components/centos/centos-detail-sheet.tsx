@@ -193,7 +193,9 @@ export function CentosDetailSheet({
             )}
           </DetailRow>
           <DetailRow icon={<Users2 />} label={t('relationship')}>
-            {entry.relationship ?? (
+            {entry.relationship ? (
+              <span className="whitespace-pre-wrap">{entry.relationship}</span>
+            ) : (
               <span className="text-muted-foreground">—</span>
             )}
           </DetailRow>

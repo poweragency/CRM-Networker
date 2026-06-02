@@ -27,7 +27,7 @@ export const centosFormSchema = z.object({
   ),
   relationship: z.preprocess(
     emptyToUndef,
-    z.string().trim().max(120, 'Massimo 120 caratteri.').optional(),
+    z.string().trim().max(600, 'Massimo 600 caratteri.').optional(),
   ),
   /** 1..5 quality score, or 0 → "no rating". */
   rating: z.coerce.number().int().min(0).max(5).default(0),
