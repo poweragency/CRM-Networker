@@ -6,6 +6,7 @@ import type {
   ProspectWithJourney,
 } from '@/lib/types/db';
 import { STAGE_ORDER } from '@/lib/types/db';
+import { kpisFromStages, type ProspectKpis } from '@/lib/prospect-kpis';
 import {
   MOCK_JOURNEY_EVENTS,
   MOCK_PROSPECTS,
@@ -52,42 +53,14 @@ export interface ProspectBoard {
   total: number;
 }
 
-/** Personal funnel KPIs for ONE marketer (never an aggregate of the downline). */
-export interface ProspectKpis {
-  /** Prospects in this marketer's own pipeline. */
-  prospects: number;
-  /** How many of them reached the Business Info stage (or beyond). */
-  businessInfoReached: number;
-  /** Enrollments (iscrizioni). */
-  iscrizioni: number;
-  /** 0..1 — share of Business-Info prospects that went on to enroll. */
-  conversionRate: number;
-}
-
-const BUSINESS_INFO_INDEX = STAGE_ORDER.indexOf('business_info');
-
 /**
  * Personal funnel KPIs derived from a marketer's OWN board — strictly their own
- * prospects, never rolled up from the downline. Conversion is the share of
- * prospects that reached Business Info and then enrolled (iscritti ÷ business
- * info), so it answers "di quelli che hanno visto il business, quanti si sono
- * iscritti". Pure + demo-safe.
+ * prospects, never rolled up from the downline. Thin wrapper over the shared,
+ * client-safe {@link kpisFromStages} (the interactive performance widget reuses
+ * the same math after applying its period filter).
  */
 export function computeProspectKpis(board: ProspectBoard): ProspectKpis {
-  let businessInfoReached = 0;
-  let iscrizioni = 0;
-  for (const col of board.columns) {
-    const idx = STAGE_ORDER.indexOf(col.stage);
-    if (idx >= BUSINESS_INFO_INDEX) businessInfoReached += col.prospects.length;
-    if (col.stage === 'iscrizione') iscrizioni += col.prospects.length;
-  }
-  return {
-    prospects: board.total,
-    businessInfoReached,
-    iscrizioni,
-    conversionRate:
-      businessInfoReached > 0 ? iscrizioni / businessInfoReached : 0,
-  };
+  return kpisFromStages(board.columns.flatMap((c) => c.prospects.map((p) => p.current_stage)));
 }
 
 function filterMock(filters: ProspectFilters): Prospect[] {

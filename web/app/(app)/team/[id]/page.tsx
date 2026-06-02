@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { getNode } from '@/lib/data/genealogy';
 import { getCurrentClaims } from '@/lib/data/session';
-import { computeProspectKpis, listProspectBoard } from '@/lib/data/prospects';
+import { listProspectBoard } from '@/lib/data/prospects';
 import { listCentos } from '@/lib/data/centos';
 import { getSevenWhysFor } from '@/lib/data/seven-whys';
 import { getMarketerProfile } from '@/lib/data/team';
@@ -90,8 +90,14 @@ export default async function MarketerProfilePage({
     whysRes.demo ||
     profileRes.demo;
 
-  // Personal funnel KPIs from this marketer's OWN board (not the downline).
-  const personalKpis = computeProspectKpis(boardRes.data);
+  // This marketer's OWN prospects (stage + funnel-entry date) → the personal
+  // performance widget filters them by period client-side.
+  const personalProspects = boardRes.data.columns.flatMap((col) =>
+    col.prospects.map((p) => ({
+      stage: p.current_stage,
+      enteredFunnelAt: p.entered_funnel_at,
+    })),
+  );
 
   // Build the board view (single owner → all rows carry this marketer's name).
   const board: BoardView = {
@@ -138,7 +144,7 @@ export default async function MarketerProfilePage({
         node={node}
         isSelf={isSelf}
         crmAccess={profile?.crm_access ?? false}
-        kpis={personalKpis}
+        prospects={personalProspects}
       />
 
       {/* Anagrafica — the member's primary data (nome, sponsor, pacchetto, … ).

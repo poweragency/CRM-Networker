@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { getCurrentClaims } from '@/lib/data/session';
 import { getNode } from '@/lib/data/genealogy';
-import { computeProspectKpis, listProspectBoard } from '@/lib/data/prospects';
+import { listProspectBoard } from '@/lib/data/prospects';
 import { listCentos } from '@/lib/data/centos';
 import { getSevenWhysFor } from '@/lib/data/seven-whys';
 import { getMarketerProfile } from '@/lib/data/team';
@@ -78,8 +78,13 @@ export default async function ImpostazioniPage({
 
   const ownerName = node?.display_name ?? (email ? email.split('@')[0]! : 'Profilo');
 
-  // Personal funnel KPIs from the caller's OWN board (not the downline).
-  const personalKpis = computeProspectKpis(boardRes.data);
+  // The caller's OWN prospects (stage + funnel-entry date) → personal KPIs.
+  const personalProspects = boardRes.data.columns.flatMap((col) =>
+    col.prospects.map((p) => ({
+      stage: p.current_stage,
+      enteredFunnelAt: p.entered_funnel_at,
+    })),
+  );
 
   // Board view (single owner → all rows carry the caller's name).
   const board: BoardView = {
@@ -138,7 +143,7 @@ export default async function ImpostazioniPage({
           node={node}
           isSelf
           crmAccess={claims.crm_access}
-          kpis={personalKpis}
+          prospects={personalProspects}
         />
       )}
 

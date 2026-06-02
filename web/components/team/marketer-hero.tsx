@@ -1,20 +1,15 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import {
-  ArrowLeft,
-  PanelLeft,
-  PanelRight,
-  Target,
-  TrendingUp,
-  UserPlus,
-  Users,
-} from 'lucide-react';
+import { ArrowLeft, PanelLeft, PanelRight, Users } from 'lucide-react';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { RankBadge } from '@/components/ui/rank-badge';
-import { cn, formatNumber, formatPercent } from '@/lib/utils';
+import { cn, formatNumber } from '@/lib/utils';
 import type { TreeNode } from '@/lib/types/db';
-import type { ProspectKpis } from '@/lib/data/prospects';
+import {
+  PersonalPerformance,
+  type PersonalProspect,
+} from '@/components/team/personal-performance';
 
 /**
  * MarketerHero — the profile masthead for /team/[id] (server component). Replaces
@@ -22,9 +17,9 @@ import type { ProspectKpis } from '@/lib/data/prospects';
  * back link, a large avatar with status ring, identity (name + "Tu" + rank +
  * status) and a KPI strip. The strip is split in two: the team structure
  * (team / left / right — genealogy aggregates) and the marketer's OWN
- * performance (prospect / iscrizioni / conversione), which are personal — never
- * rolled up from the downline. Conversion = iscritti ÷ chi ha visto la Business
- * Info. Pure presentation; the personal KPIs are computed by the page.
+ * {@link PersonalPerformance} (prospect / iscrizioni / conversione with a period
+ * filter), which is personal — never rolled up from the downline. Conversion =
+ * iscritti ÷ chi ha visto la Business Info.
  */
 
 const STATUS_RING: Record<string, string> = {
@@ -37,22 +32,17 @@ export async function MarketerHero({
   node,
   isSelf,
   crmAccess = false,
-  kpis,
+  prospects = [],
 }: {
   node: TreeNode;
   isSelf: boolean;
   /** Whether the marketer has an active CRM account login. */
   crmAccess?: boolean;
-  /** Personal funnel KPIs (this marketer only). Falls back to node.kpis. */
-  kpis?: ProspectKpis;
+  /** This marketer's OWN prospects (stage + funnel-entry date) for the KPIs. */
+  prospects?: PersonalProspect[];
 }) {
   const t = await getTranslations('team');
   const tg = await getTranslations('genealogia');
-
-  // Personal performance — this marketer's own prospects, not the downline.
-  const prospects = kpis?.prospects ?? node.kpis.prospects;
-  const iscrizioni = kpis?.iscrizioni ?? node.kpis.iscrizioni;
-  const conversion = kpis?.conversionRate ?? node.kpis.conversion_rate;
 
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
@@ -117,33 +107,8 @@ export async function MarketerHero({
         />
       </div>
 
-      {/* Personal performance — this marketer ONLY, never the downline. */}
-      <div className="border-t bg-muted/20">
-        <p className="px-4 pt-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-          {t('kpi_personal_title')}
-        </p>
-        <div className="grid grid-cols-3 divide-x">
-          <HeroStat
-            icon={Target}
-            label={tg('kpi_prospects')}
-            value={formatNumber(prospects)}
-            accent="text-info"
-          />
-          <HeroStat
-            icon={UserPlus}
-            label={tg('kpi_iscrizioni')}
-            value={formatNumber(iscrizioni)}
-            accent="text-success"
-          />
-          <HeroStat
-            icon={TrendingUp}
-            label={tg('kpi_conversion')}
-            value={formatPercent(conversion)}
-            accent="text-warning"
-            hint={t('kpi_conversion_caption')}
-          />
-        </div>
-      </div>
+      {/* Personal performance — this marketer ONLY, with a period filter. */}
+      <PersonalPerformance prospects={prospects} />
     </div>
   );
 }
@@ -153,14 +118,11 @@ function HeroStat({
   label,
   value,
   accent,
-  hint,
 }: {
   icon: typeof Users;
   label: string;
   value: string;
   accent?: string;
-  /** Optional small caption under the value (e.g. how a ratio is computed). */
-  hint?: string;
 }) {
   return (
     <div className="flex flex-col gap-1 px-4 py-3">
@@ -171,9 +133,6 @@ function HeroStat({
       <span className="text-lg font-semibold tabular-nums tracking-tight text-foreground">
         {value}
       </span>
-      {hint && (
-        <span className="text-[10px] leading-tight text-muted-foreground">{hint}</span>
-      )}
     </div>
   );
 }
