@@ -4,7 +4,7 @@ import {
   BarChart3,
   BookOpen,
   ClipboardCheck,
-  Settings,
+  UserRound,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -89,8 +89,8 @@ export const navFooterItems: NavItem[] = [
   { href: '/informativa', labelKey: 'informativa', icon: BookOpen },
   {
     href: '/impostazioni',
-    labelKey: 'settings',
-    icon: Settings,
+    labelKey: 'profile',
+    icon: UserRound,
     separatorBefore: true,
   },
 ];

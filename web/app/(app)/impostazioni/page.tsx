@@ -2,21 +2,33 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { getCurrentClaims } from '@/lib/data/session';
+import { getNode } from '@/lib/data/genealogy';
+import { listProspectBoard } from '@/lib/data/prospects';
+import { listCentos } from '@/lib/data/centos';
+import { getSevenWhysFor } from '@/lib/data/seven-whys';
 import { getMarketerProfile } from '@/lib/data/team';
+import { getWishlist } from '@/lib/data/wishlist';
 import { ROLE_LABELS } from '@/lib/types/db';
 import { ConfigNotice } from '@/components/config-notice';
-import { PageHeader } from '@/components/crm/page-header';
+import { EmptyState } from '@/components/crm/empty-state';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { ProspectBoard } from '@/components/prospects/prospect-board';
+import type { BoardView, ProspectView } from '@/components/prospects/types';
+import { CentosManager } from '@/components/centos/centos-manager';
+import { SevenWhysDetail } from '@/components/seven-whys/seven-whys-detail';
+import { MarketerProfileTabs } from '@/components/team/marketer-profile-tabs';
 import { MarketerAnagrafica } from '@/components/team/marketer-anagrafica';
+import { MarketerHero } from '@/components/team/marketer-hero';
+import { PersonalFiles } from '@/components/team/personal-files';
 
 /**
- * /impostazioni — personal settings (ADR-008 footer item). RSC. The caller can
- * edit their OWN anagrafica here (città, regione, pacchetto, data di nascita,
- * studia/lavora, note, …) via the editable {@link MarketerAnagrafica} card;
- * account facts (email, role, CRM access) stay read-only, and the appearance
- * preference sits alongside. Demo-safe via the session/team data layer.
+ * /impostazioni — the caller's OWN profile hub (the "Profilo" menu item). RSC.
+ * Mirrors the /team/[id] layout but scoped to the logged-in marketer: hero +
+ * editable anagrafica, the Percorsi informativi / Lista contatti tabs, and the
+ * personal files (7 Perché + 100's list) — same format as everyone else's card —
+ * plus an Account + appearance block at the bottom. Demo-safe data layer.
  */
 export const dynamic = 'force-dynamic';
 
@@ -25,10 +37,80 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t('title') };
 }
 
-export default async function ImpostazioniPage() {
+const TABS = ['prospects', 'centos'] as const;
+type Tab = (typeof TABS)[number];
+
+function parseTab(value: string | string[] | undefined): Tab {
+  const v = Array.isArray(value) ? value[0] : value;
+  return TABS.includes(v as Tab) ? (v as Tab) : 'prospects';
+}
+
+export default async function ImpostazioniPage({
+  searchParams,
+}: {
+  searchParams?: { tab?: string | string[] };
+}) {
   const t = await getTranslations('impostazioni');
-  const { claims, demo, email } = await getCurrentClaims();
-  const { data: profile } = await getMarketerProfile(claims.marketer_id);
+  const tt = await getTranslations('team');
+
+  const { claims, demo: claimsDemo, email } = await getCurrentClaims();
+  const meId = claims.marketer_id;
+
+  const [nodeRes, boardRes, centosRes, whysRes, profileRes, wishlistRes] =
+    await Promise.all([
+      getNode(meId),
+      listProspectBoard({ ownerMarketerId: meId }),
+      listCentos(meId),
+      getSevenWhysFor(meId),
+      getMarketerProfile(meId),
+      getWishlist(meId),
+    ]);
+
+  const node = nodeRes.data;
+  const profile = profileRes.data;
+  const demo =
+    claimsDemo ||
+    nodeRes.demo ||
+    boardRes.demo ||
+    centosRes.demo ||
+    whysRes.demo ||
+    profileRes.demo;
+
+  const ownerName = node?.display_name ?? (email ? email.split('@')[0]! : 'Profilo');
+
+  // Board view (single owner → all rows carry the caller's name).
+  const board: BoardView = {
+    total: boardRes.data.total,
+    columns: boardRes.data.columns.map((col) => {
+      const prospects: ProspectView[] = col.prospects.map((p) => ({
+        ...p,
+        owner_name: ownerName,
+      }));
+      return { stage: col.stage, prospects };
+    }),
+  };
+
+  const whysRow = whysRes.data;
+
+  const prospectsPanel = (
+    <ProspectBoard board={board} demo={demo} contacts={[]} ownerName={ownerName} />
+  );
+  const centosPanel = (
+    <CentosManager initialEntries={centosRes.data} initialDemo={demo} />
+  );
+  const sevenWhysPanel = whysRow ? (
+    <SevenWhysDetail
+      record={whysRow.record}
+      personName={whysRow.person_name}
+      readOnly={!whysRow.is_self}
+      marketerId={whysRow.marketer_id}
+    />
+  ) : (
+    <EmptyState
+      title={tt('seven_whys_unavailable')}
+      description={tt('seven_whys_unavailable_body')}
+    />
+  );
 
   const accountRows: ReadonlyArray<{ label: string; value: ReactNode }> = [
     { label: t('email'), value: email ?? '—' },
@@ -44,15 +126,32 @@ export default async function ImpostazioniPage() {
   ];
 
   return (
-    <div className="space-y-6">
-      <PageHeader title={t('title')} description={t('subtitle')} />
+    <div className="space-y-5">
       {demo && <ConfigNotice variant="inline" />}
+
+      {/* Hero masthead (own profile) */}
+      {node && <MarketerHero node={node} isSelf />}
 
       {/* Editable personal anagrafica (own profile) */}
       {profile && <MarketerAnagrafica profile={profile} canEdit />}
 
+      {/* Percorsi informativi + Lista contatti — same format as /team/[id] */}
+      <MarketerProfileTabs
+        defaultTab={parseTab(searchParams?.tab)}
+        prospects={prospectsPanel}
+        centos={centosPanel}
+      />
+
+      {/* Personal files: 7 Perché + 100's list (open in a window) */}
+      <PersonalFiles
+        sevenWhys={sevenWhysPanel}
+        wishlistItems={wishlistRes.items}
+        marketerId={meId}
+        canEdit
+      />
+
+      {/* Account + appearance */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Account (read-only) */}
         <Card className="lg:col-span-2">
           <CardHeader className="p-5 pb-3">
             <CardTitle>{t('section_account')}</CardTitle>
@@ -73,7 +172,6 @@ export default async function ImpostazioniPage() {
           </CardContent>
         </Card>
 
-        {/* Appearance */}
         <Card className="lg:col-span-1">
           <CardHeader className="p-5 pb-3">
             <CardTitle>{t('section_appearance')}</CardTitle>
