@@ -120,6 +120,8 @@ export interface TeamMemberProfile extends MarketerExtra {
   display_name: string;
   rank: MarketerRank;
   status: MarketerStatus;
+  /** Whether the marketer has an active CRM account login. */
+  crm_access: boolean;
   sponsor_id: string | null;
   sponsor_name: string | null;
   registration_date: string | null;
@@ -166,13 +168,15 @@ export interface WishlistItem {
   done: boolean;
 }
 
-/** `marketer_status` — lifecycle of a marketer profile (profile activation). */
-export type MarketerStatus = 'pending' | 'active' | 'inactive';
+/**
+ * `marketer_status` — the membership RENEWAL state (rinnovo): active or expired.
+ * Two states only; CRM account access is a separate concept (`crm_access`).
+ */
+export type MarketerStatus = 'active' | 'inactive';
 
 export const STATUS_LABELS: Record<MarketerStatus, string> = {
-  pending: 'In attesa',
   active: 'Attivo',
-  inactive: 'Inattivo',
+  inactive: 'Scaduto',
 };
 
 /** `membership_role` — the application role on a membership (NOT the DB role). */

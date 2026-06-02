@@ -14,12 +14,8 @@ import { RankBadge } from '@/components/ui/rank-badge';
 import { EmptyState } from '@/components/crm/empty-state';
 import { formatNumber, initials } from '@/lib/utils';
 
-const MARKETER_STATUS_TONE: Record<
-  MarketerStatus,
-  'success' | 'info' | 'secondary'
-> = {
+const MARKETER_STATUS_TONE: Record<MarketerStatus, 'success' | 'secondary'> = {
   active: 'success',
-  pending: 'info',
   inactive: 'secondary',
 };
 

@@ -130,7 +130,7 @@ export default async function ImpostazioniPage({
       {demo && <ConfigNotice variant="inline" />}
 
       {/* Hero masthead (own profile) */}
-      {node && <MarketerHero node={node} isSelf />}
+      {node && <MarketerHero node={node} isSelf crmAccess={claims.crm_access} />}
 
       {/* Editable personal anagrafica (own profile) */}
       {profile && <MarketerAnagrafica profile={profile} canEdit />}

@@ -131,7 +131,7 @@ export default async function MarketerProfilePage({
       {demo && <ConfigNotice variant="inline" />}
 
       {/* Hero masthead: identity + rank/status + KPI strip */}
-      <MarketerHero node={node} isSelf={isSelf} />
+      <MarketerHero node={node} isSelf={isSelf} crmAccess={profile?.crm_access ?? false} />
 
       {/* Anagrafica — the member's primary data (nome, sponsor, pacchetto, … ).
           Rank + renewal are editable only on a DOWNLINE (never the own profile). */}

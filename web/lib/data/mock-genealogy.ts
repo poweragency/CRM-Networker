@@ -54,7 +54,7 @@ const SEEDS: Seed[] = [
   { id: 'nLLR', parent: 'nLL', leg: 'RIGHT', sponsor: 'nL', first: 'Matteo', last: 'Gallo', rank: 'consultant', status: 'active', kpis: { prospects: 8, calls: 29, iscrizioni: 2, conversion_rate: 0.12 } },
 
   // ── Level 3 — under LR ──
-  { id: 'nLRL', parent: 'nLR', leg: 'LEFT', first: 'Chiara', last: 'Fontana', rank: 'consultant', status: 'pending', kpis: { prospects: 4, calls: 11, iscrizioni: 0, conversion_rate: 0.0 } },
+  { id: 'nLRL', parent: 'nLR', leg: 'LEFT', first: 'Chiara', last: 'Fontana', rank: 'consultant', status: 'active', kpis: { prospects: 4, calls: 11, iscrizioni: 0, conversion_rate: 0.0 } },
 
   // ── Level 3 — under RL ──
   { id: 'nRLL', parent: 'nRL', leg: 'LEFT', first: 'Simone', last: 'Marino', rank: 'consultant', status: 'active', kpis: { prospects: 7, calls: 26, iscrizioni: 1, conversion_rate: 0.1 } },
@@ -65,12 +65,12 @@ const SEEDS: Seed[] = [
 
   // ── Level 4 — leaves ──
   { id: 'nLLLL', parent: 'nLLL', leg: 'LEFT', first: 'Valentina', last: 'Rizzo', rank: 'executive', status: 'active', kpis: { prospects: 3, calls: 9, iscrizioni: 0, conversion_rate: 0.0 } },
-  { id: 'nLLLR', parent: 'nLLL', leg: 'RIGHT', first: 'Stefano', last: 'Caruso', rank: 'executive', status: 'pending', kpis: { prospects: 2, calls: 5, iscrizioni: 0, conversion_rate: 0.0 } },
+  { id: 'nLLLR', parent: 'nLLL', leg: 'RIGHT', first: 'Stefano', last: 'Caruso', rank: 'executive', status: 'active', kpis: { prospects: 2, calls: 5, iscrizioni: 0, conversion_rate: 0.0 } },
   { id: 'nLLRL', parent: 'nLLR', leg: 'LEFT', first: 'Martina', last: 'Bruno', rank: 'executive', status: 'active', kpis: { prospects: 4, calls: 12, iscrizioni: 1, conversion_rate: 0.16 } },
   { id: 'nRLLL', parent: 'nRLL', leg: 'LEFT', first: 'Giorgio', last: 'Villa', rank: 'executive', status: 'active', kpis: { prospects: 2, calls: 7, iscrizioni: 0, conversion_rate: 0.0 } },
   { id: 'nRLRL', parent: 'nRLR', leg: 'LEFT', first: 'Roberta', last: 'Serra', rank: 'executive', status: 'inactive', kpis: { prospects: 0, calls: 1, iscrizioni: 0, conversion_rate: 0.0 } },
   { id: 'nLRLL', parent: 'nLRL', leg: 'LEFT', first: 'Alessio', last: 'De Luca', rank: 'executive', status: 'active', kpis: { prospects: 3, calls: 8, iscrizioni: 0, conversion_rate: 0.0 } },
-  { id: 'nLRLR', parent: 'nLRL', leg: 'RIGHT', first: 'Ilaria', last: 'Ferri', rank: 'executive', status: 'pending', kpis: { prospects: 1, calls: 2, iscrizioni: 0, conversion_rate: 0.0 } },
+  { id: 'nLRLR', parent: 'nLRL', leg: 'RIGHT', first: 'Ilaria', last: 'Ferri', rank: 'executive', status: 'active', kpis: { prospects: 1, calls: 2, iscrizioni: 0, conversion_rate: 0.0 } },
 ];
 
 /** Derive an activity badge from KPIs, matching doc 14 §7.2 thresholds. */

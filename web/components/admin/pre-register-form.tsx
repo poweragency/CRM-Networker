@@ -45,7 +45,7 @@ export function PreRegisterForm({ options }: { options: Option[] }) {
   const [leg, setLeg] = React.useState<PlacementLeg>('LEFT');
   const [sponsorId, setSponsorId] = React.useState('');
   const [rank, setRank] = React.useState<MarketerRank>('executive');
-  const [status, setStatus] = React.useState<MarketerStatus>('pending');
+  const [status, setStatus] = React.useState<MarketerStatus>('active');
   const [error, setError] = React.useState<string | null>(null);
   const [pending, setPending] = React.useState(false);
 

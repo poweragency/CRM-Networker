@@ -33,9 +33,12 @@ const STATUS_RING: Record<string, string> = {
 export async function MarketerHero({
   node,
   isSelf,
+  crmAccess = false,
 }: {
   node: TreeNode;
   isSelf: boolean;
+  /** Whether the marketer has an active CRM account login. */
+  crmAccess?: boolean;
 }) {
   const t = await getTranslations('team');
   const tg = await getTranslations('genealogia');
@@ -71,10 +74,15 @@ export async function MarketerHero({
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <RankBadge rank={node.rank} />
-              <Badge variant={node.status === 'active' ? 'success' : 'secondary'}>
-                {node.status === 'active'
-                  ? t('profile_activated')
-                  : t('profile_not_activated')}
+              {/* Renewal (rinnovo) — distinct prefix so it's not confused with CRM. */}
+              <Badge variant={node.status === 'active' ? 'success' : 'danger'}>
+                {t('renewal_prefix')}:{' '}
+                {node.status === 'active' ? t('renewal_active') : t('renewal_inactive')}
+              </Badge>
+              {/* CRM account access — separate concept, separate badge. */}
+              <Badge variant={crmAccess ? 'info' : 'secondary'}>
+                {t('account_prefix')}:{' '}
+                {crmAccess ? t('account_on') : t('account_off')}
               </Badge>
             </div>
           </div>

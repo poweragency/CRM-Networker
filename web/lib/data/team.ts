@@ -82,6 +82,7 @@ export async function getMarketerProfile(
       display_name: node.display_name,
       rank: node.rank,
       status: node.status,
+      crm_access: row?.crm_access ?? false,
       sponsor_id: node.sponsor_id,
       sponsor_name: sponsorName,
       registration_date: row?.registration_date ?? null,

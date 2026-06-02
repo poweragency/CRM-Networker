@@ -28,7 +28,6 @@ import {
 
 const STATUS_TONE: Record<MarketerStatus, string> = {
   active: 'bg-success',
-  pending: 'bg-warning',
   inactive: 'bg-muted-foreground/50',
 };
 
