@@ -9,7 +9,7 @@ import type {
 } from '@/lib/types/db';
 import { RANK_ORDER } from '@/lib/types/db';
 import { MOCK_NODES, MOCK_ROOT_ID } from '@/lib/data/mock-genealogy';
-import { getRuntimeNodes } from '@/lib/data/mock/runtime';
+import { applyIdentity, getRuntimeNodes } from '@/lib/data/mock/runtime';
 import { daysAgo } from '@/lib/data/mock/_shared';
 
 /**
@@ -46,7 +46,7 @@ const ACCOUNT: Record<string, { status: AccountStatus; role: MembershipRole | nu
 };
 
 export function mockMarketerRows(): AdminMarketerRow[] {
-  const seeded = MOCK_NODES.map((n) => {
+  const seeded = MOCK_NODES.map(applyIdentity).map((n) => {
     const acct = ACCOUNT[n.id] ?? { status: 'none' as AccountStatus, role: null };
     const rankIndex = RANK_ORDER.indexOf(n.rank);
     const hasAccount = acct.status !== 'none';

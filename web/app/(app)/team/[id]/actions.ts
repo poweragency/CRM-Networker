@@ -2,7 +2,15 @@
 
 import { updateMarketerExtra } from '@/lib/data/team';
 import { saveWishlist } from '@/lib/data/wishlist';
-import type { MarketerExtra, WishlistItem } from '@/lib/types/db';
+import { getCurrentClaims } from '@/lib/data/session';
+import { setMarketerIdentity } from '@/lib/data/mock/runtime';
+import { isSupabaseConfigured } from '@/lib/env';
+import type {
+  MarketerExtra,
+  MarketerRank,
+  MarketerStatus,
+  WishlistItem,
+} from '@/lib/types/db';
 
 /**
  * Server Actions backing the /team/[id] profile editors (anagrafica + 100's
@@ -33,4 +41,30 @@ export async function saveWishlistAction(
   items: WishlistItem[],
 ): Promise<SaveWishlistActionResult> {
   return saveWishlist(marketerId, items);
+}
+
+export interface SaveIdentityResult {
+  ok: boolean;
+  demo: boolean;
+  /** Set when the caller tried to edit their OWN identity (not allowed). */
+  forbidden?: boolean;
+}
+
+/**
+ * Update a marketer's rank and/or renewal status. A manager can change these for
+ * someone in their DOWNLINE, but NEVER for themselves — the server enforces the
+ * self-guard regardless of the UI. Demo-safe: records an in-memory identity
+ * override so every view reflects it; in production this becomes a guarded
+ * rank/status RPC (RLS-scoped to the caller's subtree).
+ */
+export async function saveMarketerIdentityAction(
+  id: string,
+  patch: { rank?: MarketerRank; status?: MarketerStatus },
+): Promise<SaveIdentityResult> {
+  const { claims } = await getCurrentClaims();
+  if (claims.marketer_id === id) {
+    return { ok: false, demo: !isSupabaseConfigured, forbidden: true };
+  }
+  setMarketerIdentity(id, patch);
+  return { ok: true, demo: !isSupabaseConfigured };
 }

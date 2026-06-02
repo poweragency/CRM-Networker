@@ -14,14 +14,21 @@ import { cn, formatDate } from '@/lib/utils';
 import {
   OCCUPATION_LABELS,
   OCCUPATION_ORDER,
+  RANK_LABELS,
+  RANK_ORDER,
   STARTING_PACKAGE_LABELS,
   STARTING_PACKAGE_ORDER,
+  type MarketerRank,
   type MarketerExtra,
+  type MarketerStatus,
   type Occupation,
   type StartingPackage,
   type TeamMemberProfile,
 } from '@/lib/types/db';
-import { saveMarketerAnagrafica } from '@/app/(app)/team/[id]/actions';
+import {
+  saveMarketerAnagrafica,
+  saveMarketerIdentityAction,
+} from '@/app/(app)/team/[id]/actions';
 
 /**
  * MarketerAnagrafica — the per-member details card on /team/[id]. The identity
@@ -52,9 +59,13 @@ function extraOf(p: TeamMemberProfile): MarketerExtra {
 export function MarketerAnagrafica({
   profile,
   canEdit,
+  /** Whether rank + renewal status can be changed (manager editing a downline,
+   *  never the own profile). Server re-checks the self-guard regardless. */
+  canEditIdentity = false,
 }: {
   profile: TeamMemberProfile;
   canEdit: boolean;
+  canEditIdentity?: boolean;
 }) {
   const t = useTranslations('team');
   const { toast } = useToast();
@@ -64,29 +75,47 @@ export function MarketerAnagrafica({
   const [saved, setSaved] = React.useState<MarketerExtra>(() => extraOf(profile));
   const [form, setForm] = React.useState<MarketerExtra>(saved);
 
+  // Identity (rank + renewal status) — only when canEditIdentity.
+  const [rank, setRank] = React.useState<MarketerRank>(profile.rank);
+  const [status, setStatus] = React.useState<MarketerStatus>(profile.status);
+  const [savedRank, setSavedRank] = React.useState<MarketerRank>(profile.rank);
+  const [savedStatus, setSavedStatus] = React.useState<MarketerStatus>(profile.status);
+
   function set<K extends keyof MarketerExtra>(key: K, value: MarketerExtra[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
   function startEdit() {
     setForm(saved);
+    setRank(savedRank);
+    setStatus(savedStatus);
     setEditing(true);
   }
 
   function cancel() {
     setForm(saved);
+    setRank(savedRank);
+    setStatus(savedStatus);
     setEditing(false);
   }
 
   async function save() {
     setSaving(true);
     const res = await saveMarketerAnagrafica(profile.id, form);
+    // Persist rank/status only if editable and actually changed.
+    let identityOk = true;
+    if (canEditIdentity && (rank !== savedRank || status !== savedStatus)) {
+      const idRes = await saveMarketerIdentityAction(profile.id, { rank, status });
+      identityOk = idRes.ok;
+    }
     setSaving(false);
-    if (!res.ok) {
+    if (!res.ok || !identityOk) {
       toast({ title: t('error'), variant: 'error' });
       return;
     }
     setSaved(form);
+    setSavedRank(rank);
+    setSavedStatus(status);
     setEditing(false);
     toast({
       title: t('saved'),
@@ -96,6 +125,7 @@ export function MarketerAnagrafica({
   }
 
   const v = saved;
+  const RENEWAL_STATES: MarketerStatus[] = ['active', 'inactive'];
 
   return (
     <Card>
@@ -134,12 +164,53 @@ export function MarketerAnagrafica({
             label={t('f_registration')}
             value={profile.registration_date ? formatDate(profile.registration_date) : null}
           />
+          {/* Rank — editable only for a downline (canEditIdentity). */}
           <div className="space-y-1">
             <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               {t('f_rank')}
             </dt>
             <dd>
-              <RankBadge rank={profile.rank} />
+              {editing && canEditIdentity ? (
+                <select
+                  className={fieldCx}
+                  value={rank}
+                  onChange={(e) => setRank(e.target.value as MarketerRank)}
+                >
+                  {RANK_ORDER.map((r) => (
+                    <option key={r} value={r}>
+                      {RANK_LABELS[r]}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <RankBadge rank={savedRank} />
+              )}
+            </dd>
+          </div>
+
+          {/* Renewal (status) — editable only for a downline (canEditIdentity). */}
+          <div className="space-y-1">
+            <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {t('f_renewal')}
+            </dt>
+            <dd>
+              {editing && canEditIdentity ? (
+                <select
+                  className={fieldCx}
+                  value={status === 'active' ? 'active' : 'inactive'}
+                  onChange={(e) => setStatus(e.target.value as MarketerStatus)}
+                >
+                  {RENEWAL_STATES.map((s) => (
+                    <option key={s} value={s}>
+                      {s === 'active' ? t('renewal_active') : t('renewal_inactive')}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <Badge variant={savedStatus === 'active' ? 'success' : 'secondary'}>
+                  {savedStatus === 'active' ? t('renewal_active') : t('renewal_inactive')}
+                </Badge>
+              )}
             </dd>
           </div>
 

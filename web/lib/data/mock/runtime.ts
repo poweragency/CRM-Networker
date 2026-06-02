@@ -1,4 +1,4 @@
-import type { TreeNode } from '@/lib/types/db';
+import type { MarketerRank, MarketerStatus, TreeNode } from '@/lib/types/db';
 
 /**
  * Demo-only RUNTIME store of marketers added while the server is running (e.g.
@@ -52,4 +52,37 @@ export function setCrmAccess(marketerId: string, email: string): void {
 /** The CRM access record for a marketer, if granted. */
 export function getCrmAccess(marketerId: string): { email: string } | undefined {
   return crmAccess.get(marketerId);
+}
+
+/* ─── Identity overrides (rank / status) — demo runtime ────────────────────── */
+// A manager can change a DOWNLINE's rank and renewal status from the profile.
+// Stored here so every demo view (tree node, profile hero, roster) reflects it.
+// In-memory; in production this becomes a guarded rank/status RPC.
+const identity = new Map<
+  string,
+  { rank?: MarketerRank; status?: MarketerStatus }
+>();
+
+export function setMarketerIdentity(
+  id: string,
+  patch: { rank?: MarketerRank; status?: MarketerStatus },
+): void {
+  identity.set(id, { ...identity.get(id), ...patch });
+}
+
+export function getMarketerIdentity(
+  id: string,
+): { rank?: MarketerRank; status?: MarketerStatus } | undefined {
+  return identity.get(id);
+}
+
+/** Apply any rank/status override onto a tree node (returns a patched copy). */
+export function applyIdentity(node: TreeNode): TreeNode {
+  const ov = identity.get(node.id);
+  if (!ov) return node;
+  return {
+    ...node,
+    rank: ov.rank ?? node.rank,
+    status: ov.status ?? node.status,
+  };
 }

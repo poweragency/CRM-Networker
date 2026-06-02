@@ -133,8 +133,15 @@ export default async function MarketerProfilePage({
       {/* Hero masthead: identity + rank/status + KPI strip */}
       <MarketerHero node={node} isSelf={isSelf} />
 
-      {/* Anagrafica — the member's primary data (nome, sponsor, pacchetto, … ) */}
-      {profile && <MarketerAnagrafica profile={profile} canEdit={canEdit} />}
+      {/* Anagrafica — the member's primary data (nome, sponsor, pacchetto, … ).
+          Rank + renewal are editable only on a DOWNLINE (never the own profile). */}
+      {profile && (
+        <MarketerAnagrafica
+          profile={profile}
+          canEdit={canEdit}
+          canEditIdentity={canEdit && !isSelf}
+        />
+      )}
 
       <MarketerProfileTabs
         defaultTab={parseTab(searchParams?.tab)}

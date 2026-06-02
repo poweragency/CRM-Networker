@@ -7,7 +7,7 @@ import type {
   TreeNode,
   TreeNodeKpis,
 } from '@/lib/types/db';
-import { getRuntimeNodes, runtimeNode } from '@/lib/data/mock/runtime';
+import { applyIdentity, getRuntimeNodes, runtimeNode } from '@/lib/data/mock/runtime';
 
 /**
  * Deterministic demo binary tree (~21 nodes) so /genealogia, search and the
@@ -140,20 +140,25 @@ export function mockRoot(): TreeNode {
   return NODE_MAP.get(MOCK_ROOT_ID)!;
 }
 
-/** A single demo node by id (or null). Runtime-added nodes win over the seed. */
+/**
+ * A single demo node by id (or null). Runtime-added nodes win over the seed; any
+ * rank/status identity override (set from a profile by a manager) is applied.
+ */
 export function mockNode(id: string): TreeNode | null {
-  return runtimeNode(id) ?? NODE_MAP.get(id) ?? null;
+  const base = runtimeNode(id) ?? NODE_MAP.get(id) ?? null;
+  return base ? applyIdentity(base) : null;
 }
 
 /**
  * Direct children (≤2) of a node, ordered LEFT then RIGHT. Includes any
  * runtime-added marketers (e.g. placed from the tree) so every view stays in
- * sync within the running server.
+ * sync within the running server. Identity overrides (rank/status) are applied.
  */
 export function mockChildren(parentId: string): TreeNode[] {
   return [...MOCK_NODES, ...getRuntimeNodes()]
     .filter((n) => n.parent_id === parentId)
-    .sort((a, b) => (a.leg === b.leg ? 0 : a.leg === 'LEFT' ? -1 : 1));
+    .sort((a, b) => (a.leg === b.leg ? 0 : a.leg === 'LEFT' ? -1 : 1))
+    .map(applyIdentity);
 }
 
 /** Return the LEFT-only / RIGHT-only / full subtree (inclusive of root). */
@@ -188,6 +193,7 @@ export function mockSearch(q: string): TreeNode[] {
   const needle = q.trim().toLowerCase();
   if (!needle) return [];
   return [...MOCK_NODES, ...getRuntimeNodes()]
+    .map(applyIdentity)
     .filter((n) => n.display_name.toLowerCase().includes(needle))
     .slice(0, 20);
 }
