@@ -3,6 +3,7 @@ import { getClient } from '@/lib/data/crm-shared';
 import { getOwnerContext } from '@/lib/data/crm-shared';
 import type { AppNotification, NotificationType } from '@/lib/types/db';
 import { mockNotifications } from '@/lib/data/mock/notifications';
+import { listUpcomingBirthdays, type UpcomingBirthday } from '@/lib/data/team';
 
 /**
  * Notifications data access (server-only). Reads the caller's in-app inbox
@@ -28,13 +29,71 @@ function activeUnread(rows: AppNotification[]): number {
   return rows.filter((n) => !n.read_at && !n.deleted_at).length;
 }
 
+/** How far ahead to surface a team member's birthday. */
+const BIRTHDAY_WINDOW_DAYS = 7;
+
+function birthdayTitle(b: UpcomingBirthday): string {
+  if (b.daysUntil === 0) return `🎂 Oggi è il compleanno di ${b.display_name}!`;
+  if (b.daysUntil === 1) return `🎂 Domani è il compleanno di ${b.display_name}`;
+  return `🎂 Tra ${b.daysUntil} giorni è il compleanno di ${b.display_name}`;
+}
+
+/**
+ * Derive birthday notifications for the caller's team (one per member with a
+ * birthday in the next {@link BIRTHDAY_WINDOW_DAYS} days, the caller excluded).
+ * Computed at request time against the real clock so they stay fresh, and never
+ * throws — any failure degrades to no birthday notifications.
+ */
+async function birthdayNotifications(now: Date): Promise<AppNotification[]> {
+  try {
+    let selfId = '';
+    try {
+      selfId = (await getOwnerContext()).marketerId;
+    } catch {
+      selfId = '';
+    }
+    const { data } = await listUpcomingBirthdays(BIRTHDAY_WINDOW_DAYS, now);
+    const createdAt = now.toISOString();
+    return data
+      .filter((b) => b.id !== selfId)
+      .map((b) => ({
+        id: `bday-${b.id}`,
+        type: 'birthday' as NotificationType,
+        title_it: birthdayTitle(b),
+        body_it:
+          b.daysUntil === 0
+            ? 'Un membro del tuo team compie gli anni oggi. Fagli gli auguri!'
+            : 'Preparati a fare gli auguri a un membro del tuo team.',
+        payload: { marketer_id: b.id },
+        read_at: null,
+        created_at: createdAt,
+        deleted_at: null,
+      }));
+  } catch {
+    return [];
+  }
+}
+
+/** Merge generated + stored notifications, drop dismissed, newest first. */
+function mergeSorted(
+  generated: AppNotification[],
+  stored: AppNotification[],
+): AppNotification[] {
+  return [...generated, ...stored]
+    .filter((n) => !n.deleted_at)
+    .sort((a, b) =>
+      a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0,
+    );
+}
+
 /** The caller's active (non-dismissed) notifications, newest first. */
 export async function listNotifications(
   limit = 50,
 ): Promise<NotificationsResult> {
+  const birthdays = await birthdayNotifications(new Date());
   const supabase = getClient();
   if (!supabase) {
-    const data = mockNotifications();
+    const data = mergeSorted(birthdays, mockNotifications());
     return { data, unread: activeUnread(data), demo: true };
   }
   try {
@@ -46,7 +105,7 @@ export async function listNotifications(
       .limit(limit);
 
     if (error || !data) {
-      const fallback = mockNotifications();
+      const fallback = mergeSorted(birthdays, mockNotifications());
       return { data: fallback, unread: activeUnread(fallback), demo: true };
     }
 
@@ -60,9 +119,10 @@ export async function listNotifications(
       created_at: String(r.created_at),
       deleted_at: (r.deleted_at as string | null) ?? null,
     }));
-    return { data: rows, unread: activeUnread(rows), demo: false };
+    const merged = mergeSorted(birthdays, rows);
+    return { data: merged, unread: activeUnread(merged), demo: false };
   } catch {
-    const fallback = mockNotifications();
+    const fallback = mergeSorted(birthdays, mockNotifications());
     return { data: fallback, unread: activeUnread(fallback), demo: true };
   }
 }

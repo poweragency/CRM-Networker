@@ -7,8 +7,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar } from '@/components/ui/avatar';
 import { getProspectById } from '@/lib/data/prospects';
 import { getProspectExtra } from '@/lib/data/prospect-extras';
+import { getContactById } from '@/lib/data/contacts';
 import { getNode } from '@/lib/data/genealogy';
 import { ProspectDetail } from '@/components/prospects/prospect-detail';
+import { WhatsAppButton } from '@/components/crm/whatsapp-button';
 import { formatDate, formatRelativeTime } from '@/lib/utils';
 
 /**
@@ -38,6 +40,13 @@ export default async function ProspectDetailPage({
   const ownerRes = await getNode(prospect.owner_marketer_id);
   const ownerName = ownerRes.data?.display_name ?? 'Marketer';
   const extra = getProspectExtra(prospect.id);
+
+  // Phone for the WhatsApp quick-contact comes from the linked contact.
+  const contactRes = prospect.contact_id
+    ? await getContactById(prospect.contact_id)
+    : null;
+  const phone = contactRes?.data?.phone ?? null;
+
   const demo = res.demo || ownerRes.demo;
 
   return (
@@ -48,6 +57,16 @@ export default async function ProspectDetailPage({
           { label: t('title'), href: '/percorso-prospect' },
           { label: prospect.full_name },
         ]}
+        actions={
+          phone ? (
+            <WhatsAppButton
+              phone={phone}
+              name={prospect.full_name}
+              withLabel
+              className="border border-[#25D366]/30"
+            />
+          ) : undefined
+        }
       />
 
       {demo && <ConfigNotice variant="inline" />}

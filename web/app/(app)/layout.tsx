@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getCurrentClaims } from '@/lib/data/session';
 import { getNode } from '@/lib/data/genealogy';
+import { listNotifications } from '@/lib/data/notifications';
 import { isSupabaseConfigured } from '@/lib/env';
 import { AppShell } from '@/components/shell/app-shell';
 import type { NavViewer } from '@/lib/nav';
@@ -57,8 +58,8 @@ export default async function AppLayout({
 
   const orgName = demo ? 'Networker · Demo' : claims.org_id || 'Workspace';
 
-  // Static placeholder until the notifications feed lands (doc 08 §2).
-  const unreadCount = 3;
+  // Live unread count from the notifications feed (includes team birthdays).
+  const { unread: unreadCount } = await listNotifications();
 
   return (
     <AppShell

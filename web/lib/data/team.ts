@@ -43,6 +43,7 @@ export async function listTeamMembers(): Promise<TeamResult<TeamMemberRow[]>> {
       rank: m.rank,
       status: m.status,
       starting_package: ex.starting_package,
+      phone: ex.phone,
       city: ex.city,
       region: ex.region,
       registration_date: m.registration_date,
@@ -89,6 +90,60 @@ export async function getMarketerProfile(
     },
     demo: nodeRes.demo || reg.demo,
   };
+}
+
+/** A team member whose birthday falls within the look-ahead window. */
+export interface UpcomingBirthday {
+  id: string;
+  display_name: string;
+  /** ISO `YYYY-MM-DD`. */
+  birth_date: string;
+  /** Whole days until the next occurrence (0 = today). */
+  daysUntil: number;
+}
+
+/**
+ * Team members whose birthday lands within `withinDays` from `now` (inclusive,
+ * 0 = today), nearest first. Anchored on the month/day of `birth_date` (the year
+ * is ignored), parsed without timezone drift. Demo-safe; drives the birthday
+ * notifications. `now` is injected so callers control the clock.
+ */
+export async function listUpcomingBirthdays(
+  withinDays = 7,
+  now = new Date(),
+): Promise<TeamResult<UpcomingBirthday[]>> {
+  const { data, demo } = await listMarketers();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const results: UpcomingBirthday[] = [];
+
+  for (const m of data) {
+    const { birth_date } = resolveExtra(m.id);
+    if (!birth_date) continue;
+    const parts = birth_date.split('-').map(Number);
+    const month = parts[1];
+    const day = parts[2];
+    if (!month || !day) continue;
+
+    // Next occurrence of this month/day on/after today.
+    let next = new Date(today.getFullYear(), month - 1, day);
+    if (next.getTime() < today.getTime()) {
+      next = new Date(today.getFullYear() + 1, month - 1, day);
+    }
+    const daysUntil = Math.round(
+      (next.getTime() - today.getTime()) / 86_400_000,
+    );
+    if (daysUntil <= withinDays) {
+      results.push({
+        id: m.id,
+        display_name: m.display_name,
+        birth_date,
+        daysUntil,
+      });
+    }
+  }
+
+  results.sort((a, b) => a.daysUntil - b.daysUntil);
+  return { data: results, demo };
 }
 
 export interface UpdateExtraResult {

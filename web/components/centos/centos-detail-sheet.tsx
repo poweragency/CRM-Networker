@@ -19,6 +19,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { FormSheet } from '@/components/crm/form-sheet';
 import { StatusPill } from '@/components/crm/status-pill';
+import { WhatsAppButton } from '@/components/crm/whatsapp-button';
 import { centosStatus, type CentosEntry } from '@/lib/types/db';
 import { RatingStars } from './rating-stars';
 
@@ -182,12 +183,15 @@ export function CentosDetailSheet({
         <div className="divide-y divide-border">
           <DetailRow icon={<Phone />} label={t('phone')}>
             {entry.phone ? (
-              <a
-                href={`tel:${entry.phone.replace(/\s+/g, '')}`}
-                className="text-primary hover:underline"
-              >
-                {entry.phone}
-              </a>
+              <span className="flex items-center gap-1.5">
+                <a
+                  href={`tel:${entry.phone.replace(/\s+/g, '')}`}
+                  className="text-primary hover:underline"
+                >
+                  {entry.phone}
+                </a>
+                <WhatsAppButton phone={entry.phone} name={entry.full_name} />
+              </span>
             ) : (
               <span className="text-muted-foreground">—</span>
             )}

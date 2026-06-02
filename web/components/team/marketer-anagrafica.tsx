@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { RankBadge } from '@/components/ui/rank-badge';
 import { useToast } from '@/components/crm/toaster';
+import { WhatsAppButton } from '@/components/crm/whatsapp-button';
 import { cn, formatDate } from '@/lib/utils';
 import {
   OCCUPATION_LABELS,
@@ -48,6 +49,7 @@ function extraOf(p: TeamMemberProfile): MarketerExtra {
     starting_package: p.starting_package,
     addon: p.addon,
     platform_click: p.platform_click,
+    phone: p.phone,
     city: p.city,
     region: p.region,
     birth_date: p.birth_date,
@@ -260,6 +262,27 @@ export function MarketerAnagrafica({
               />
               {form.platform_click ? t('yes') : t('no')}
             </label>
+          </EditableField>
+
+          <EditableField
+            label={t('f_phone')}
+            editing={editing}
+            display={v.phone}
+            displayNode={
+              v.phone ? (
+                <span className="flex items-center gap-1.5">
+                  <span className="text-sm text-foreground">{v.phone}</span>
+                  <WhatsAppButton phone={v.phone} name={profile.display_name} />
+                </span>
+              ) : undefined
+            }
+          >
+            <Input
+              type="tel"
+              value={form.phone ?? ''}
+              placeholder="+39 ___ ___ ____"
+              onChange={(e) => set('phone', e.target.value || null)}
+            />
           </EditableField>
 
           <EditableField label={t('f_city')} editing={editing} display={v.city}>

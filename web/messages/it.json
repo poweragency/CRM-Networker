@@ -304,6 +304,8 @@
   },
   "crm": {
     "section": "CRM",
+    "whatsapp": "WhatsApp",
+    "whatsapp_to": "Scrivi su WhatsApp a {name}",
     "new": "Nuovo",
     "create": "Crea",
     "edit": "Modifica",
@@ -1056,6 +1058,7 @@
     "f_addon": "Addon",
     "f_addon_placeholder": "Eventuali addon…",
     "f_platform_click": "Click",
+    "f_phone": "Telefono",
     "f_city": "Città di provenienza",
     "f_region": "Regione",
     "f_birth_date": "Data di nascita",

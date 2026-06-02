@@ -9,6 +9,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { RankBadge } from '@/components/ui/rank-badge';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/crm/empty-state';
+import { WhatsAppButton } from '@/components/crm/whatsapp-button';
 import { TopbarSlot } from '@/components/shell/topbar-slot';
 import { cn, formatDate, formatNumber } from '@/lib/utils';
 import {
@@ -162,6 +163,11 @@ export function TeamRoster({ rows }: { rows: TeamMemberRow[] }) {
                             )}
                           </span>
                         </span>
+                        <WhatsAppButton
+                          phone={r.phone}
+                          name={r.display_name}
+                          className="ml-auto shrink-0"
+                        />
                       </span>
                     </td>
                     <td className="px-3 py-3">

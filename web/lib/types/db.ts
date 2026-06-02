@@ -102,6 +102,8 @@ export interface MarketerExtra {
   addon: string | null;
   /** "click" — accesso alla piattaforma aziendale (sì/no). */
   platform_click: boolean;
+  /** Numero di telefono (per il contatto rapido via WhatsApp). */
+  phone: string | null;
   /** Città di provenienza. */
   city: string | null;
   region: string | null;
@@ -134,6 +136,7 @@ export interface TeamMemberRow {
   rank: MarketerRank;
   status: MarketerStatus;
   starting_package: StartingPackage | null;
+  phone: string | null;
   city: string | null;
   region: string | null;
   registration_date: string | null;
@@ -1004,6 +1007,7 @@ export type NotificationType =
   | 'bottleneck_alert'
   | 'monthly_report_ready'
   | 'invitation'
+  | 'birthday'
   | 'system';
 
 export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
@@ -1012,6 +1016,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   bottleneck_alert: 'Avviso collo di bottiglia',
   monthly_report_ready: 'Report disponibile',
   invitation: 'Invito',
+  birthday: 'Compleanno',
   system: 'Sistema',
 };
 
@@ -1035,6 +1040,7 @@ export function notificationHref(n: AppNotification): string {
   const p = n.payload ?? {};
   const prospectId = typeof p.prospect_id === 'string' ? p.prospect_id : null;
   const reportId = typeof p.report_id === 'string' ? p.report_id : null;
+  const marketerId = typeof p.marketer_id === 'string' ? p.marketer_id : null;
   switch (n.type) {
     case 'follow_up_due':
       return prospectId ? `/percorso-prospect/${prospectId}` : '/percorso-prospect';
@@ -1044,6 +1050,8 @@ export function notificationHref(n: AppNotification): string {
       return reportId ? `/report?id=${reportId}` : '/report';
     case 'rank_changed':
       return '/genealogia';
+    case 'birthday':
+      return marketerId ? `/team/${marketerId}` : '/statistiche';
     case 'invitation':
       return '/admin/attivazioni';
     case 'system':

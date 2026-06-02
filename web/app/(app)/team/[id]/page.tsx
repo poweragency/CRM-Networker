@@ -145,6 +145,7 @@ export default async function MarketerProfilePage({
         isSelf={isSelf}
         crmAccess={profile?.crm_access ?? false}
         prospects={personalProspects}
+        phone={profile?.phone ?? null}
       />
 
       {/* Anagrafica — the member's primary data (nome, sponsor, pacchetto, … ).

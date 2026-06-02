@@ -42,11 +42,14 @@ export function mockExtra(id: string): MarketerExtra {
   const birthYear = 1986 + (i % 18);
   const birthMonth = ((i * 7) % 12) + 1;
   const birthDay = ((i * 13) % 27) + 1;
+  // Deterministic Italian-looking mobile (10 digits, starts with 3).
+  const digits = String(3201000000 + i * 1234567).slice(0, 10);
   return {
     starting_package: PACKAGES[i % PACKAGES.length]!,
     // "addon" and "notes" are intentionally empty fields to fill in later.
     addon: null,
     platform_click: i % 3 !== 0,
+    phone: `+39 ${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`,
     city: loc.city,
     region: loc.region,
     birth_date: `${birthYear}-${pad(birthMonth)}-${pad(birthDay)}`,

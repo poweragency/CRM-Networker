@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import {
   AlertTriangle,
   Bell,
+  Cake,
   CalendarClock,
   Check,
   CheckCheck,
@@ -46,6 +47,7 @@ const TYPE_ICON: Record<NotificationType, LucideIcon> = {
   bottleneck_alert: AlertTriangle,
   monthly_report_ready: FileBarChart,
   invitation: Mail,
+  birthday: Cake,
   system: Bell,
 };
 
@@ -55,6 +57,7 @@ const TYPE_TONE: Record<NotificationType, string> = {
   bottleneck_alert: 'bg-danger/12 text-danger',
   monthly_report_ready: 'bg-primary/10 text-primary',
   invitation: 'bg-info/12 text-info',
+  birthday: 'bg-success/12 text-success',
   system: 'bg-muted text-muted-foreground',
 };
 

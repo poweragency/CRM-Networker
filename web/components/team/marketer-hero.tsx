@@ -10,6 +10,7 @@ import {
   PersonalPerformance,
   type PersonalProspect,
 } from '@/components/team/personal-performance';
+import { WhatsAppButton } from '@/components/crm/whatsapp-button';
 
 /**
  * MarketerHero — the profile masthead for /team/[id] (server component). Replaces
@@ -33,6 +34,7 @@ export async function MarketerHero({
   isSelf,
   crmAccess = false,
   prospects = [],
+  phone = null,
 }: {
   node: TreeNode;
   isSelf: boolean;
@@ -40,6 +42,8 @@ export async function MarketerHero({
   crmAccess?: boolean;
   /** This marketer's OWN prospects (stage + funnel-entry date) for the KPIs. */
   prospects?: PersonalProspect[];
+  /** Phone number → WhatsApp quick-contact (hidden on the own profile). */
+  phone?: string | null;
 }) {
   const t = await getTranslations('team');
   const tg = await getTranslations('genealogia');
@@ -71,6 +75,15 @@ export async function MarketerHero({
                 <Badge variant="default" className="px-1.5 py-0">
                   {t('you')}
                 </Badge>
+              )}
+              {/* WhatsApp quick-contact — team members only, never the own profile. */}
+              {!isSelf && phone && (
+                <WhatsAppButton
+                  phone={phone}
+                  name={node.display_name}
+                  withLabel
+                  className="ml-auto border border-[#25D366]/30"
+                />
               )}
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
