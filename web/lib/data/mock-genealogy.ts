@@ -61,7 +61,7 @@ const SEEDS: Seed[] = [
   { id: 'nRLR', parent: 'nRL', leg: 'RIGHT', first: 'Federica', last: 'Lombardi', rank: 'executive', status: 'active', kpis: { prospects: 5, calls: 17, iscrizioni: 1, conversion_rate: 0.11 } },
 
   // ── Level 3 — under RR ──
-  { id: 'nRRL', parent: 'nRR', leg: 'LEFT', first: 'Andrea', last: 'Barbieri', rank: 'executive', status: 'suspended', kpis: { prospects: 1, calls: 3, iscrizioni: 0, conversion_rate: 0.0 } },
+  { id: 'nRRL', parent: 'nRR', leg: 'LEFT', first: 'Andrea', last: 'Barbieri', rank: 'executive', status: 'inactive', kpis: { prospects: 1, calls: 3, iscrizioni: 0, conversion_rate: 0.0 } },
 
   // ── Level 4 — leaves ──
   { id: 'nLLLL', parent: 'nLLL', leg: 'LEFT', first: 'Valentina', last: 'Rizzo', rank: 'executive', status: 'active', kpis: { prospects: 3, calls: 9, iscrizioni: 0, conversion_rate: 0.0 } },
@@ -75,7 +75,7 @@ const SEEDS: Seed[] = [
 
 /** Derive an activity badge from KPIs, matching doc 14 §7.2 thresholds. */
 function deriveActivity(kpis: TreeNodeKpis, status: MarketerStatus): ActivityIndicator {
-  if (status === 'suspended' || status === 'inactive') return 'dormant';
+  if (status === 'inactive') return 'dormant';
   if (kpis.iscrizioni >= 1 || kpis.calls >= 20 || kpis.prospects >= 10) return 'hot';
   if (kpis.calls >= 5 || kpis.prospects >= 3) return 'warm';
   if (kpis.calls > 0 || kpis.prospects > 0) return 'cold';

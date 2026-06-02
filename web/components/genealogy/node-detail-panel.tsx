@@ -23,7 +23,7 @@ import { RankBadge } from '@/components/ui/rank-badge';
 import { Separator } from '@/components/ui/separator';
 import { StatusDot } from '@/components/ui/status-dot';
 import { cn, formatNumber, formatPercent } from '@/lib/utils';
-import { STATUS_LABELS, type TreeNode } from '@/lib/types/db';
+import type { TreeNode } from '@/lib/types/db';
 import { isCrmEligibleRank } from './permissions';
 
 /**
@@ -118,18 +118,10 @@ export function NodeDetailPanel({
           </h2>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <RankBadge rank={node.rank} />
-            <Badge
-              variant={
-                node.status === 'active'
-                  ? 'success'
-                  : node.status === 'suspended'
-                    ? 'danger'
-                    : node.status === 'pending'
-                      ? 'warning'
-                      : 'secondary'
-              }
-            >
-              {STATUS_LABELS[node.status]}
+            <Badge variant={node.status === 'active' ? 'success' : 'secondary'}>
+              {node.status === 'active'
+                ? t('profile_activated')
+                : t('profile_not_activated')}
             </Badge>
           </div>
           <div className="mt-2">

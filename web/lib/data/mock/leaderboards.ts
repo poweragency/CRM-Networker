@@ -32,7 +32,7 @@ function metricValue(node: TreeNode, metric: LeaderboardMetric): number {
 
 /** Resolve the population ranked for a given scope (+ branch side). */
 function population(scope: LeaderboardScope, branch: BranchScope): TreeNode[] {
-  const active = MOCK_NODES.filter((n) => n.status !== 'suspended');
+  const active = MOCK_NODES.filter((n) => n.status !== 'inactive');
   if (scope === 'branch') {
     // LEFT/RIGHT legs of the root; GLOBAL falls back to the whole org.
     if (branch === 'LEFT') return active.filter((n) => n.id.startsWith('nL'));

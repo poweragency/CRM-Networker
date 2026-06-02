@@ -17,7 +17,6 @@ const statusTone: Record<MarketerStatus, { dot: string; ring: string }> = {
   active: { dot: 'bg-success', ring: 'ring-success/30' },
   pending: { dot: 'bg-warning', ring: 'ring-warning/30' },
   inactive: { dot: 'bg-muted-foreground', ring: 'ring-muted-foreground/30' },
-  suspended: { dot: 'bg-danger', ring: 'ring-danger/30' },
 };
 
 const activityTone: Record<ActivityIndicator, { dot: string; ring: string }> = {

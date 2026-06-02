@@ -166,14 +166,13 @@ export interface WishlistItem {
   done: boolean;
 }
 
-/** `marketer_status` — lifecycle of a marketer profile. */
-export type MarketerStatus = 'pending' | 'active' | 'inactive' | 'suspended';
+/** `marketer_status` — lifecycle of a marketer profile (profile activation). */
+export type MarketerStatus = 'pending' | 'active' | 'inactive';
 
 export const STATUS_LABELS: Record<MarketerStatus, string> = {
   pending: 'In attesa',
   active: 'Attivo',
   inactive: 'Inattivo',
-  suspended: 'Sospeso',
 };
 
 /** `membership_role` — the application role on a membership (NOT the DB role). */

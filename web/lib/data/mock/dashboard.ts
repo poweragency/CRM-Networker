@@ -44,7 +44,7 @@ export function mockTopMarketers(
   category: TopCategory,
   limit = 5,
 ): TopMarketerEntry[] {
-  const ranked = MOCK_NODES.filter((n) => n.status !== 'suspended')
+  const ranked = MOCK_NODES.filter((n) => n.status !== 'inactive')
     .map((n) => ({ n, value: metricValue(n, category) }))
     .filter((r) => r.value > 0)
     .sort((a, b) =>

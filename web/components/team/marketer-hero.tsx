@@ -14,7 +14,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { RankBadge } from '@/components/ui/rank-badge';
 import { cn, formatNumber, formatPercent } from '@/lib/utils';
-import { STATUS_LABELS, type TreeNode } from '@/lib/types/db';
+import type { TreeNode } from '@/lib/types/db';
 
 /**
  * MarketerHero — the profile masthead for /team/[id] (server component). Replaces
@@ -28,7 +28,6 @@ const STATUS_RING: Record<string, string> = {
   active: 'ring-success/40',
   pending: 'ring-warning/40',
   inactive: 'ring-border',
-  suspended: 'ring-danger/40',
 };
 
 export async function MarketerHero({
@@ -72,18 +71,10 @@ export async function MarketerHero({
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <RankBadge rank={node.rank} />
-              <Badge
-                variant={
-                  node.status === 'active'
-                    ? 'success'
-                    : node.status === 'suspended'
-                      ? 'danger'
-                      : node.status === 'pending'
-                        ? 'warning'
-                        : 'secondary'
-                }
-              >
-                {STATUS_LABELS[node.status]}
+              <Badge variant={node.status === 'active' ? 'success' : 'secondary'}>
+                {node.status === 'active'
+                  ? t('profile_activated')
+                  : t('profile_not_activated')}
               </Badge>
             </div>
           </div>

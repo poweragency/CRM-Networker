@@ -16,12 +16,11 @@ import { formatNumber, initials } from '@/lib/utils';
 
 const MARKETER_STATUS_TONE: Record<
   MarketerStatus,
-  'success' | 'info' | 'secondary' | 'danger'
+  'success' | 'info' | 'secondary'
 > = {
   active: 'success',
   pending: 'info',
   inactive: 'secondary',
-  suspended: 'danger',
 };
 
 /**

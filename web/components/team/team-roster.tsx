@@ -30,7 +30,6 @@ const STATUS_TONE: Record<MarketerStatus, string> = {
   active: 'bg-success',
   pending: 'bg-warning',
   inactive: 'bg-muted-foreground/50',
-  suspended: 'bg-danger',
 };
 
 export function TeamRoster({ rows }: { rows: TeamMemberRow[] }) {
