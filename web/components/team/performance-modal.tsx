@@ -55,6 +55,15 @@ function fmtMonth(key: string, style: 'long' | 'short'): string {
   return (label.charAt(0).toUpperCase() + label.slice(1)).replace('.', '');
 }
 
+/** Floor for the date pickers — guards against absurd years (e.g. 3450). */
+const MIN_DATE = '2015-01-01';
+
+/** Keep a YYYY-MM-DD value within [min, max] (ISO strings compare correctly). */
+function clampDay(v: string, min: string, max: string): string {
+  if (!v) return v;
+  return v < min ? min : v > max ? max : v;
+}
+
 export function PerformanceModal({
   prospects,
 }: {
@@ -88,6 +97,8 @@ function PerformanceContent({ prospects }: { prospects: PersonalProspect[] }) {
   const [mode, setMode] = React.useState<Mode>('monthly');
   const [from, setFrom] = React.useState('');
   const [to, setTo] = React.useState('');
+  // Upper bound = today (no future cohorts); ISO YYYY-MM-DD.
+  const today = React.useMemo(() => new Date().toISOString().slice(0, 10), []);
 
   // Per-month buckets (cohort = month of funnel entry), most recent first.
   const months = React.useMemo<MonthBucket[]>(() => {
@@ -168,8 +179,11 @@ function PerformanceContent({ prospects }: { prospects: PersonalProspect[] }) {
               <input
                 type="date"
                 value={from}
-                max={to || undefined}
-                onChange={(e) => setFrom(e.target.value)}
+                min={MIN_DATE}
+                max={to || today}
+                onChange={(e) =>
+                  setFrom(clampDay(e.target.value, MIN_DATE, to || today))
+                }
                 className="rounded-md border bg-background px-2 py-1 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
             </label>
@@ -178,8 +192,11 @@ function PerformanceContent({ prospects }: { prospects: PersonalProspect[] }) {
               <input
                 type="date"
                 value={to}
-                min={from || undefined}
-                onChange={(e) => setTo(e.target.value)}
+                min={from || MIN_DATE}
+                max={today}
+                onChange={(e) =>
+                  setTo(clampDay(e.target.value, from || MIN_DATE, today))
+                }
                 className="rounded-md border bg-background px-2 py-1 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
             </label>
