@@ -100,7 +100,7 @@ export function AppShell({
 function ShellFallback({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen bg-background">
-      <div className="hidden w-64 shrink-0 border-r bg-card md:block" />
+      <div className="hidden w-side shrink-0 border-r bg-card md:block" />
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="h-14 border-b bg-card" />
         <main className="flex-1 overflow-x-hidden">

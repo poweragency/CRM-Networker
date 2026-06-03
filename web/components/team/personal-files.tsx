@@ -31,11 +31,7 @@ export function PersonalFiles({
   const [wishOpen, setWishOpen] = React.useState(false);
 
   return (
-    <section className="space-y-3">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        {t('files_title')}
-      </h2>
-
+    <div className="-mt-2">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <FileCard
           icon={<HelpCircle className="h-[18px] w-[18px]" aria-hidden />}
@@ -74,7 +70,7 @@ export function PersonalFiles({
           readOnly={!canEdit}
         />
       </Modal>
-    </section>
+    </div>
   );
 }
 
