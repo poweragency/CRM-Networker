@@ -20,6 +20,7 @@ import { MarketerProfileTabs } from '@/components/team/marketer-profile-tabs';
 import { AnagraficaModal } from '@/components/team/anagrafica-modal';
 import { MarketerHero } from '@/components/team/marketer-hero';
 import { MarketerKpis } from '@/components/team/marketer-kpis';
+import { PerformanceModal } from '@/components/team/performance-modal';
 import { MarketerSections } from '@/components/team/marketer-sections';
 import { MarketerFormazione } from '@/components/team/marketer-formazione';
 import { PersonalFiles } from '@/components/team/personal-files';
@@ -185,6 +186,9 @@ export default async function MarketerProfilePage({
         production={
           <>
             <MarketerKpis node={node} prospects={personalProspects} />
+            <div className="flex">
+              <PerformanceModal prospects={personalProspects} />
+            </div>
             <MarketerProfileTabs
               defaultTab={parseTab(searchParams?.tab)}
               prospects={prospectsPanel}
