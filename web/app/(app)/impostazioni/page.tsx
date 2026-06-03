@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import type { ReactNode } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { getCurrentClaims } from '@/lib/data/session';
 import { getNode } from '@/lib/data/genealogy';
@@ -9,12 +8,8 @@ import { getSevenWhysFor } from '@/lib/data/seven-whys';
 import { getMarketerProfile } from '@/lib/data/team';
 import { getWishlist } from '@/lib/data/wishlist';
 import { getFormazioneProgress } from '@/lib/data/formazione';
-import { ROLE_LABELS } from '@/lib/types/db';
 import { ConfigNotice } from '@/components/config-notice';
 import { EmptyState } from '@/components/crm/empty-state';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { ProspectBoard } from '@/components/prospects/prospect-board';
 import type { BoardView, ProspectView } from '@/components/prospects/types';
 import { CentosManager } from '@/components/centos/centos-manager';
@@ -54,7 +49,6 @@ export default async function ImpostazioniPage({
 }: {
   searchParams?: { tab?: string | string[] };
 }) {
-  const t = await getTranslations('impostazioni');
   const tt = await getTranslations('team');
 
   const { claims, demo: claimsDemo, email } = await getCurrentClaims();
@@ -132,19 +126,6 @@ export default async function ImpostazioniPage({
     />
   );
 
-  const accountRows: ReadonlyArray<{ label: string; value: ReactNode }> = [
-    { label: t('email'), value: email ?? '—' },
-    { label: t('role'), value: ROLE_LABELS[claims.role] },
-    {
-      label: t('crm_access'),
-      value: (
-        <Badge variant={claims.crm_access ? 'success' : 'secondary'}>
-          {claims.crm_access ? t('crm_on') : t('crm_off')}
-        </Badge>
-      ),
-    },
-  ];
-
   return (
     <div className="space-y-5">
       {demo && <ConfigNotice variant="inline" />}
@@ -184,41 +165,6 @@ export default async function ImpostazioniPage({
           <MarketerFormazione marketerId={meId} initialDone={formazioneRes.done} />
         }
       />
-
-      {/* Account + appearance */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader className="p-5 pb-3">
-            <CardTitle>{t('section_account')}</CardTitle>
-            <p className="text-sm text-muted-foreground">{t('section_account_desc')}</p>
-          </CardHeader>
-          <CardContent className="p-5 pt-0">
-            <dl className="divide-y">
-              {accountRows.map((row, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between gap-4 py-2.5 first:pt-0 last:pb-0"
-                >
-                  <dt className="text-sm text-muted-foreground">{row.label}</dt>
-                  <dd className="text-sm font-medium text-foreground">{row.value}</dd>
-                </div>
-              ))}
-            </dl>
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-1">
-          <CardHeader className="p-5 pb-3">
-            <CardTitle>{t('section_appearance')}</CardTitle>
-          </CardHeader>
-          <CardContent className="p-5 pt-0">
-            <div className="flex items-center justify-between rounded-lg border bg-background p-3">
-              <span className="text-sm font-medium text-foreground">{t('theme')}</span>
-              <ThemeToggle />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }
