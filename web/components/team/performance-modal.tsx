@@ -181,7 +181,8 @@ function PerformanceContent({ prospects }: { prospects: PersonalProspect[] }) {
                 value={from}
                 min={MIN_DATE}
                 max={to || today}
-                onChange={(e) =>
+                onChange={(e) => setFrom(e.target.value)}
+                onBlur={(e) =>
                   setFrom(clampDay(e.target.value, MIN_DATE, to || today))
                 }
                 className="rounded-md border bg-background px-2 py-1 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -194,7 +195,8 @@ function PerformanceContent({ prospects }: { prospects: PersonalProspect[] }) {
                 value={to}
                 min={from || MIN_DATE}
                 max={today}
-                onChange={(e) =>
+                onChange={(e) => setTo(e.target.value)}
+                onBlur={(e) =>
                   setTo(clampDay(e.target.value, from || MIN_DATE, today))
                 }
                 className="rounded-md border bg-background px-2 py-1 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

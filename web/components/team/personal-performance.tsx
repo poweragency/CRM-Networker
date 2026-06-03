@@ -138,7 +138,8 @@ export function PersonalPerformance({
               value={from}
               min={MIN_DATE}
               max={to || today}
-              onChange={(e) => setFrom(clampDay(e.target.value, MIN_DATE, to || today))}
+              onChange={(e) => setFrom(e.target.value)}
+              onBlur={(e) => setFrom(clampDay(e.target.value, MIN_DATE, to || today))}
               className="rounded-md border bg-background px-2 py-1 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </label>
@@ -149,7 +150,8 @@ export function PersonalPerformance({
               value={to}
               min={from || MIN_DATE}
               max={today}
-              onChange={(e) => setTo(clampDay(e.target.value, from || MIN_DATE, today))}
+              onChange={(e) => setTo(e.target.value)}
+              onBlur={(e) => setTo(clampDay(e.target.value, from || MIN_DATE, today))}
               className="rounded-md border bg-background px-2 py-1 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </label>
