@@ -2,6 +2,7 @@
 
 import { updateMarketerExtra } from '@/lib/data/team';
 import { saveWishlist } from '@/lib/data/wishlist';
+import { saveFormazioneProgress } from '@/lib/data/formazione';
 import { getCurrentClaims } from '@/lib/data/session';
 import { setMarketerIdentity } from '@/lib/data/mock/runtime';
 import { isSupabaseConfigured } from '@/lib/env';
@@ -41,6 +42,19 @@ export async function saveWishlistAction(
   items: WishlistItem[],
 ): Promise<SaveWishlistActionResult> {
   return saveWishlist(marketerId, items);
+}
+
+export interface SaveFormazioneActionResult {
+  ok: boolean;
+  demo: boolean;
+}
+
+/** Persist which formazione items (playlist/libri) a marketer has ticked. */
+export async function saveFormazioneAction(
+  marketerId: string,
+  done: string[],
+): Promise<SaveFormazioneActionResult> {
+  return saveFormazioneProgress(marketerId, done);
 }
 
 export interface SaveIdentityResult {

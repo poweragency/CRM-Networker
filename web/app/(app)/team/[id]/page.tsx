@@ -8,6 +8,7 @@ import { listCentos } from '@/lib/data/centos';
 import { getSevenWhysFor } from '@/lib/data/seven-whys';
 import { getMarketerProfile } from '@/lib/data/team';
 import { getWishlist } from '@/lib/data/wishlist';
+import { getFormazioneProgress } from '@/lib/data/formazione';
 import { RANK_ORDER } from '@/lib/types/db';
 import { ConfigNotice } from '@/components/config-notice';
 import { EmptyState } from '@/components/crm/empty-state';
@@ -65,15 +66,23 @@ export default async function MarketerProfilePage({
   const node = nodeRes.data;
   if (!node) notFound();
 
-  const [claimsRes, boardRes, centosRes, whysRes, profileRes, wishlistRes] =
-    await Promise.all([
-      getCurrentClaims(),
-      listProspectBoard({ ownerMarketerId: node.id }),
-      listCentos(node.id),
-      getSevenWhysFor(node.id),
-      getMarketerProfile(node.id),
-      getWishlist(node.id),
-    ]);
+  const [
+    claimsRes,
+    boardRes,
+    centosRes,
+    whysRes,
+    profileRes,
+    wishlistRes,
+    formazioneRes,
+  ] = await Promise.all([
+    getCurrentClaims(),
+    listProspectBoard({ ownerMarketerId: node.id }),
+    listCentos(node.id),
+    getSevenWhysFor(node.id),
+    getMarketerProfile(node.id),
+    getWishlist(node.id),
+    getFormazioneProgress(node.id),
+  ]);
 
   const isSelf = claimsRes.claims.marketer_id === node.id;
   const claims = claimsRes.claims;
@@ -181,7 +190,13 @@ export default async function MarketerProfilePage({
             />
           </>
         }
-        formazione={<MarketerFormazione />}
+        formazione={
+          <MarketerFormazione
+            marketerId={node.id}
+            initialDone={formazioneRes.done}
+            readOnly={!isSelf}
+          />
+        }
       />
     </div>
   );

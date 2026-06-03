@@ -8,6 +8,7 @@ import { listCentos } from '@/lib/data/centos';
 import { getSevenWhysFor } from '@/lib/data/seven-whys';
 import { getMarketerProfile } from '@/lib/data/team';
 import { getWishlist } from '@/lib/data/wishlist';
+import { getFormazioneProgress } from '@/lib/data/formazione';
 import { ROLE_LABELS } from '@/lib/types/db';
 import { ConfigNotice } from '@/components/config-notice';
 import { EmptyState } from '@/components/crm/empty-state';
@@ -59,15 +60,23 @@ export default async function ImpostazioniPage({
   const { claims, demo: claimsDemo, email } = await getCurrentClaims();
   const meId = claims.marketer_id;
 
-  const [nodeRes, boardRes, centosRes, whysRes, profileRes, wishlistRes] =
-    await Promise.all([
-      getNode(meId),
-      listProspectBoard({ ownerMarketerId: meId }),
-      listCentos(meId),
-      getSevenWhysFor(meId),
-      getMarketerProfile(meId),
-      getWishlist(meId),
-    ]);
+  const [
+    nodeRes,
+    boardRes,
+    centosRes,
+    whysRes,
+    profileRes,
+    wishlistRes,
+    formazioneRes,
+  ] = await Promise.all([
+    getNode(meId),
+    listProspectBoard({ ownerMarketerId: meId }),
+    listCentos(meId),
+    getSevenWhysFor(meId),
+    getMarketerProfile(meId),
+    getWishlist(meId),
+    getFormazioneProgress(meId),
+  ]);
 
   const node = nodeRes.data;
   const profile = profileRes.data;
@@ -171,7 +180,9 @@ export default async function ImpostazioniPage({
             />
           </>
         }
-        formazione={<MarketerFormazione />}
+        formazione={
+          <MarketerFormazione marketerId={meId} initialDone={formazioneRes.done} />
+        }
       />
 
       {/* Account + appearance */}
