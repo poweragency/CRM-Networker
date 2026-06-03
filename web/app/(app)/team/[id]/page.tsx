@@ -170,9 +170,17 @@ export default async function MarketerProfilePage({
         }
       />
 
+      {/* File personali (7 Perché + 100's list) — subito sotto l'intestazione,
+          fuori dallo switch: restano visibili sia in Produzione che in Formazione. */}
+      <PersonalFiles
+        sevenWhys={sevenWhysPanel}
+        wishlistItems={wishlistRes.items}
+        marketerId={node.id}
+        canEdit={isSelf}
+      />
+
       {/* Produzione (tutto l'operativo) + Formazione (playlist / libri).
-          Lo switch sta subito sotto l'intestazione identità (sempre visibile);
-          i numeri vivono dentro Produzione. */}
+          I numeri vivono dentro Produzione. */}
       <MarketerSections
         production={
           <>
@@ -181,12 +189,6 @@ export default async function MarketerProfilePage({
               defaultTab={parseTab(searchParams?.tab)}
               prospects={prospectsPanel}
               centos={centosPanel}
-            />
-            <PersonalFiles
-              sevenWhys={sevenWhysPanel}
-              wishlistItems={wishlistRes.items}
-              marketerId={node.id}
-              canEdit={isSelf}
             />
           </>
         }
