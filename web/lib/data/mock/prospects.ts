@@ -71,7 +71,73 @@ function buildProspect(s: Seed): Prospect {
   };
 }
 
-export const MOCK_PROSPECTS: Prospect[] = SEEDS.map(buildProspect);
+/* ────────────────────────────────────────────────────────────────────────────
+ * 6-month demo cohorts for the Performance modal — all owned by the demo caller
+ * (DEMO_OWNER_ID), one cohort per month going back from the mock "now"
+ * (May 2026). The stage mix varies month to month so the per-phase conversions
+ * differ: older cohorts close/enroll better, the current month is still mostly
+ * early-funnel. These feed the per-month + custom-range conversion views.
+ * ──────────────────────────────────────────────────────────────────────────── */
+const PERF_FIRST_NAMES = [
+  'Luca', 'Marco', 'Sara', 'Elena', 'Paolo', 'Chiara', 'Davide', 'Giulia',
+  'Matteo', 'Francesca', 'Andrea', 'Valentina', 'Simone', 'Martina', 'Roberto',
+  'Alessia',
+];
+const PERF_LAST_NAMES = [
+  'Rossi', 'Bianchi', 'Ferrari', 'Russo', 'Romano', 'Gallo', 'Conti', 'Greco',
+  'Bruno', 'Marino', 'Costa', 'Rizzo', 'Moretti', 'Barbieri', 'Fontana',
+  'Mariani',
+];
+
+const PERF_COHORTS: ReadonlyArray<{
+  monthsAgo: number;
+  stages: ProspectStage[];
+}> = [
+  // Current month (May 2026): mostly early funnel, nothing enrolled yet.
+  { monthsAgo: 0, stages: ['conoscitiva', 'conoscitiva', 'business_info', 'business_info', 'business_info', 'follow_up', 'follow_up', 'closing'] },
+  { monthsAgo: 1, stages: ['conoscitiva', 'business_info', 'business_info', 'follow_up', 'follow_up', 'closing', 'check_soldi', 'iscrizione'] },
+  { monthsAgo: 2, stages: ['business_info', 'business_info', 'follow_up', 'follow_up', 'closing', 'closing', 'check_soldi', 'iscrizione', 'iscrizione'] },
+  { monthsAgo: 3, stages: ['conoscitiva', 'business_info', 'follow_up', 'closing', 'check_soldi', 'iscrizione', 'iscrizione'] },
+  { monthsAgo: 4, stages: ['business_info', 'follow_up', 'follow_up', 'closing', 'iscrizione', 'iscrizione', 'iscrizione'] },
+  // Oldest month: a strong cohort that mostly closed and enrolled.
+  { monthsAgo: 5, stages: ['business_info', 'business_info', 'follow_up', 'closing', 'closing', 'iscrizione', 'iscrizione', 'iscrizione', 'iscrizione'] },
+];
+
+/** ISO for `day` of the month `monthsAgo` before May 2026 (the mock base month). */
+function perfMonthIso(monthsAgo: number, day: number): string {
+  return new Date(Date.UTC(2026, 4 - monthsAgo, day, 9, 0, 0)).toISOString();
+}
+
+const MOCK_PERF_PROSPECTS: Prospect[] = PERF_COHORTS.flatMap((cohort) =>
+  cohort.stages.map((stage, i) => {
+    const seq = cohort.monthsAgo * 13 + i;
+    const enteredAt = perfMonthIso(cohort.monthsAgo, 4 + i);
+    const enrolled = stage === 'iscrizione';
+    return {
+      id: `prf-${cohort.monthsAgo}-${String(i + 1).padStart(2, '0')}`,
+      org_id: DEMO_ORG_ID,
+      owner_marketer_id: DEMO_OWNER_ID,
+      contact_id: null,
+      full_name: `${PERF_FIRST_NAMES[seq % PERF_FIRST_NAMES.length]} ${PERF_LAST_NAMES[(seq * 5 + 2) % PERF_LAST_NAMES.length]}`,
+      current_stage: stage,
+      outcome: enrolled ? ('enrolled' as const) : ('open' as const),
+      current_stage_since: enteredAt,
+      entered_funnel_at: enteredAt,
+      closed_at: enrolled ? enteredAt : null,
+      notes: null,
+      created_by: DEMO_OWNER_ID,
+      updated_by: DEMO_OWNER_ID,
+      created_at: enteredAt,
+      updated_at: enteredAt,
+      deleted_at: null,
+    };
+  }),
+);
+
+export const MOCK_PROSPECTS: Prospect[] = [
+  ...SEEDS.map(buildProspect),
+  ...MOCK_PERF_PROSPECTS,
+];
 
 /** Build the ordered journey-event history for one prospect. */
 export function buildJourney(prospectId: string): ProspectJourneyEvent[] {
