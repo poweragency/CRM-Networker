@@ -397,11 +397,12 @@ function Pct({ c, big = false }: { c: PhaseConversion; big?: boolean }) {
   );
 }
 
-/** Month-over-month change in percentage points, with arrow + color. */
+/** Relative month-over-month change of the rate, with arrow + color. */
 function Delta({ curr, prev }: { curr: PhaseConversion; prev?: PhaseConversion }) {
   const t = useTranslations('team');
-  if (!prev || curr.from === 0 || prev.from === 0) return null;
-  const d = curr.rate - prev.rate;
+  if (!prev || curr.from === 0 || prev.from === 0 || prev.rate === 0) return null;
+  // Variazione relativa: di quanto è cambiato il tasso rispetto al mese prima.
+  const d = (curr.rate - prev.rate) / prev.rate;
   const Icon = d > 0.0005 ? ArrowUpRight : d < -0.0005 ? ArrowDownRight : Minus;
   const tone =
     d > 0.0005 ? 'text-success' : d < -0.0005 ? 'text-danger' : 'text-muted-foreground';
