@@ -1,4 +1,8 @@
-import type { CentosEntry } from '@/lib/types/db';
+import type {
+  CentosEntry,
+  CentosRapporto,
+  CentosStatus,
+} from '@/lib/types/db';
 import { DEMO_ORG_ID, DEMO_OWNER_ID, daysAgo } from './_shared';
 
 /**
@@ -44,6 +48,20 @@ const SEEDS: Seed[] = [
   { position: 22, full_name: 'Eleonora Vianello', relationship: 'Amica della cognata', rating: 3, contacted: false },
 ];
 
+/** Map the legacy rating to a warmth so the demo shows all three rapporti. */
+function seedRapporto(rating: number): CentosRapporto {
+  if (rating >= 4) return 'caldo';
+  if (rating === 3) return 'tiepido';
+  return 'freddo';
+}
+
+/** Project the legacy flags onto the new funnel status (covers all 4 values). */
+function seedStato(s: Seed): CentosStatus {
+  if (s.promoted) return 'iscritto';
+  if (s.contacted) return s.rating <= 2 ? 'non_iscritto' : 'invitato';
+  return 'non_invitato';
+}
+
 export const MOCK_CENTOS: CentosEntry[] = SEEDS.map((s) => ({
   id: `cn-${String(s.position).padStart(3, '0')}`,
   org_id: DEMO_ORG_ID,
@@ -53,6 +71,8 @@ export const MOCK_CENTOS: CentosEntry[] = SEEDS.map((s) => ({
   phone: s.phone ?? null,
   relationship: s.relationship,
   rating: s.rating,
+  rapporto: seedRapporto(s.rating),
+  stato: seedStato(s),
   contacted: s.contacted,
   promoted_contact_id: s.promoted ?? null,
   notes: s.notes ?? null,

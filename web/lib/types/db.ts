@@ -619,24 +619,63 @@ export interface CallStats {
 /* ─────────────────────── Centos List (doc 01 §4.2) ─────────────────────── */
 
 /**
- * Derived UI status for a Centos entry (the table stores `contacted` +
- * `promoted_contact_id`; we project a single status for filtering/badges).
+ * Funnel status of a Centos entry — set explicitly by the marketer (no longer
+ * derived from flags): non invitato → invitato → iscritto / non iscritto.
  */
-export type CentosStatus = 'da_contattare' | 'contattato' | 'promosso';
+export type CentosStatus =
+  | 'non_invitato'
+  | 'invitato'
+  | 'iscritto'
+  | 'non_iscritto';
+
+export const CENTOS_STATUS_ORDER: CentosStatus[] = [
+  'non_invitato',
+  'invitato',
+  'iscritto',
+  'non_iscritto',
+];
 
 export const CENTOS_STATUS_LABELS: Record<CentosStatus, string> = {
-  da_contattare: 'Da contattare',
-  contattato: 'Contattato',
-  promosso: 'Promosso a contatto',
+  non_invitato: 'Non invitato',
+  invitato: 'Invitato',
+  iscritto: 'Iscritto',
+  non_iscritto: 'Non iscritto',
 };
 
+/** Tones map to: grigio, blu, verde, rosso. */
 export const CENTOS_STATUS_TONE: Record<
   CentosStatus,
-  'default' | 'secondary' | 'success'
+  'secondary' | 'info' | 'success' | 'danger'
 > = {
-  da_contattare: 'secondary',
-  contattato: 'default',
-  promosso: 'success',
+  non_invitato: 'secondary',
+  invitato: 'info',
+  iscritto: 'success',
+  non_iscritto: 'danger',
+};
+
+/** Rapporto (warmth) with the contact. */
+export type CentosRapporto = 'caldo' | 'tiepido' | 'freddo';
+
+export const CENTOS_RAPPORTO_ORDER: CentosRapporto[] = [
+  'caldo',
+  'tiepido',
+  'freddo',
+];
+
+export const CENTOS_RAPPORTO_LABELS: Record<CentosRapporto, string> = {
+  caldo: 'Caldo',
+  tiepido: 'Tiepido',
+  freddo: 'Freddo',
+};
+
+/** Tones map to: rosso, arancio, blu. */
+export const CENTOS_RAPPORTO_TONE: Record<
+  CentosRapporto,
+  'danger' | 'warning' | 'info'
+> = {
+  caldo: 'danger',
+  tiepido: 'warning',
+  freddo: 'info',
 };
 
 /** A row of `centos_list_entries`. */
@@ -648,8 +687,12 @@ export interface CentosEntry {
   full_name: string;
   phone: string | null;
   relationship: string | null;
-  /** 1..5 prospect-quality score. */
+  /** 1..5 prospect-quality score (legacy — superseded by `rapporto`). */
   rating: number | null;
+  /** Warmth of the relationship. */
+  rapporto: CentosRapporto | null;
+  /** Funnel status (set explicitly). */
+  stato: CentosStatus;
   contacted: boolean;
   promoted_contact_id: string | null;
   notes: string | null;
@@ -658,11 +701,9 @@ export interface CentosEntry {
   deleted_at: string | null;
 }
 
-/** Project the stored flags into the single {@link CentosStatus}. */
+/** The explicit funnel {@link CentosStatus} of an entry. */
 export function centosStatus(entry: CentosEntry): CentosStatus {
-  if (entry.promoted_contact_id) return 'promosso';
-  if (entry.contacted) return 'contattato';
-  return 'da_contattare';
+  return entry.stato ?? 'non_invitato';
 }
 
 /* ─────────────────────── Sette Perché (doc 01 §4.3) ─────────────────────── */

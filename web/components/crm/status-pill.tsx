@@ -4,6 +4,8 @@ import { cn } from '@/lib/utils';
 import {
   CALL_OUTCOME_LABELS,
   CALL_OUTCOME_TONE,
+  CENTOS_RAPPORTO_LABELS,
+  CENTOS_RAPPORTO_TONE,
   CENTOS_STATUS_LABELS,
   CENTOS_STATUS_TONE,
   CONTACT_STATUS_LABELS,
@@ -14,6 +16,7 @@ import {
   PROSPECT_OUTCOME_TONE,
   STAGE_LABELS,
   type CallOutcome,
+  type CentosRapporto,
   type CentosStatus,
   type ContactStatus,
   type DocumentStatus,
@@ -57,6 +60,7 @@ type StatusPillProps = BaseProps &
     | { kind: 'prospect'; value: ProspectOutcome }
     | { kind: 'stage'; value: ProspectStage }
     | { kind: 'centos'; value: CentosStatus }
+    | { kind: 'centos_rapporto'; value: CentosRapporto }
   );
 
 function resolve(props: StatusPillProps): { label: string; tone: Tone } {
@@ -71,6 +75,8 @@ function resolve(props: StatusPillProps): { label: string; tone: Tone } {
       return { label: PROSPECT_OUTCOME_LABELS[props.value], tone: PROSPECT_OUTCOME_TONE[props.value] };
     case 'centos':
       return { label: CENTOS_STATUS_LABELS[props.value], tone: CENTOS_STATUS_TONE[props.value] };
+    case 'centos_rapporto':
+      return { label: CENTOS_RAPPORTO_LABELS[props.value], tone: CENTOS_RAPPORTO_TONE[props.value] };
     case 'stage':
       return { label: STAGE_LABELS[props.value], tone: 'secondary' };
   }

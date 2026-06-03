@@ -2,34 +2,20 @@
 
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
-import {
-  Phone,
-  Users2,
-  Star,
-  Clock,
-  Pencil,
-  Trash2,
-  CheckCircle2,
-  Circle,
-  ArrowUpRight,
-} from 'lucide-react';
-import { formatDate, formatRelativeTime } from '@/lib/utils';
+import { Users2, Thermometer, CircleDot, Pencil, Trash2 } from 'lucide-react';
+import { formatDate } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { FormSheet } from '@/components/crm/form-sheet';
 import { StatusPill } from '@/components/crm/status-pill';
-import { WhatsAppButton } from '@/components/crm/whatsapp-button';
-import { centosStatus, type CentosEntry } from '@/lib/types/db';
-import { RatingStars } from './rating-stars';
+import type { CentosEntry } from '@/lib/types/db';
 
 /**
  * CentosDetailSheet — a read view of a single Centos entry in a slide-over:
- * identity, derived status, phone, relationship, rating, notes and timing.
- * The footer exposes Edit + Delete, plus the contacted toggle and the
- * promote-to-contact action (when not already promoted) which the parent wires to
- * the demo-safe Server Actions. Pure presentation; all mutations stay in the
- * page container.
+ * identity, stato + rapporto, chi è, notes and created date. The footer exposes
+ * Edit + Delete; rapporto and stato are changed inline in the list or via the
+ * edit form. Pure presentation; all mutations stay in the page container.
  */
 
 export interface CentosDetailSheetProps {
@@ -38,8 +24,6 @@ export interface CentosDetailSheetProps {
   entry: CentosEntry | null;
   onEdit: (entry: CentosEntry) => void;
   onDelete: (entry: CentosEntry) => void;
-  onToggleContacted: (entry: CentosEntry) => void;
-  onPromote: (entry: CentosEntry) => void;
   /** disables the action buttons while a mutation is in flight. */
   busy?: boolean;
 }
@@ -73,8 +57,6 @@ export function CentosDetailSheet({
   entry,
   onEdit,
   onDelete,
-  onToggleContacted,
-  onPromote,
   busy,
 }: CentosDetailSheetProps) {
   const t = useTranslations('centos');
@@ -88,9 +70,6 @@ export function CentosDetailSheet({
       </FormSheet>
     );
   }
-
-  const status = centosStatus(entry);
-  const promoted = Boolean(entry.promoted_contact_id);
 
   return (
     <FormSheet
@@ -135,67 +114,18 @@ export function CentosDetailSheet({
               </h3>
             </div>
             <div className="mt-1.5 flex flex-wrap items-center gap-2">
-              <StatusPill kind="centos" value={status} />
-              {entry.rating ? (
-                <RatingStars
-                  value={entry.rating}
-                  label={t('rating_stars', { count: entry.rating })}
-                />
-              ) : null}
+              <StatusPill kind="centos" value={entry.stato} />
+              {entry.rapporto && (
+                <StatusPill kind="centos_rapporto" value={entry.rapporto} />
+              )}
             </div>
           </div>
-        </div>
-
-        {/* Quick actions */}
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant={entry.contacted ? 'secondary' : 'outline'}
-            size="sm"
-            onClick={() => onToggleContacted(entry)}
-            disabled={busy}
-            className="gap-1.5"
-          >
-            {entry.contacted ? (
-              <CheckCircle2 className="h-4 w-4 text-success" aria-hidden />
-            ) : (
-              <Circle className="h-4 w-4" aria-hidden />
-            )}
-            {entry.contacted ? t('unmark_contacted') : t('mark_contacted')}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => onPromote(entry)}
-            disabled={busy || promoted}
-            className="gap-1.5"
-            title={promoted ? t('already_promoted') : undefined}
-          >
-            <ArrowUpRight className="h-4 w-4" aria-hidden />
-            {promoted ? t('already_promoted') : t('promote')}
-          </Button>
         </div>
 
         <Separator />
 
         {/* Details */}
         <div className="divide-y divide-border">
-          <DetailRow icon={<Phone />} label={t('phone')}>
-            {entry.phone ? (
-              <span className="flex items-center gap-1.5">
-                <a
-                  href={`tel:${entry.phone.replace(/\s+/g, '')}`}
-                  className="text-primary hover:underline"
-                >
-                  {entry.phone}
-                </a>
-                <WhatsAppButton phone={entry.phone} name={entry.full_name} />
-              </span>
-            ) : (
-              <span className="text-muted-foreground">—</span>
-            )}
-          </DetailRow>
           <DetailRow icon={<Users2 />} label={t('relationship')}>
             {entry.relationship ? (
               <span className="whitespace-pre-wrap">{entry.relationship}</span>
@@ -203,24 +133,15 @@ export function CentosDetailSheet({
               <span className="text-muted-foreground">—</span>
             )}
           </DetailRow>
-          <DetailRow icon={<Star />} label={t('rating')}>
-            {entry.rating ? (
-              <RatingStars
-                value={entry.rating}
-                size="md"
-                label={t('rating_stars', { count: entry.rating })}
-              />
+          <DetailRow icon={<Thermometer />} label={t('form_rapporto')}>
+            {entry.rapporto ? (
+              <StatusPill kind="centos_rapporto" value={entry.rapporto} />
             ) : (
-              <span className="text-muted-foreground">{t('no_rating')}</span>
+              <span className="text-muted-foreground">—</span>
             )}
           </DetailRow>
-          <DetailRow icon={<Clock />} label={tc('updated_at')}>
-            <span>
-              {formatDate(entry.updated_at)}
-              <span className="ml-1.5 text-xs text-muted-foreground">
-                ({formatRelativeTime(entry.updated_at)})
-              </span>
-            </span>
+          <DetailRow icon={<CircleDot />} label={t('form_stato')}>
+            <StatusPill kind="centos" value={entry.stato} />
           </DetailRow>
         </div>
 

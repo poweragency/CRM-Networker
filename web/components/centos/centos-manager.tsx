@@ -9,13 +9,11 @@ import {
   MoreHorizontal,
   Pencil,
   Trash2,
-  Phone as PhoneIcon,
   CheckCircle2,
-  Circle,
-  ArrowUpRight,
+  Send,
   Users2,
 } from 'lucide-react';
-import { cn, formatRelativeTime } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import {
@@ -28,25 +26,28 @@ import {
 import { PageHeader } from '@/components/crm/page-header';
 import { FilterBar, type FilterConfig } from '@/components/crm/filter-bar';
 import { DataTable } from '@/components/crm/data-table';
-import { StatusPill } from '@/components/crm/status-pill';
 import { ConfirmDialog } from '@/components/crm/confirm-dialog';
 import { useToast } from '@/components/crm/toaster';
 import { ConfigNotice } from '@/components/config-notice';
 import {
+  CENTOS_RAPPORTO_LABELS,
+  CENTOS_RAPPORTO_ORDER,
+  CENTOS_RAPPORTO_TONE,
   CENTOS_STATUS_LABELS,
-  centosStatus,
+  CENTOS_STATUS_ORDER,
+  CENTOS_STATUS_TONE,
   type CentosEntry,
+  type CentosRapporto,
   type CentosStatus,
 } from '@/lib/types/db';
+import type { CentosInput } from '@/lib/data/centos';
 import {
   createCentosAction,
   deleteCentosAction,
-  promoteCentosAction,
   updateCentosAction,
 } from '@/app/(app)/centos/actions';
 import { CentosFormSheet } from './centos-form-sheet';
 import { CentosDetailSheet } from './centos-detail-sheet';
-import { RatingStars } from './rating-stars';
 import type { toCentosInput } from './centos-form-schema';
 
 /**
@@ -54,17 +55,16 @@ import type { toCentosInput } from './centos-form-schema';
  * the caller's position-ordered Centos entries via the demo-safe data layer and
  * hands them in as props; everything interactive lives here:
  *
- *  - a progress header (contacted / promoted counts) + a FilterBar (search over
- *    name/relationship/notes + status & rating filters) that filter the in-memory
- *    list client-side (instant, no round-trips);
- *  - a DataTable with sortable columns (#, name, relationship, rating, status,
- *    updated) and a per-row action menu;
- *  - "Aggiungi nome" + edit via CentosFormSheet, a detail slide-over, the
- *    contacted toggle, promote-to-contact, and delete via ConfirmDialog.
+ *  - a header with progress (invitati / iscritti) + a FilterBar (search over
+ *    name/relationship/notes + stato & rapporto filters) that filter the list
+ *    client-side (instant, no round-trips);
+ *  - a DataTable with sortable columns (#, nome, chi è, rapporto, stato) where
+ *    rapporto and stato are colored inline dropdowns editable in place;
+ *  - "Aggiungi nome" + edit via CentosFormSheet, a detail slide-over and delete.
  *
  * Mutations call the Server Actions, which are demo-safe: in "modalità demo" they
- * return simulated results and we patch local state optimistically and raise the
- * right toast. Nothing throws; the local list stays the source of truth.
+ * return simulated results and we patch local state optimistically. Nothing
+ * throws; the local list stays the source of truth.
  */
 
 export interface CentosManagerProps {
@@ -72,11 +72,51 @@ export interface CentosManagerProps {
   initialDemo: boolean;
 }
 
-const STATUS_ORDER: CentosStatus[] = ['da_contattare', 'contattato', 'promosso'];
-const RATING_KEY = 'rating';
+/** Tone → text color for the inline status/rapporto dropdowns. */
+const TONE_TEXT: Record<string, string> = {
+  secondary: 'text-muted-foreground',
+  info: 'text-info',
+  success: 'text-success',
+  warning: 'text-warning',
+  danger: 'text-danger',
+};
 
 function sortByPosition(rows: CentosEntry[]): CentosEntry[] {
   return [...rows].sort((a, b) => a.position - b.position);
+}
+
+/** A colored native <select> for an in-row enum edit (stops row-click). */
+function InlineSelect({
+  value,
+  tone,
+  options,
+  onChange,
+  ariaLabel,
+}: {
+  value: string;
+  tone: string;
+  options: { value: string; label: string }[];
+  onChange: (value: string) => void;
+  ariaLabel: string;
+}) {
+  return (
+    <select
+      value={value}
+      aria-label={ariaLabel}
+      onClick={(e) => e.stopPropagation()}
+      onChange={(e) => onChange(e.target.value)}
+      className={cn(
+        'cursor-pointer rounded-md border border-input bg-card px-2 py-1 text-sm font-medium shadow-sm transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        TONE_TEXT[tone] ?? 'text-foreground',
+      )}
+    >
+      {options.map((o) => (
+        <option key={o.value} value={o.value} className="text-foreground">
+          {o.label}
+        </option>
+      ))}
+    </select>
+  );
 }
 
 export function CentosManager({
@@ -100,24 +140,24 @@ export function CentosManager({
   >({});
 
   const statusFilter = filterValues.status ?? [];
-  const ratingFilter = filterValues[RATING_KEY] ?? [];
+  const rapportoFilter = filterValues.rapporto ?? [];
 
   const filters = React.useMemo<FilterConfig[]>(
     () => [
       {
         key: 'status',
         label: t('filter_status'),
-        options: STATUS_ORDER.map((s) => ({
+        options: CENTOS_STATUS_ORDER.map((s) => ({
           value: s,
           label: CENTOS_STATUS_LABELS[s],
         })),
       },
       {
-        key: RATING_KEY,
-        label: t('filter_rating'),
-        options: [5, 4, 3, 2, 1].map((n) => ({
-          value: String(n),
-          label: t('rating_stars', { count: n }),
+        key: 'rapporto',
+        label: t('filter_rapporto'),
+        options: CENTOS_RAPPORTO_ORDER.map((r) => ({
+          value: r,
+          label: CENTOS_RAPPORTO_LABELS[r],
         })),
       },
     ],
@@ -129,30 +169,29 @@ export function CentosManager({
     return entries.filter((e) => {
       if (q) {
         const hay =
-          `${e.full_name} ${e.relationship ?? ''} ${e.phone ?? ''} ${e.notes ?? ''}`.toLowerCase();
+          `${e.full_name} ${e.relationship ?? ''} ${e.notes ?? ''}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
-      if (statusFilter.length && !statusFilter.includes(centosStatus(e)))
-        return false;
-      if (ratingFilter.length && !ratingFilter.includes(String(e.rating ?? 0)))
+      if (statusFilter.length && !statusFilter.includes(e.stato)) return false;
+      if (rapportoFilter.length && !rapportoFilter.includes(e.rapporto ?? ''))
         return false;
       return true;
     });
-  }, [entries, search, statusFilter, ratingFilter]);
+  }, [entries, search, statusFilter, rapportoFilter]);
 
   // ── Progress stats (over the full list, not the filtered view) ──────────────
   const stats = React.useMemo(() => {
-    let contacted = 0;
-    let promoted = 0;
+    let invited = 0;
+    let enrolled = 0;
     for (const e of entries) {
-      if (e.promoted_contact_id) promoted += 1;
-      if (e.contacted) contacted += 1;
+      if (e.stato !== 'non_invitato') invited += 1;
+      if (e.stato === 'iscritto') enrolled += 1;
     }
-    return { total: entries.length, contacted, promoted };
+    return { total: entries.length, invited, enrolled };
   }, [entries]);
 
-  const contactedPct =
-    stats.total === 0 ? 0 : Math.round((stats.contacted / stats.total) * 100);
+  const invitedPct =
+    stats.total === 0 ? 0 : Math.round((stats.invited / stats.total) * 100);
 
   // ── Sheet / dialog state ────────────────────────────────────────────────────
   const [formOpen, setFormOpen] = React.useState(false);
@@ -162,7 +201,6 @@ export function CentosManager({
   const [deleteTarget, setDeleteTarget] = React.useState<CentosEntry | null>(
     null,
   );
-  const [rowBusy, setRowBusy] = React.useState(false);
   // Ids whose "Chi è" cell is expanded to show the full text inline.
   const [expandedRel, setExpandedRel] = React.useState<Set<string>>(
     () => new Set(),
@@ -183,12 +221,9 @@ export function CentosManager({
   };
 
   // Keep the open detail sheet in sync with the latest row data.
-  const syncDetail = React.useCallback(
-    (updated: CentosEntry) => {
-      setDetail((prev) => (prev?.id === updated.id ? updated : prev));
-    },
-    [],
-  );
+  const syncDetail = React.useCallback((updated: CentosEntry) => {
+    setDetail((prev) => (prev?.id === updated.id ? updated : prev));
+  }, []);
 
   // ── Mutations (demo-safe Server Actions) ────────────────────────────────────
   const handleSubmit = async (input: ReturnType<typeof toCentosInput>) => {
@@ -247,60 +282,27 @@ export function CentosManager({
     setDeleteTarget(null);
   };
 
-  const handleToggleContacted = async (entry: CentosEntry) => {
-    const next = !entry.contacted;
-    setRowBusy(true);
-    try {
-      const res = await updateCentosAction(entry.id, { contacted: next });
+  // Inline edit of rapporto / stato — optimistic, reverts on failure.
+  const handleSetField = React.useCallback(
+    async (entry: CentosEntry, patch: Partial<CentosInput>) => {
+      const prev = entry;
+      setEntries((list) =>
+        list.map((e) => (e.id === entry.id ? { ...e, ...patch } : e)),
+      );
+      const res = await updateCentosAction(entry.id, patch);
       if (!res.ok) {
+        setEntries((list) => list.map((e) => (e.id === prev.id ? prev : e)));
         toast({ title: tc('mutation_error'), variant: 'error' });
         return;
       }
       const updated: CentosEntry =
-        res.entry ?? { ...entry, contacted: next };
-      setEntries((prev) =>
-        prev.map((e) => (e.id === entry.id ? updated : e)),
-      );
+        res.entry ?? ({ ...entry, ...patch } as CentosEntry);
+      setEntries((list) => list.map((e) => (e.id === entry.id ? updated : e)));
       syncDetail(updated);
       setDemo((d) => d || res.demo);
-      toast({
-        title: next ? t('marked_contacted') : t('marked_uncontacted'),
-        description: res.demo ? tc('saved_demo') : undefined,
-        variant: 'success',
-      });
-    } finally {
-      setRowBusy(false);
-    }
-  };
-
-  const handlePromote = async (entry: CentosEntry) => {
-    if (entry.promoted_contact_id) return;
-    setRowBusy(true);
-    try {
-      const res = await promoteCentosAction(entry.id);
-      if (!res.ok) {
-        toast({ title: tc('mutation_error'), variant: 'error' });
-        return;
-      }
-      const updated: CentosEntry = {
-        ...entry,
-        promoted_contact_id: res.contactId,
-        contacted: true,
-      };
-      setEntries((prev) =>
-        prev.map((e) => (e.id === entry.id ? updated : e)),
-      );
-      syncDetail(updated);
-      setDemo((d) => d || res.demo);
-      toast({
-        title: t('promoted_toast'),
-        description: res.demo ? tc('created_demo') : undefined,
-        variant: 'success',
-      });
-    } finally {
-      setRowBusy(false);
-    }
-  };
+    },
+    [toast, tc, syncDetail],
+  );
 
   // ── Columns ─────────────────────────────────────────────────────────────────
   const columns = React.useMemo<ColumnDef<CentosEntry, unknown>[]>(
@@ -325,17 +327,9 @@ export function CentosManager({
           return (
             <div className="flex items-center gap-2.5">
               <Avatar name={e.full_name} size="sm" />
-              <div className="min-w-0">
-                <p className="truncate font-medium text-foreground">
-                  {e.full_name}
-                </p>
-                {e.phone && (
-                  <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
-                    <PhoneIcon className="h-3 w-3 shrink-0" aria-hidden />
-                    {e.phone}
-                  </p>
-                )}
-              </div>
+              <p className="truncate font-medium text-foreground">
+                {e.full_name}
+              </p>
             </div>
           );
         },
@@ -375,37 +369,53 @@ export function CentosManager({
         },
       },
       {
-        id: 'rating',
-        accessorFn: (e) => e.rating ?? 0,
-        header: t('col_rating'),
-        cell: ({ row }) => (
-          <RatingStars
-            value={row.original.rating}
-            label={
-              row.original.rating
-                ? t('rating_stars', { count: row.original.rating })
-                : t('no_rating')
-            }
-          />
-        ),
+        id: 'rapporto',
+        accessorFn: (e) => e.rapporto ?? '',
+        header: t('col_rapporto'),
+        size: 150,
+        cell: ({ row }) => {
+          const e = row.original;
+          return (
+            <InlineSelect
+              ariaLabel={t('col_rapporto')}
+              value={e.rapporto ?? ''}
+              tone={e.rapporto ? CENTOS_RAPPORTO_TONE[e.rapporto] : 'secondary'}
+              options={[
+                { value: '', label: t('rapporto_none') },
+                ...CENTOS_RAPPORTO_ORDER.map((r) => ({
+                  value: r,
+                  label: CENTOS_RAPPORTO_LABELS[r],
+                })),
+              ]}
+              onChange={(v) =>
+                handleSetField(e, {
+                  rapporto: v ? (v as CentosRapporto) : null,
+                })
+              }
+            />
+          );
+        },
       },
       {
         id: 'status',
-        accessorFn: (e) => centosStatus(e),
+        accessorFn: (e) => e.stato,
         header: t('col_status'),
-        cell: ({ row }) => (
-          <StatusPill kind="centos" value={centosStatus(row.original)} />
-        ),
-      },
-      {
-        id: 'updated_at',
-        accessorKey: 'updated_at',
-        header: t('col_updated'),
-        cell: ({ row }) => (
-          <span className="text-sm text-muted-foreground">
-            {formatRelativeTime(row.original.updated_at)}
-          </span>
-        ),
+        size: 160,
+        cell: ({ row }) => {
+          const e = row.original;
+          return (
+            <InlineSelect
+              ariaLabel={t('col_status')}
+              value={e.stato}
+              tone={CENTOS_STATUS_TONE[e.stato]}
+              options={CENTOS_STATUS_ORDER.map((s) => ({
+                value: s,
+                label: CENTOS_STATUS_LABELS[s],
+              }))}
+              onChange={(v) => handleSetField(e, { stato: v as CentosStatus })}
+            />
+          );
+        },
       },
       {
         id: '__actions',
@@ -414,7 +424,6 @@ export function CentosManager({
         header: () => <span className="sr-only">Azioni</span>,
         cell: ({ row }) => {
           const e = row.original;
-          const promoted = Boolean(e.promoted_contact_id);
           return (
             <div onClick={(ev) => ev.stopPropagation()}>
               <DropdownMenu>
@@ -436,24 +445,6 @@ export function CentosManager({
                     <Pencil className="h-4 w-4" aria-hidden />
                     {tc('edit')}
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    disabled={rowBusy}
-                    onClick={() => handleToggleContacted(e)}
-                  >
-                    {e.contacted ? (
-                      <Circle className="h-4 w-4" aria-hidden />
-                    ) : (
-                      <CheckCircle2 className="h-4 w-4" aria-hidden />
-                    )}
-                    {e.contacted ? t('unmark_contacted') : t('mark_contacted')}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    disabled={rowBusy || promoted}
-                    onClick={() => handlePromote(e)}
-                  >
-                    <ArrowUpRight className="h-4 w-4" aria-hidden />
-                    {promoted ? t('already_promoted') : t('promote')}
-                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     destructive
@@ -470,7 +461,7 @@ export function CentosManager({
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [t, tc, rowBusy, expandedRel],
+    [t, tc, expandedRel, handleSetField],
   );
 
   const hasFilters = search.length > 0 || Object.keys(filterValues).length > 0;
@@ -500,28 +491,28 @@ export function CentosManager({
           value={stats.total}
         />
         <StatCard
-          icon={<CheckCircle2 className="h-4 w-4" aria-hidden />}
-          label={t('stat_contacted')}
-          value={stats.contacted}
+          icon={<Send className="h-4 w-4" aria-hidden />}
+          label={t('stat_invited')}
+          value={stats.invited}
           tone="success"
           footer={
             <div className="mt-2 space-y-1">
               <div
                 className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
                 role="progressbar"
-                aria-valuenow={contactedPct}
+                aria-valuenow={invitedPct}
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-label={t('progress_label')}
               >
                 <div
                   className="h-full rounded-full bg-success transition-all"
-                  style={{ width: `${contactedPct}%` }}
+                  style={{ width: `${invitedPct}%` }}
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                {t('progress', {
-                  contacted: stats.contacted,
+                {t('progress_invited', {
+                  invited: stats.invited,
                   total: stats.total,
                 })}
               </p>
@@ -529,9 +520,9 @@ export function CentosManager({
           }
         />
         <StatCard
-          icon={<ArrowUpRight className="h-4 w-4" aria-hidden />}
-          label={t('stat_promoted')}
-          value={stats.promoted}
+          icon={<CheckCircle2 className="h-4 w-4" aria-hidden />}
+          label={t('stat_enrolled')}
+          value={stats.enrolled}
           tone="primary"
         />
       </div>
@@ -586,9 +577,6 @@ export function CentosManager({
         entry={detail}
         onEdit={openEdit}
         onDelete={(e) => setDeleteTarget(e)}
-        onToggleContacted={handleToggleContacted}
-        onPromote={handlePromote}
-        busy={rowBusy}
       />
 
       {/* Single delete */}

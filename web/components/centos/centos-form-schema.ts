@@ -21,17 +21,19 @@ export const centosFormSchema = z.object({
     .trim()
     .min(1, 'Il nome è obbligatorio.')
     .max(120, 'Massimo 120 caratteri.'),
-  phone: z.preprocess(
-    emptyToUndef,
-    z.string().trim().max(40, 'Massimo 40 caratteri.').optional(),
-  ),
   relationship: z.preprocess(
     emptyToUndef,
     z.string().trim().max(600, 'Massimo 600 caratteri.').optional(),
   ),
-  /** 1..5 quality score, or 0 → "no rating". */
-  rating: z.coerce.number().int().min(0).max(5).default(0),
-  contacted: z.boolean().default(false),
+  /** Warmth — '' means "non impostato" → null at submit. */
+  rapporto: z
+    .enum(['caldo', 'tiepido', 'freddo'])
+    .or(z.literal(''))
+    .default(''),
+  /** Funnel status — always set (defaults to "non invitato"). */
+  stato: z
+    .enum(['non_invitato', 'invitato', 'iscritto', 'non_iscritto'])
+    .default('non_invitato'),
   notes: z.preprocess(
     emptyToUndef,
     z.string().trim().max(2000, 'Massimo 2000 caratteri.').optional(),
@@ -63,10 +65,9 @@ export const zodCentosResolver: Resolver<CentosFormValues> = async (values) => {
 export function toFormValues(entry?: CentosEntry | null): CentosFormValues {
   return {
     full_name: entry?.full_name ?? '',
-    phone: entry?.phone ?? '',
     relationship: entry?.relationship ?? '',
-    rating: entry?.rating ?? 0,
-    contacted: entry?.contacted ?? false,
+    rapporto: entry?.rapporto ?? '',
+    stato: entry?.stato ?? 'non_invitato',
     notes: entry?.notes ?? '',
   };
 }
@@ -75,11 +76,9 @@ export function toFormValues(entry?: CentosEntry | null): CentosFormValues {
 export function toCentosInput(values: CentosFormValues): CentosInput {
   return {
     full_name: values.full_name.trim(),
-    phone: values.phone?.trim() || null,
     relationship: values.relationship?.trim() || null,
-    // 0 in the form means "no rating" → store null.
-    rating: values.rating && values.rating > 0 ? values.rating : null,
-    contacted: values.contacted,
+    rapporto: values.rapporto ? values.rapporto : null,
+    stato: values.stato,
     notes: values.notes?.trim() || null,
   };
 }

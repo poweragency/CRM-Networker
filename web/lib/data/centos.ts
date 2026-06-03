@@ -1,5 +1,5 @@
 import 'server-only';
-import type { CentosEntry } from '@/lib/types/db';
+import type { CentosEntry, CentosRapporto, CentosStatus } from '@/lib/types/db';
 import { MOCK_CENTOS } from '@/lib/data/mock/centos';
 import {
   type CrmResult,
@@ -18,7 +18,7 @@ import { demoId } from '@/lib/data/mock/_shared';
  */
 
 const SELECT =
-  'id,org_id,owner_marketer_id,position,full_name,phone,relationship,rating,contacted,promoted_contact_id,notes,created_at,updated_at,deleted_at';
+  'id,org_id,owner_marketer_id,position,full_name,phone,relationship,rating,rapporto,stato,contacted,promoted_contact_id,notes,created_at,updated_at,deleted_at';
 
 /**
  * List Centos entries ordered by position. Defaults to the caller's own list;
@@ -63,6 +63,8 @@ export interface CentosInput {
   phone?: string | null;
   relationship?: string | null;
   rating?: number | null;
+  rapporto?: CentosRapporto | null;
+  stato?: CentosStatus;
   position?: number;
   contacted?: boolean;
   notes?: string | null;
@@ -87,6 +89,8 @@ export async function createCentos(
     phone: input.phone ?? null,
     relationship: input.relationship ?? null,
     rating: input.rating ?? null,
+    rapporto: input.rapporto ?? null,
+    stato: input.stato ?? 'non_invitato',
     contacted: input.contacted ?? false,
     promoted_contact_id: null,
     notes: input.notes ?? null,

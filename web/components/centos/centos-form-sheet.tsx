@@ -1,15 +1,20 @@
 'use client';
 
 import * as React from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { FormSheet } from '@/components/crm/form-sheet';
-import type { CentosEntry } from '@/lib/types/db';
-import { RatingStarsInput } from './rating-stars-input';
+import {
+  CENTOS_RAPPORTO_LABELS,
+  CENTOS_RAPPORTO_ORDER,
+  CENTOS_STATUS_LABELS,
+  CENTOS_STATUS_ORDER,
+  type CentosEntry,
+} from '@/lib/types/db';
 import {
   type CentosFormValues,
   toCentosInput,
@@ -22,8 +27,12 @@ import {
  * shared FormSheet + react-hook-form with a local zod resolver (full validation,
  * no extra deps). On submit it hands a normalized CentosInput to the parent,
  * which performs the demo-safe Server Action and patches list state. Used for
- * both "Aggiungi nome" (no `entry`) and "Modifica nome" (with `entry`).
+ * both "Aggiungi nome" (no `entry`) and "Modifica nome" (with `entry`). Fields:
+ * nome, chi è, rapporto + stato (a tendina) e note.
  */
+
+const selectCx =
+  'flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 
 export interface CentosFormSheetProps {
   open: boolean;
@@ -56,7 +65,6 @@ export function CentosFormSheet({
   const {
     register,
     handleSubmit,
-    control,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<CentosFormValues>({
@@ -119,21 +127,6 @@ export function CentosFormSheet({
           <FieldError message={errors.full_name?.message} />
         </div>
 
-        {/* Phone */}
-        <div className="space-y-1.5">
-          <Label htmlFor={`${formId}-phone`}>{t('phone')}</Label>
-          <Input
-            id={`${formId}-phone`}
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            placeholder="+39 …"
-            aria-invalid={Boolean(errors.phone)}
-            {...register('phone')}
-          />
-          <FieldError message={errors.phone?.message} />
-        </div>
-
         {/* Chi è — a large free-text description */}
         <div className="space-y-1.5">
           <Label htmlFor={`${formId}-relationship`}>{t('relationship')}</Label>
@@ -148,41 +141,37 @@ export function CentosFormSheet({
           <FieldError message={errors.relationship?.message} />
         </div>
 
-        {/* Rating */}
-        <div className="space-y-1.5">
-          <Label htmlFor={`${formId}-rating`}>{t('rating')}</Label>
-          <Controller
-            control={control}
-            name="rating"
-            render={({ field }) => (
-              <RatingStarsInput
-                value={field.value ?? 0}
-                onChange={field.onChange}
-                aria-label={t('rating')}
-              />
-            )}
-          />
-          <p className="text-xs text-muted-foreground">{t('rating_help')}</p>
-        </div>
-
-        {/* Contacted toggle */}
-        <div className="space-y-1.5">
-          <Label>{t('contacted')}</Label>
-          <Controller
-            control={control}
-            name="contacted"
-            render={({ field }) => (
-              <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border bg-card px-3 py-2.5 text-sm transition-colors hover:bg-muted/40">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 cursor-pointer rounded border-input accent-primary"
-                  checked={field.value ?? false}
-                  onChange={(e) => field.onChange(e.target.checked)}
-                />
-                <span className="text-foreground">{t('mark_contacted')}</span>
-              </label>
-            )}
-          />
+        {/* Rapporto + Stato (a tendina) */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor={`${formId}-rapporto`}>{t('form_rapporto')}</Label>
+            <select
+              id={`${formId}-rapporto`}
+              className={selectCx}
+              {...register('rapporto')}
+            >
+              <option value="">{t('rapporto_none')}</option>
+              {CENTOS_RAPPORTO_ORDER.map((r) => (
+                <option key={r} value={r}>
+                  {CENTOS_RAPPORTO_LABELS[r]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor={`${formId}-stato`}>{t('form_stato')}</Label>
+            <select
+              id={`${formId}-stato`}
+              className={selectCx}
+              {...register('stato')}
+            >
+              {CENTOS_STATUS_ORDER.map((s) => (
+                <option key={s} value={s}>
+                  {CENTOS_STATUS_LABELS[s]}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Notes */}
