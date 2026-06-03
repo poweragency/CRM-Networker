@@ -194,7 +194,7 @@ export default async function MarketerProfilePage({
           <MarketerFormazione
             marketerId={node.id}
             initialDone={formazioneRes.done}
-            readOnly={!isSelf}
+            readOnly={!canEdit}
           />
         }
       />
