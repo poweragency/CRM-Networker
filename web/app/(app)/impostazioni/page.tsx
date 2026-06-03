@@ -21,6 +21,7 @@ import { SevenWhysDetail } from '@/components/seven-whys/seven-whys-detail';
 import { MarketerProfileTabs } from '@/components/team/marketer-profile-tabs';
 import { AnagraficaModal } from '@/components/team/anagrafica-modal';
 import { MarketerHero } from '@/components/team/marketer-hero';
+import { MarketerKpis } from '@/components/team/marketer-kpis';
 import { MarketerSections } from '@/components/team/marketer-sections';
 import { MarketerFormazione } from '@/components/team/marketer-formazione';
 import { PersonalFiles } from '@/components/team/personal-files';
@@ -139,27 +140,24 @@ export default async function ImpostazioniPage({
     <div className="space-y-5">
       {demo && <ConfigNotice variant="inline" />}
 
-      {/* Hero masthead (own profile) */}
+      {/* Hero masthead (own profile) — the Anagrafica button rides to the right
+          of the name so it stays visible from any tab. */}
       {node && (
         <MarketerHero
           node={node}
           isSelf
           crmAccess={claims.crm_access}
-          prospects={personalProspects}
+          action={profile ? <AnagraficaModal profile={profile} canEdit /> : null}
         />
       )}
 
-      {/* Anagrafica → opens in a modal from a top button (no longer inline). */}
-      {profile && (
-        <div className="flex">
-          <AnagraficaModal profile={profile} canEdit />
-        </div>
-      )}
-
-      {/* Produzione (tutto l'operativo) + Formazione (playlist / libri). */}
+      {/* Produzione (tutto l'operativo) + Formazione (playlist / libri).
+          Lo switch sta subito sotto l'intestazione identità (sempre visibile);
+          i numeri vivono dentro Produzione. */}
       <MarketerSections
         production={
           <>
+            {node && <MarketerKpis node={node} prospects={personalProspects} />}
             <MarketerProfileTabs
               defaultTab={parseTab(searchParams?.tab)}
               prospects={prospectsPanel}

@@ -18,6 +18,7 @@ import { SevenWhysDetail } from '@/components/seven-whys/seven-whys-detail';
 import { MarketerProfileTabs } from '@/components/team/marketer-profile-tabs';
 import { AnagraficaModal } from '@/components/team/anagrafica-modal';
 import { MarketerHero } from '@/components/team/marketer-hero';
+import { MarketerKpis } from '@/components/team/marketer-kpis';
 import { MarketerSections } from '@/components/team/marketer-sections';
 import { MarketerFormazione } from '@/components/team/marketer-formazione';
 import { PersonalFiles } from '@/components/team/personal-files';
@@ -141,31 +142,32 @@ export default async function MarketerProfilePage({
     <div className="space-y-5">
       {demo && <ConfigNotice variant="inline" />}
 
-      {/* Hero masthead: identity + rank/status + KPI strip */}
+      {/* Identity masthead — always visible (the numbers live in Produzione).
+          The Anagrafica button rides to the right of the name so it's reachable
+          from any tab. Rank + renewal are editable only on a DOWNLINE. */}
       <MarketerHero
         node={node}
         isSelf={isSelf}
         crmAccess={profile?.crm_access ?? false}
-        prospects={personalProspects}
         phone={profile?.phone ?? null}
+        action={
+          profile ? (
+            <AnagraficaModal
+              profile={profile}
+              canEdit={canEdit}
+              canEditIdentity={canEdit && !isSelf}
+            />
+          ) : null
+        }
       />
 
-      {/* Anagrafica → opens in a modal from a top button (no longer inline).
-          Rank + renewal are editable only on a DOWNLINE (never the own profile). */}
-      {profile && (
-        <div className="flex">
-          <AnagraficaModal
-            profile={profile}
-            canEdit={canEdit}
-            canEditIdentity={canEdit && !isSelf}
-          />
-        </div>
-      )}
-
-      {/* Produzione (tutto l'operativo) + Formazione (playlist / libri). */}
+      {/* Produzione (tutto l'operativo) + Formazione (playlist / libri).
+          Lo switch sta subito sotto l'intestazione identità (sempre visibile);
+          i numeri vivono dentro Produzione. */}
       <MarketerSections
         production={
           <>
+            <MarketerKpis node={node} prospects={personalProspects} />
             <MarketerProfileTabs
               defaultTab={parseTab(searchParams?.tab)}
               prospects={prospectsPanel}

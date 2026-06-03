@@ -1,26 +1,22 @@
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { ArrowLeft, PanelLeft, PanelRight, Users } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { RankBadge } from '@/components/ui/rank-badge';
-import { cn, formatNumber } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import type { TreeNode } from '@/lib/types/db';
-import {
-  PersonalPerformance,
-  type PersonalProspect,
-} from '@/components/team/personal-performance';
 import { WhatsAppButton } from '@/components/crm/whatsapp-button';
 
 /**
- * MarketerHero — the profile masthead for /team/[id] (server component). Replaces
- * the old breadcrumb + duplicate identity card with a single premium header: a
- * back link, a large avatar with status ring, identity (name + "Tu" + rank +
- * status) and a KPI strip. The strip is split in two: the team structure
- * (team / left / right — genealogy aggregates) and the marketer's OWN
- * {@link PersonalPerformance} (prospect / iscrizioni / conversione with a period
- * filter), which is personal — never rolled up from the downline. Conversion =
- * iscritti ÷ chi ha visto la Business Info.
+ * MarketerHero — the profile identity masthead (server component). Back link, a
+ * large avatar with status ring, identity (name + "Tu" + rank + renewal/CRM
+ * badges) and, to the right of the name, the header actions (the Anagrafica
+ * button via the `action` slot + the WhatsApp quick-contact). It stays at the
+ * top of the profile, always visible — so the anagrafica is reachable from any
+ * tab; the numbers (team structure + personal performance) live in the
+ * "Produzione" section via {@link MarketerKpis}.
  */
 
 const STATUS_RING: Record<string, string> = {
@@ -33,20 +29,19 @@ export async function MarketerHero({
   node,
   isSelf,
   crmAccess = false,
-  prospects = [],
   phone = null,
+  action = null,
 }: {
   node: TreeNode;
   isSelf: boolean;
   /** Whether the marketer has an active CRM account login. */
   crmAccess?: boolean;
-  /** This marketer's OWN prospects (stage + funnel-entry date) for the KPIs. */
-  prospects?: PersonalProspect[];
   /** Phone number → WhatsApp quick-contact (hidden on the own profile). */
   phone?: string | null;
+  /** Header action shown to the right of the name (e.g. the Anagrafica button). */
+  action?: ReactNode;
 }) {
   const t = await getTranslations('team');
-  const tg = await getTranslations('genealogia');
 
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
@@ -76,14 +71,20 @@ export async function MarketerHero({
                   {t('you')}
                 </Badge>
               )}
-              {/* WhatsApp quick-contact — team members only, never the own profile. */}
-              {!isSelf && phone && (
-                <WhatsAppButton
-                  phone={phone}
-                  name={node.display_name}
-                  withLabel
-                  className="ml-auto border border-[#25D366]/30"
-                />
+              {/* Right-aligned header actions: Anagrafica (action slot) + WhatsApp
+                  quick-contact (team members only, never the own profile). */}
+              {(action || (!isSelf && phone)) && (
+                <div className="ml-auto flex items-center gap-2">
+                  {action}
+                  {!isSelf && phone && (
+                    <WhatsAppButton
+                      phone={phone}
+                      name={node.display_name}
+                      withLabel
+                      className="border border-[#25D366]/30"
+                    />
+                  )}
+                </div>
               )}
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
@@ -102,50 +103,6 @@ export async function MarketerHero({
           </div>
         </div>
       </div>
-
-      {/* Team structure (genealogia) — these are downline aggregates. */}
-      <div className="grid grid-cols-3 divide-x border-t">
-        <HeroStat icon={Users} label={tg('team_size')} value={formatNumber(node.team_size)} />
-        <HeroStat
-          icon={PanelLeft}
-          label={tg('left_count')}
-          value={formatNumber(node.left_count)}
-          accent="text-branch-left"
-        />
-        <HeroStat
-          icon={PanelRight}
-          label={tg('right_count')}
-          value={formatNumber(node.right_count)}
-          accent="text-branch-right"
-        />
-      </div>
-
-      {/* Personal performance — this marketer ONLY, with a period filter. */}
-      <PersonalPerformance prospects={prospects} />
-    </div>
-  );
-}
-
-function HeroStat({
-  icon: Icon,
-  label,
-  value,
-  accent,
-}: {
-  icon: typeof Users;
-  label: string;
-  value: string;
-  accent?: string;
-}) {
-  return (
-    <div className="flex flex-col gap-1 px-4 py-3">
-      <span className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-        <Icon className={cn('h-3.5 w-3.5', accent ?? 'text-muted-foreground')} aria-hidden />
-        <span className="truncate">{label}</span>
-      </span>
-      <span className="text-lg font-semibold tabular-nums tracking-tight text-foreground">
-        {value}
-      </span>
     </div>
   );
 }
