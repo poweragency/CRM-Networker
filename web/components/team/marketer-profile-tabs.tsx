@@ -14,21 +14,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 export function MarketerProfileTabs({
   defaultTab,
   prospects,
-  centos,
+  listaContatti,
 }: {
-  defaultTab: 'prospects' | 'centos';
+  defaultTab: 'prospects' | 'lista-contatti';
   prospects: ReactNode;
-  centos: ReactNode;
+  listaContatti: ReactNode;
 }) {
   const t = useTranslations('team');
   return (
     <Tabs defaultValue={defaultTab} className="gap-4">
       <TabsList>
         <TabsTrigger value="prospects">{t('tab_prospects')}</TabsTrigger>
-        <TabsTrigger value="centos">{t('tab_centos')}</TabsTrigger>
+        <TabsTrigger value="lista-contatti">{t('tab_lista_contatti')}</TabsTrigger>
       </TabsList>
       <TabsContent value="prospects">{prospects}</TabsContent>
-      <TabsContent value="centos">{centos}</TabsContent>
+      <TabsContent value="lista-contatti">{listaContatti}</TabsContent>
     </Tabs>
   );
 }

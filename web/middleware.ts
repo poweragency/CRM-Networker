@@ -26,7 +26,7 @@ const PROTECTED_PREFIXES = [
   '/contatti',
   '/percorso-prospect',
   '/chiamate',
-  '/centos',
+  '/lista-contatti',
   '/sette-perche',
   '/documenti',
   '/analytics',

@@ -30,29 +30,29 @@ import { ConfirmDialog } from '@/components/crm/confirm-dialog';
 import { useToast } from '@/components/crm/toaster';
 import { ConfigNotice } from '@/components/config-notice';
 import {
-  CENTOS_RAPPORTO_LABELS,
-  CENTOS_RAPPORTO_ORDER,
-  CENTOS_RAPPORTO_TONE,
-  CENTOS_STATUS_LABELS,
-  CENTOS_STATUS_ORDER,
-  CENTOS_STATUS_TONE,
-  type CentosEntry,
-  type CentosRapporto,
-  type CentosStatus,
+  LISTA_CONTATTI_RAPPORTO_LABELS,
+  LISTA_CONTATTI_RAPPORTO_ORDER,
+  LISTA_CONTATTI_RAPPORTO_TONE,
+  LISTA_CONTATTI_STATUS_LABELS,
+  LISTA_CONTATTI_STATUS_ORDER,
+  LISTA_CONTATTI_STATUS_TONE,
+  type ListaContattiEntry,
+  type ListaContattiRapporto,
+  type ListaContattiStatus,
 } from '@/lib/types/db';
-import type { CentosInput } from '@/lib/data/centos';
+import type { ListaContattiInput } from '@/lib/data/lista-contatti';
 import {
-  createCentosAction,
-  deleteCentosAction,
-  updateCentosAction,
-} from '@/app/(app)/centos/actions';
-import { CentosFormSheet } from './centos-form-sheet';
-import { CentosDetailSheet } from './centos-detail-sheet';
-import type { toCentosInput } from './centos-form-schema';
+  createListaContattiAction,
+  deleteListaContattiAction,
+  updateListaContattiAction,
+} from '@/app/(app)/lista-contatti/actions';
+import { ListaContattiFormSheet } from './lista-contatti-form-sheet';
+import { ListaContattiDetailSheet } from './lista-contatti-detail-sheet';
+import type { toListaContattiInput } from './lista-contatti-form-schema';
 
 /**
- * CentosManager — the full client container for /centos. The page (RSC) fetches
- * the caller's position-ordered Centos entries via the demo-safe data layer and
+ * ListaContattiManager — the full client container for /lista-contatti. The page (RSC) fetches
+ * the caller's position-ordered Lista contatti entries via the demo-safe data layer and
  * hands them in as props; everything interactive lives here:
  *
  *  - a header with progress (invitati / iscritti) + a FilterBar (search over
@@ -60,15 +60,15 @@ import type { toCentosInput } from './centos-form-schema';
  *    client-side (instant, no round-trips);
  *  - a DataTable with sortable columns (#, nome, chi è, rapporto, stato) where
  *    rapporto and stato are colored inline dropdowns editable in place;
- *  - "Aggiungi nome" + edit via CentosFormSheet, a detail slide-over and delete.
+ *  - "Aggiungi nome" + edit via ListaContattiFormSheet, a detail slide-over and delete.
  *
  * Mutations call the Server Actions, which are demo-safe: in "modalità demo" they
  * return simulated results and we patch local state optimistically. Nothing
  * throws; the local list stays the source of truth.
  */
 
-export interface CentosManagerProps {
-  initialEntries: CentosEntry[];
+export interface ListaContattiManagerProps {
+  initialEntries: ListaContattiEntry[];
   initialDemo: boolean;
 }
 
@@ -81,7 +81,7 @@ const TONE_TEXT: Record<string, string> = {
   danger: 'text-danger',
 };
 
-function sortByPosition(rows: CentosEntry[]): CentosEntry[] {
+function sortByPosition(rows: ListaContattiEntry[]): ListaContattiEntry[] {
   return [...rows].sort((a, b) => a.position - b.position);
 }
 
@@ -119,16 +119,16 @@ function InlineSelect({
   );
 }
 
-export function CentosManager({
+export function ListaContattiManager({
   initialEntries,
   initialDemo,
-}: CentosManagerProps) {
-  const t = useTranslations('centos');
+}: ListaContattiManagerProps) {
+  const t = useTranslations('listaContatti');
   const tc = useTranslations('crm');
   const { toast } = useToast();
 
   // ── Local source-of-truth list (mutations patch this) ──────────────────────
-  const [entries, setEntries] = React.useState<CentosEntry[]>(() =>
+  const [entries, setEntries] = React.useState<ListaContattiEntry[]>(() =>
     sortByPosition(initialEntries),
   );
   const [demo, setDemo] = React.useState(initialDemo);
@@ -147,17 +147,17 @@ export function CentosManager({
       {
         key: 'status',
         label: t('filter_status'),
-        options: CENTOS_STATUS_ORDER.map((s) => ({
+        options: LISTA_CONTATTI_STATUS_ORDER.map((s) => ({
           value: s,
-          label: CENTOS_STATUS_LABELS[s],
+          label: LISTA_CONTATTI_STATUS_LABELS[s],
         })),
       },
       {
         key: 'rapporto',
         label: t('filter_rapporto'),
-        options: CENTOS_RAPPORTO_ORDER.map((r) => ({
+        options: LISTA_CONTATTI_RAPPORTO_ORDER.map((r) => ({
           value: r,
-          label: CENTOS_RAPPORTO_LABELS[r],
+          label: LISTA_CONTATTI_RAPPORTO_LABELS[r],
         })),
       },
     ],
@@ -195,10 +195,10 @@ export function CentosManager({
 
   // ── Sheet / dialog state ────────────────────────────────────────────────────
   const [formOpen, setFormOpen] = React.useState(false);
-  const [editing, setEditing] = React.useState<CentosEntry | null>(null);
-  const [detail, setDetail] = React.useState<CentosEntry | null>(null);
+  const [editing, setEditing] = React.useState<ListaContattiEntry | null>(null);
+  const [detail, setDetail] = React.useState<ListaContattiEntry | null>(null);
   const [detailOpen, setDetailOpen] = React.useState(false);
-  const [deleteTarget, setDeleteTarget] = React.useState<CentosEntry | null>(
+  const [deleteTarget, setDeleteTarget] = React.useState<ListaContattiEntry | null>(
     null,
   );
   // Ids whose "Chi è" cell is expanded to show the full text inline.
@@ -210,31 +210,31 @@ export function CentosManager({
     setEditing(null);
     setFormOpen(true);
   };
-  const openEdit = (entry: CentosEntry) => {
+  const openEdit = (entry: ListaContattiEntry) => {
     setDetailOpen(false);
     setEditing(entry);
     setFormOpen(true);
   };
-  const openDetail = (entry: CentosEntry) => {
+  const openDetail = (entry: ListaContattiEntry) => {
     setDetail(entry);
     setDetailOpen(true);
   };
 
   // Keep the open detail sheet in sync with the latest row data.
-  const syncDetail = React.useCallback((updated: CentosEntry) => {
+  const syncDetail = React.useCallback((updated: ListaContattiEntry) => {
     setDetail((prev) => (prev?.id === updated.id ? updated : prev));
   }, []);
 
   // ── Mutations (demo-safe Server Actions) ────────────────────────────────────
-  const handleSubmit = async (input: ReturnType<typeof toCentosInput>) => {
+  const handleSubmit = async (input: ReturnType<typeof toListaContattiInput>) => {
     if (editing) {
-      const res = await updateCentosAction(editing.id, input);
+      const res = await updateListaContattiAction(editing.id, input);
       if (!res.ok) {
         toast({ title: tc('mutation_error'), variant: 'error' });
         return;
       }
-      const updated: CentosEntry =
-        res.entry ?? ({ ...editing, ...input } as CentosEntry);
+      const updated: ListaContattiEntry =
+        res.entry ?? ({ ...editing, ...input } as ListaContattiEntry);
       setEntries((prev) =>
         sortByPosition(prev.map((e) => (e.id === editing.id ? updated : e))),
       );
@@ -246,12 +246,12 @@ export function CentosManager({
         variant: 'success',
       });
     } else {
-      const res = await createCentosAction(input);
+      const res = await createListaContattiAction(input);
       if (!res.ok || !res.entry) {
         toast({ title: tc('mutation_error'), variant: 'error' });
         return;
       }
-      setEntries((prev) => sortByPosition([...prev, res.entry as CentosEntry]));
+      setEntries((prev) => sortByPosition([...prev, res.entry as ListaContattiEntry]));
       setDemo((d) => d || res.demo);
       toast({
         title: t('created'),
@@ -266,7 +266,7 @@ export function CentosManager({
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     const target = deleteTarget;
-    const res = await deleteCentosAction(target.id);
+    const res = await deleteListaContattiAction(target.id);
     if (!res.ok) {
       toast({ title: tc('mutation_error'), variant: 'error' });
       return;
@@ -284,19 +284,19 @@ export function CentosManager({
 
   // Inline edit of rapporto / stato — optimistic, reverts on failure.
   const handleSetField = React.useCallback(
-    async (entry: CentosEntry, patch: Partial<CentosInput>) => {
+    async (entry: ListaContattiEntry, patch: Partial<ListaContattiInput>) => {
       const prev = entry;
       setEntries((list) =>
         list.map((e) => (e.id === entry.id ? { ...e, ...patch } : e)),
       );
-      const res = await updateCentosAction(entry.id, patch);
+      const res = await updateListaContattiAction(entry.id, patch);
       if (!res.ok) {
         setEntries((list) => list.map((e) => (e.id === prev.id ? prev : e)));
         toast({ title: tc('mutation_error'), variant: 'error' });
         return;
       }
-      const updated: CentosEntry =
-        res.entry ?? ({ ...entry, ...patch } as CentosEntry);
+      const updated: ListaContattiEntry =
+        res.entry ?? ({ ...entry, ...patch } as ListaContattiEntry);
       setEntries((list) => list.map((e) => (e.id === entry.id ? updated : e)));
       syncDetail(updated);
       setDemo((d) => d || res.demo);
@@ -305,7 +305,7 @@ export function CentosManager({
   );
 
   // ── Columns ─────────────────────────────────────────────────────────────────
-  const columns = React.useMemo<ColumnDef<CentosEntry, unknown>[]>(
+  const columns = React.useMemo<ColumnDef<ListaContattiEntry, unknown>[]>(
     () => [
       {
         id: 'position',
@@ -379,17 +379,17 @@ export function CentosManager({
             <InlineSelect
               ariaLabel={t('col_rapporto')}
               value={e.rapporto ?? ''}
-              tone={e.rapporto ? CENTOS_RAPPORTO_TONE[e.rapporto] : 'secondary'}
+              tone={e.rapporto ? LISTA_CONTATTI_RAPPORTO_TONE[e.rapporto] : 'secondary'}
               options={[
                 { value: '', label: t('rapporto_none') },
-                ...CENTOS_RAPPORTO_ORDER.map((r) => ({
+                ...LISTA_CONTATTI_RAPPORTO_ORDER.map((r) => ({
                   value: r,
-                  label: CENTOS_RAPPORTO_LABELS[r],
+                  label: LISTA_CONTATTI_RAPPORTO_LABELS[r],
                 })),
               ]}
               onChange={(v) =>
                 handleSetField(e, {
-                  rapporto: v ? (v as CentosRapporto) : null,
+                  rapporto: v ? (v as ListaContattiRapporto) : null,
                 })
               }
             />
@@ -407,12 +407,12 @@ export function CentosManager({
             <InlineSelect
               ariaLabel={t('col_status')}
               value={e.stato}
-              tone={CENTOS_STATUS_TONE[e.stato]}
-              options={CENTOS_STATUS_ORDER.map((s) => ({
+              tone={LISTA_CONTATTI_STATUS_TONE[e.stato]}
+              options={LISTA_CONTATTI_STATUS_ORDER.map((s) => ({
                 value: s,
-                label: CENTOS_STATUS_LABELS[s],
+                label: LISTA_CONTATTI_STATUS_LABELS[s],
               }))}
-              onChange={(v) => handleSetField(e, { stato: v as CentosStatus })}
+              onChange={(v) => handleSetField(e, { stato: v as ListaContattiStatus })}
             />
           );
         },
@@ -560,7 +560,7 @@ export function CentosManager({
       />
 
       {/* Create / edit slide-over */}
-      <CentosFormSheet
+      <ListaContattiFormSheet
         open={formOpen}
         onOpenChange={(o) => {
           setFormOpen(o);
@@ -571,7 +571,7 @@ export function CentosManager({
       />
 
       {/* Detail slide-over */}
-      <CentosDetailSheet
+      <ListaContattiDetailSheet
         open={detailOpen}
         onOpenChange={setDetailOpen}
         entry={detail}

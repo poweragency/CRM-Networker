@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 
 /**
  * RatingStarsInput — an accessible, keyboard-operable 1–5 star picker used in the
- * Centos form. Controlled via `value` (0 = no rating) / `onChange`. Hover previews
+ * Lista contatti form. Controlled via `value` (0 = no rating) / `onChange`. Hover previews
  * the would-be value; a small "clear" affordance resets to 0. Implemented as a
  * radiogroup so screen readers and arrow keys work.
  */

@@ -11,7 +11,7 @@ import { getCurrentClaims } from '@/lib/data/session';
 type ServerClient = NonNullable<ReturnType<typeof createClient>>;
 
 /**
- * Shared plumbing for the CRM data layer (contacts/prospects/calls/centos/
+ * Shared plumbing for the CRM data layer (contacts/prospects/calls/lista-contatti/
  * seven-whys/documents). Mirrors the genealogy pattern: every read attempts
  * Supabase via the RLS-bound server client and FALLS BACK to mock data when env
  * is missing OR the call throws — so the app is fully renderable in "modalità

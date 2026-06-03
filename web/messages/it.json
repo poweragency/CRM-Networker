@@ -149,7 +149,7 @@
     "contacts": "Contatti",
     "prospects": "Percorso Prospect",
     "calls": "Chiamate",
-    "centos": "Centos List",
+    "centos": "Lista contatti",
     "seven_whys": "Sette Perché",
     "documents": "Documenti interni",
     "analytics": "Analytics",
@@ -508,7 +508,7 @@
     "occurred_invalid": "Inserisci una data valida.",
     "stats_title": "Riepilogo attività"
   },
-  "centos": {
+  "listaContatti": {
     "title": "Lista contatti",
     "subtitle": "I tuoi contatti: i nomi da cui partire.",
     "new_entry": "Aggiungi nome",
@@ -565,7 +565,7 @@
     "relationship_placeholder": "Descrivi chi è questa persona: come la conosci, cosa fa, contesto…",
     "rating_help": "Quanto è promettente questo contatto (1–5).",
     "delete_confirm_title": "Rimuovere dalla lista?",
-    "delete_confirm_body": "Il nome verrà rimosso dalla Lista Centos."
+    "delete_confirm_body": "Il nome verrà rimosso dalla Lista contatti."
   },
   "sette_perche": {
     "title": "Sette Perché",
@@ -1043,7 +1043,7 @@
     "formazione_empty_body": "Questa sezione verrà popolata a breve.",
     "tab_anagrafica": "Anagrafica",
     "tab_prospects": "Percorsi informativi",
-    "tab_centos": "Lista contatti",
+    "tab_lista_contatti": "Lista contatti",
     "tab_seven_whys": "Sette Perché",
     "files_title": "File personali",
     "file_seven_whys": "7 Perché",

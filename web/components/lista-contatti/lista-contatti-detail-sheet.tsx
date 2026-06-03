@@ -9,21 +9,21 @@ import { Avatar } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { FormSheet } from '@/components/crm/form-sheet';
 import { StatusPill } from '@/components/crm/status-pill';
-import type { CentosEntry } from '@/lib/types/db';
+import type { ListaContattiEntry } from '@/lib/types/db';
 
 /**
- * CentosDetailSheet — a read view of a single Centos entry in a slide-over:
+ * ListaContattiDetailSheet — a read view of a single Lista contatti entry in a slide-over:
  * identity, stato + rapporto, chi è, notes and created date. The footer exposes
  * Edit + Delete; rapporto and stato are changed inline in the list or via the
  * edit form. Pure presentation; all mutations stay in the page container.
  */
 
-export interface CentosDetailSheetProps {
+export interface ListaContattiDetailSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  entry: CentosEntry | null;
-  onEdit: (entry: CentosEntry) => void;
-  onDelete: (entry: CentosEntry) => void;
+  entry: ListaContattiEntry | null;
+  onEdit: (entry: ListaContattiEntry) => void;
+  onDelete: (entry: ListaContattiEntry) => void;
   /** disables the action buttons while a mutation is in flight. */
   busy?: boolean;
 }
@@ -51,15 +51,15 @@ function DetailRow({ icon, label, children }: RowProps) {
   );
 }
 
-export function CentosDetailSheet({
+export function ListaContattiDetailSheet({
   open,
   onOpenChange,
   entry,
   onEdit,
   onDelete,
   busy,
-}: CentosDetailSheetProps) {
-  const t = useTranslations('centos');
+}: ListaContattiDetailSheetProps) {
+  const t = useTranslations('listaContatti');
   const tc = useTranslations('crm');
 
   if (!entry) {
@@ -114,9 +114,9 @@ export function CentosDetailSheet({
               </h3>
             </div>
             <div className="mt-1.5 flex flex-wrap items-center gap-2">
-              <StatusPill kind="centos" value={entry.stato} />
+              <StatusPill kind="lista_contatti" value={entry.stato} />
               {entry.rapporto && (
-                <StatusPill kind="centos_rapporto" value={entry.rapporto} />
+                <StatusPill kind="lista_contatti_rapporto" value={entry.rapporto} />
               )}
             </div>
           </div>
@@ -135,13 +135,13 @@ export function CentosDetailSheet({
           </DetailRow>
           <DetailRow icon={<Thermometer />} label={t('form_rapporto')}>
             {entry.rapporto ? (
-              <StatusPill kind="centos_rapporto" value={entry.rapporto} />
+              <StatusPill kind="lista_contatti_rapporto" value={entry.rapporto} />
             ) : (
               <span className="text-muted-foreground">—</span>
             )}
           </DetailRow>
           <DetailRow icon={<CircleDot />} label={t('form_stato')}>
-            <StatusPill kind="centos" value={entry.stato} />
+            <StatusPill kind="lista_contatti" value={entry.stato} />
           </DetailRow>
         </div>
 

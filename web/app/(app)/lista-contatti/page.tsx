@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { listCentos } from '@/lib/data/centos';
-import { CentosManager } from '@/components/centos/centos-manager';
+import { listListaContatti } from '@/lib/data/lista-contatti';
+import { ListaContattiManager } from '@/components/lista-contatti/lista-contatti-manager';
 
 /**
- * /centos — the "Lista Centos" (list of 100) manager (CRM, doc 01 §4.2 /
+ * /lista-contatti — the "Lista contatti" (list of 100) manager (CRM, doc 01 §4.2 /
  * ADR-008 slug).
  *
- * Server component. Reads the caller's position-ordered Centos entries through
+ * Server component. Reads the caller's position-ordered Lista contatti entries through
  * the demo-safe data layer, which falls back to the mock list when Supabase env
  * is missing OR a query fails — so this page builds and renders with no env
  * (RESILIENCE). All data access happens here at request time; the interactive
@@ -20,14 +20,14 @@ import { CentosManager } from '@/components/centos/centos-manager';
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations('centos');
+  const t = await getTranslations('listaContatti');
   return { title: t('title') };
 }
 
-export default async function CentosPage() {
-  const listRes = await listCentos();
+export default async function ListaContattiPage() {
+  const listRes = await listListaContatti();
 
   return (
-    <CentosManager initialEntries={listRes.data} initialDemo={listRes.demo} />
+    <ListaContattiManager initialEntries={listRes.data} initialDemo={listRes.demo} />
   );
 }

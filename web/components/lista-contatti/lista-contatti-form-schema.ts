@@ -1,21 +1,21 @@
 import { z } from 'zod';
 import type { Resolver } from 'react-hook-form';
-import type { CentosEntry } from '@/lib/types/db';
-import type { CentosInput } from '@/lib/data/centos';
+import type { ListaContattiEntry } from '@/lib/types/db';
+import type { ListaContattiInput } from '@/lib/data/lista-contatti';
 
 /**
- * Zod schema + a hand-rolled react-hook-form resolver for the Centos create/edit
+ * Zod schema + a hand-rolled react-hook-form resolver for the Lista contatti create/edit
  * form. We use a local resolver (instead of @hookform/resolvers, which is not a
  * project dependency) so the form keeps full zod validation with zero new
  * packages — same pattern as the contacts form. Optional fields are lenient:
- * empty strings normalize to null at submit time via {@link toCentosInput}.
+ * empty strings normalize to null at submit time via {@link toListaContattiInput}.
  */
 
 /** Empty string → undefined (so optional checks don't fire on ""). */
 const emptyToUndef = (v: unknown) =>
   typeof v === 'string' && v.trim() === '' ? undefined : v;
 
-export const centosFormSchema = z.object({
+export const listaContattiFormSchema = z.object({
   full_name: z
     .string({ required_error: 'Il nome è obbligatorio.' })
     .trim()
@@ -40,14 +40,14 @@ export const centosFormSchema = z.object({
   ),
 });
 
-export type CentosFormValues = z.infer<typeof centosFormSchema>;
+export type ListaContattiFormValues = z.infer<typeof listaContattiFormSchema>;
 
 /**
  * Minimal zod resolver for react-hook-form (replaces @hookform/resolvers/zod).
  * Maps zod issues onto RHF's `errors` shape and returns parsed values.
  */
-export const zodCentosResolver: Resolver<CentosFormValues> = async (values) => {
-  const result = centosFormSchema.safeParse(values);
+export const zodListaContattiResolver: Resolver<ListaContattiFormValues> = async (values) => {
+  const result = listaContattiFormSchema.safeParse(values);
   if (result.success) {
     return { values: result.data, errors: {} };
   }
@@ -62,7 +62,7 @@ export const zodCentosResolver: Resolver<CentosFormValues> = async (values) => {
 };
 
 /** Build default form values from an existing entry (or blanks for create). */
-export function toFormValues(entry?: CentosEntry | null): CentosFormValues {
+export function toFormValues(entry?: ListaContattiEntry | null): ListaContattiFormValues {
   return {
     full_name: entry?.full_name ?? '',
     relationship: entry?.relationship ?? '',
@@ -72,8 +72,8 @@ export function toFormValues(entry?: CentosEntry | null): CentosFormValues {
   };
 }
 
-/** Normalize validated form values into the data-layer CentosInput shape. */
-export function toCentosInput(values: CentosFormValues): CentosInput {
+/** Normalize validated form values into the data-layer ListaContattiInput shape. */
+export function toListaContattiInput(values: ListaContattiFormValues): ListaContattiInput {
   return {
     full_name: values.full_name.trim(),
     relationship: values.relationship?.trim() || null,

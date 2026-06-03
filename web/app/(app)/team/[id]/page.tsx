@@ -4,7 +4,7 @@ import { getTranslations } from 'next-intl/server';
 import { getNode } from '@/lib/data/genealogy';
 import { getCurrentClaims } from '@/lib/data/session';
 import { listProspectBoard } from '@/lib/data/prospects';
-import { listCentos } from '@/lib/data/centos';
+import { listListaContatti } from '@/lib/data/lista-contatti';
 import { getSevenWhysFor } from '@/lib/data/seven-whys';
 import { getMarketerProfile } from '@/lib/data/team';
 import { getWishlist } from '@/lib/data/wishlist';
@@ -14,7 +14,7 @@ import { ConfigNotice } from '@/components/config-notice';
 import { EmptyState } from '@/components/crm/empty-state';
 import { ProspectBoard } from '@/components/prospects/prospect-board';
 import type { BoardView, ProspectView } from '@/components/prospects/types';
-import { CentosManager } from '@/components/centos/centos-manager';
+import { ListaContattiManager } from '@/components/lista-contatti/lista-contatti-manager';
 import { SevenWhysDetail } from '@/components/seven-whys/seven-whys-detail';
 import { MarketerProfileTabs } from '@/components/team/marketer-profile-tabs';
 import { AnagraficaModal } from '@/components/team/anagrafica-modal';
@@ -45,7 +45,7 @@ export async function generateMetadata({
   return { title: node?.display_name ?? 'Marketer' };
 }
 
-const TABS = ['prospects', 'centos'] as const;
+const TABS = ['prospects', 'lista-contatti'] as const;
 type Tab = (typeof TABS)[number];
 
 function parseTab(value: string | string[] | undefined): Tab {
@@ -69,7 +69,7 @@ export default async function MarketerProfilePage({
   const [
     claimsRes,
     boardRes,
-    centosRes,
+    listaContattiRes,
     whysRes,
     profileRes,
     wishlistRes,
@@ -77,7 +77,7 @@ export default async function MarketerProfilePage({
   ] = await Promise.all([
     getCurrentClaims(),
     listProspectBoard({ ownerMarketerId: node.id }),
-    listCentos(node.id),
+    listListaContatti(node.id),
     getSevenWhysFor(node.id),
     getMarketerProfile(node.id),
     getWishlist(node.id),
@@ -98,7 +98,7 @@ export default async function MarketerProfilePage({
     nodeRes.demo ||
     claimsRes.demo ||
     boardRes.demo ||
-    centosRes.demo ||
+    listaContattiRes.demo ||
     whysRes.demo ||
     profileRes.demo;
 
@@ -132,8 +132,8 @@ export default async function MarketerProfilePage({
     <ProspectBoard board={board} demo={demo} contacts={[]} ownerName={node.display_name} />
   );
 
-  const centosPanel = (
-    <CentosManager initialEntries={centosRes.data} initialDemo={demo} />
+  const listaContattiPanel = (
+    <ListaContattiManager initialEntries={listaContattiRes.data} initialDemo={demo} />
   );
 
   const sevenWhysPanel = whysRow ? (
@@ -188,7 +188,7 @@ export default async function MarketerProfilePage({
             <MarketerProfileTabs
               defaultTab={parseTab(searchParams?.tab)}
               prospects={prospectsPanel}
-              centos={centosPanel}
+              listaContatti={listaContattiPanel}
             />
           </>
         }

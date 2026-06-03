@@ -1,12 +1,12 @@
 import type {
-  CentosEntry,
-  CentosRapporto,
-  CentosStatus,
+  ListaContattiEntry,
+  ListaContattiRapporto,
+  ListaContattiStatus,
 } from '@/lib/types/db';
 import { DEMO_ORG_ID, DEMO_OWNER_ID, daysAgo } from './_shared';
 
 /**
- * The demo "Lista Centos" (list of 100) for the demo caller — ~22 ordered
+ * The demo "Lista contatti" (list of 100) for the demo caller — ~22 ordered
  * names with relationships, ratings and contacted/promoted flags. Drives the
  * ordered list, ratings, the contacted toggle and the "promote to contact"
  * action in "modalità demo".
@@ -49,20 +49,20 @@ const SEEDS: Seed[] = [
 ];
 
 /** Map the legacy rating to a warmth so the demo shows all three rapporti. */
-function seedRapporto(rating: number): CentosRapporto {
+function seedRapporto(rating: number): ListaContattiRapporto {
   if (rating >= 4) return 'caldo';
   if (rating === 3) return 'tiepido';
   return 'freddo';
 }
 
 /** Project the legacy flags onto the new funnel status (covers all 4 values). */
-function seedStato(s: Seed): CentosStatus {
+function seedStato(s: Seed): ListaContattiStatus {
   if (s.promoted) return 'iscritto';
   if (s.contacted) return s.rating <= 2 ? 'non_iscritto' : 'invitato';
   return 'non_invitato';
 }
 
-export const MOCK_CENTOS: CentosEntry[] = SEEDS.map((s) => ({
+export const MOCK_LISTA_CONTATTI: ListaContattiEntry[] = SEEDS.map((s) => ({
   id: `cn-${String(s.position).padStart(3, '0')}`,
   org_id: DEMO_ORG_ID,
   owner_marketer_id: DEMO_OWNER_ID,

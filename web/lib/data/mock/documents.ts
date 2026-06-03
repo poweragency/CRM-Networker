@@ -218,7 +218,7 @@ const SEEDS: Seed[] = [
   },
   {
     id: 'doc-012',
-    title: 'Guida alla Lista Centos',
+    title: 'Guida alla Lista contatti',
     category: 'formazione',
     status: 'published',
     tags: ['centos', 'lista-100'],

@@ -3,7 +3,7 @@ import { Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /**
- * RatingStars — a server-safe read-only 1–5 star display for a Centos entry's
+ * RatingStars — a server-safe read-only 1–5 star display for a Lista contatti entry's
  * quality score. `value` of 0/null renders a muted em-dash so empty ratings stay
  * legible. The numeric value is exposed via `aria-label` (color is never the sole
  * signal). For the editable variant see {@link RatingStarsInput}.

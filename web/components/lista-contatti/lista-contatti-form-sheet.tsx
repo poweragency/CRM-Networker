@@ -9,23 +9,23 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { FormSheet } from '@/components/crm/form-sheet';
 import {
-  CENTOS_RAPPORTO_LABELS,
-  CENTOS_RAPPORTO_ORDER,
-  CENTOS_STATUS_LABELS,
-  CENTOS_STATUS_ORDER,
-  type CentosEntry,
+  LISTA_CONTATTI_RAPPORTO_LABELS,
+  LISTA_CONTATTI_RAPPORTO_ORDER,
+  LISTA_CONTATTI_STATUS_LABELS,
+  LISTA_CONTATTI_STATUS_ORDER,
+  type ListaContattiEntry,
 } from '@/lib/types/db';
 import {
-  type CentosFormValues,
-  toCentosInput,
+  type ListaContattiFormValues,
+  toListaContattiInput,
   toFormValues,
-  zodCentosResolver,
-} from './centos-form-schema';
+  zodListaContattiResolver,
+} from './lista-contatti-form-schema';
 
 /**
- * CentosFormSheet — the create/edit slide-over for a Centos entry. Built on the
+ * ListaContattiFormSheet — the create/edit slide-over for a Lista contatti entry. Built on the
  * shared FormSheet + react-hook-form with a local zod resolver (full validation,
- * no extra deps). On submit it hands a normalized CentosInput to the parent,
+ * no extra deps). On submit it hands a normalized ListaContattiInput to the parent,
  * which performs the demo-safe Server Action and patches list state. Used for
  * both "Aggiungi nome" (no `entry`) and "Modifica nome" (with `entry`). Fields:
  * nome, chi è, rapporto + stato (a tendina) e note.
@@ -34,13 +34,13 @@ import {
 const selectCx =
   'flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 
-export interface CentosFormSheetProps {
+export interface ListaContattiFormSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Existing entry to edit; omit/undefined for create. */
-  entry?: CentosEntry | null;
+  entry?: ListaContattiEntry | null;
   /** Receives the normalized input; should perform the action + return a promise. */
-  onSubmit: (input: ReturnType<typeof toCentosInput>) => Promise<void>;
+  onSubmit: (input: ReturnType<typeof toListaContattiInput>) => Promise<void>;
 }
 
 function FieldError({ message }: { message?: string }) {
@@ -52,13 +52,13 @@ function FieldError({ message }: { message?: string }) {
   );
 }
 
-export function CentosFormSheet({
+export function ListaContattiFormSheet({
   open,
   onOpenChange,
   entry,
   onSubmit,
-}: CentosFormSheetProps) {
-  const t = useTranslations('centos');
+}: ListaContattiFormSheetProps) {
+  const t = useTranslations('listaContatti');
   const tc = useTranslations('crm');
   const isEdit = Boolean(entry);
 
@@ -67,8 +67,8 @@ export function CentosFormSheet({
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm<CentosFormValues>({
-    resolver: zodCentosResolver,
+  } = useForm<ListaContattiFormValues>({
+    resolver: zodListaContattiResolver,
     defaultValues: toFormValues(entry),
   });
 
@@ -79,7 +79,7 @@ export function CentosFormSheet({
   }, [open, entry, reset]);
 
   const submit = handleSubmit(async (values) => {
-    await onSubmit(toCentosInput(values));
+    await onSubmit(toListaContattiInput(values));
   });
 
   const formId = React.useId();
@@ -151,9 +151,9 @@ export function CentosFormSheet({
               {...register('rapporto')}
             >
               <option value="">{t('rapporto_none')}</option>
-              {CENTOS_RAPPORTO_ORDER.map((r) => (
+              {LISTA_CONTATTI_RAPPORTO_ORDER.map((r) => (
                 <option key={r} value={r}>
-                  {CENTOS_RAPPORTO_LABELS[r]}
+                  {LISTA_CONTATTI_RAPPORTO_LABELS[r]}
                 </option>
               ))}
             </select>
@@ -165,9 +165,9 @@ export function CentosFormSheet({
               className={selectCx}
               {...register('stato')}
             >
-              {CENTOS_STATUS_ORDER.map((s) => (
+              {LISTA_CONTATTI_STATUS_ORDER.map((s) => (
                 <option key={s} value={s}>
-                  {CENTOS_STATUS_LABELS[s]}
+                  {LISTA_CONTATTI_STATUS_LABELS[s]}
                 </option>
               ))}
             </select>

@@ -319,7 +319,7 @@ export interface SessionClaims {
 }
 
 /* ════════════════════════════════════════════════════════════════════════
- * CRM DOMAIN (doc 01 §4 contacts/centos/whys/documents, §5 prospects/calls)
+ * CRM DOMAIN (doc 01 §4 contacts/lista-contatti/whys/documents, §5 prospects/calls)
  * Enum *values* mirror the canonical DB strings; Italian labels resolve via
  * the *_LABELS maps below (same convention as the genealogy enums above).
  * ════════════════════════════════════════════════════════════════════════ */
@@ -385,7 +385,7 @@ export const CONTACT_SOURCE_ORDER: readonly ContactSource[] = [
 ] as const;
 
 export const CONTACT_SOURCE_LABELS: Record<ContactSource, string> = {
-  centos_list: 'Lista Centos',
+  centos_list: 'Lista contatti',
   referral: 'Referral',
   social: 'Social',
   evento: 'Evento',
@@ -616,26 +616,26 @@ export interface CallStats {
   connect_rate: number;
 }
 
-/* ─────────────────────── Centos List (doc 01 §4.2) ─────────────────────── */
+/* ─────────────────────── Lista contatti (doc 01 §4.2) ─────────────────────── */
 
 /**
- * Funnel status of a Centos entry — set explicitly by the marketer (no longer
+ * Funnel status of a Lista contatti entry — set explicitly by the marketer (no longer
  * derived from flags): non invitato → invitato → iscritto / non iscritto.
  */
-export type CentosStatus =
+export type ListaContattiStatus =
   | 'non_invitato'
   | 'invitato'
   | 'iscritto'
   | 'non_iscritto';
 
-export const CENTOS_STATUS_ORDER: CentosStatus[] = [
+export const LISTA_CONTATTI_STATUS_ORDER: ListaContattiStatus[] = [
   'non_invitato',
   'invitato',
   'iscritto',
   'non_iscritto',
 ];
 
-export const CENTOS_STATUS_LABELS: Record<CentosStatus, string> = {
+export const LISTA_CONTATTI_STATUS_LABELS: Record<ListaContattiStatus, string> = {
   non_invitato: 'Non invitato',
   invitato: 'Invitato',
   iscritto: 'Iscritto',
@@ -643,8 +643,8 @@ export const CENTOS_STATUS_LABELS: Record<CentosStatus, string> = {
 };
 
 /** Tones map to: grigio, blu, verde, rosso. */
-export const CENTOS_STATUS_TONE: Record<
-  CentosStatus,
+export const LISTA_CONTATTI_STATUS_TONE: Record<
+  ListaContattiStatus,
   'secondary' | 'info' | 'success' | 'danger'
 > = {
   non_invitato: 'secondary',
@@ -654,23 +654,23 @@ export const CENTOS_STATUS_TONE: Record<
 };
 
 /** Rapporto (warmth) with the contact. */
-export type CentosRapporto = 'caldo' | 'tiepido' | 'freddo';
+export type ListaContattiRapporto = 'caldo' | 'tiepido' | 'freddo';
 
-export const CENTOS_RAPPORTO_ORDER: CentosRapporto[] = [
+export const LISTA_CONTATTI_RAPPORTO_ORDER: ListaContattiRapporto[] = [
   'caldo',
   'tiepido',
   'freddo',
 ];
 
-export const CENTOS_RAPPORTO_LABELS: Record<CentosRapporto, string> = {
+export const LISTA_CONTATTI_RAPPORTO_LABELS: Record<ListaContattiRapporto, string> = {
   caldo: 'Caldo',
   tiepido: 'Tiepido',
   freddo: 'Freddo',
 };
 
 /** Tones map to: rosso, arancio, blu. */
-export const CENTOS_RAPPORTO_TONE: Record<
-  CentosRapporto,
+export const LISTA_CONTATTI_RAPPORTO_TONE: Record<
+  ListaContattiRapporto,
   'danger' | 'warning' | 'info'
 > = {
   caldo: 'danger',
@@ -678,8 +678,8 @@ export const CENTOS_RAPPORTO_TONE: Record<
   freddo: 'info',
 };
 
-/** A row of `centos_list_entries`. */
-export interface CentosEntry {
+/** A row of `lista_contatti_entries`. */
+export interface ListaContattiEntry {
   id: string;
   org_id: string;
   owner_marketer_id: string;
@@ -690,9 +690,9 @@ export interface CentosEntry {
   /** 1..5 prospect-quality score (legacy — superseded by `rapporto`). */
   rating: number | null;
   /** Warmth of the relationship. */
-  rapporto: CentosRapporto | null;
+  rapporto: ListaContattiRapporto | null;
   /** Funnel status (set explicitly). */
-  stato: CentosStatus;
+  stato: ListaContattiStatus;
   contacted: boolean;
   promoted_contact_id: string | null;
   notes: string | null;
@@ -701,8 +701,8 @@ export interface CentosEntry {
   deleted_at: string | null;
 }
 
-/** The explicit funnel {@link CentosStatus} of an entry. */
-export function centosStatus(entry: CentosEntry): CentosStatus {
+/** The explicit funnel {@link ListaContattiStatus} of an entry. */
+export function listaContattiStatus(entry: ListaContattiEntry): ListaContattiStatus {
   return entry.stato ?? 'non_invitato';
 }
 
