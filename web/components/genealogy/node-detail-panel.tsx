@@ -97,7 +97,7 @@ export function NodeDetailPanel({
   const showActivate =
     canActivate &&
     isCrmEligibleRank(node.rank) &&
-    node.status !== 'active' &&
+    !node.crm_access &&
     !activated;
 
   return (
@@ -117,10 +117,8 @@ export function NodeDetailPanel({
           </h2>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <RankBadge rank={node.rank} />
-            <Badge variant={node.status === 'active' ? 'success' : 'danger'}>
-              {node.status === 'active'
-                ? t('profile_activated')
-                : t('profile_not_activated')}
+            <Badge variant={node.crm_access || activated ? 'success' : 'secondary'}>
+              {node.crm_access || activated ? t('crm_active') : t('crm_inactive')}
             </Badge>
           </div>
         </div>

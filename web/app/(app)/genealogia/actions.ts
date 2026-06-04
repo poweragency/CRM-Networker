@@ -7,6 +7,7 @@ import {
 } from '@/lib/data/genealogy';
 import { updateMarketerExtra } from '@/lib/data/team';
 import { createMarketer } from '@/lib/data/admin';
+import { activateCrmAccess } from '@/lib/data/account';
 import {
   addRuntimeNode,
   nextRuntimeId,
@@ -176,8 +177,8 @@ export interface ActivateCrmInput {
 export interface ActivateCrmResult {
   ok: boolean;
   demo: boolean;
-  /** A validation message key (i18n under `genealogia`) when ok is false. */
-  errorKey?: 'email_invalid' | 'password_short';
+  /** A message key (i18n under `genealogia`) when ok is false. */
+  errorKey?: 'email_invalid' | 'password_short' | 'service_missing' | 'failed';
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -203,10 +204,20 @@ export async function activateCrmAccessAction(
     return { ok: false, demo: !isSupabaseConfigured, errorKey: 'password_short' };
   }
 
-  // Demo path: record the login email only (password intentionally discarded).
-  // Real path (Supabase configured) will call Supabase Auth here; the password is
-  // hashed by Supabase, never by us.
-  setCrmAccess(input.marketerId, email);
+  // Demo (no env): record only the email and simulate success.
+  if (!isSupabaseConfigured) {
+    setCrmAccess(input.marketerId, email);
+    return { ok: true, demo: true };
+  }
 
-  return { ok: true, demo: !isSupabaseConfigured };
+  // Real: create the login + activate the membership (service-role, server-side).
+  const res = await activateCrmAccess(input.marketerId, email, input.password);
+  if (!res.ok) {
+    return {
+      ok: false,
+      demo: false,
+      errorKey: res.error === 'service_missing' ? 'service_missing' : 'failed',
+    };
+  }
+  return { ok: true, demo: false };
 }

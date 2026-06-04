@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { Network, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import type { NavViewer } from '@/lib/nav';
 import { SidebarNav } from '@/components/shell/sidebar-nav';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -59,9 +59,12 @@ export function Sidebar({ viewer, collapsed, onToggleCollapsed }: SidebarProps) 
               className="flex items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label={tc('appName')}
             >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm transition-transform hover:scale-105">
-                <Network className="h-[18px] w-[18px]" aria-hidden />
-              </span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo-gg.png"
+                alt={tc('appName')}
+                className="h-8 w-8 shrink-0 rounded-lg object-contain shadow-sm transition-transform hover:scale-105"
+              />
               <span className="truncate text-sm font-semibold tracking-tight text-card-foreground">
                 {tc('appName')}
               </span>

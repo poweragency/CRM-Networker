@@ -51,6 +51,9 @@ interface MarketerRow {
   has_left_child?: boolean | null;
   has_right_child?: boolean | null;
   branch_leg?: PlacementLeg | null;
+  /** From get_subtree (boolean) or, for direct selects, derived from memberships. */
+  crm_access?: boolean | null;
+  memberships?: { status?: string | null }[] | null;
 }
 
 function toTreeNode(row: MarketerRow): TreeNode {
@@ -66,6 +69,10 @@ function toTreeNode(row: MarketerRow): TreeNode {
     sponsor_id: row.sponsor_id,
     rank: row.rank,
     status: row.status,
+    crm_access:
+      typeof row.crm_access === 'boolean'
+        ? row.crm_access
+        : (row.memberships ?? []).some((m) => m.status === 'active'),
     team_size: row.team_size ?? 0,
     left_count: row.left_team_size ?? 0,
     right_count: row.right_team_size ?? 0,
@@ -91,7 +98,7 @@ export async function getRootMarketer(): Promise<GenealogyResult<TreeNode>> {
     const { data, error } = await supabase
       .from('marketers')
       .select(
-        'id,parent_id,leg,sponsor_id,first_name,last_name,display_name,rank,status',
+        'id,parent_id,leg,sponsor_id,first_name,last_name,display_name,rank,status,memberships(status)',
       )
       .is('parent_id', null)
       .is('deleted_at', null)
@@ -119,7 +126,7 @@ export async function getChildren(
     const { data, error } = await supabase
       .from('marketers')
       .select(
-        'id,parent_id,leg,sponsor_id,first_name,last_name,display_name,rank,status',
+        'id,parent_id,leg,sponsor_id,first_name,last_name,display_name,rank,status,memberships(status)',
       )
       .eq('parent_id', parentId)
       .is('deleted_at', null)
@@ -184,7 +191,7 @@ export async function getNode(
     const { data, error } = await supabase
       .from('marketers')
       .select(
-        'id,parent_id,leg,sponsor_id,first_name,last_name,display_name,rank,status',
+        'id,parent_id,leg,sponsor_id,first_name,last_name,display_name,rank,status,memberships(status)',
       )
       .eq('id', id)
       .is('deleted_at', null)
@@ -214,7 +221,7 @@ export async function searchMarketers(
     const { data, error } = await supabase
       .from('marketers')
       .select(
-        'id,parent_id,leg,sponsor_id,first_name,last_name,display_name,rank,status',
+        'id,parent_id,leg,sponsor_id,first_name,last_name,display_name,rank,status,memberships(status)',
       )
       .is('deleted_at', null)
       .ilike('display_name', `%${needle}%`)

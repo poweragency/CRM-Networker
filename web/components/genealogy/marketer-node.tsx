@@ -15,7 +15,7 @@ import { useTranslations } from 'next-intl';
 import { Avatar } from '@/components/ui/avatar';
 import { RankBadge } from '@/components/ui/rank-badge';
 import { cn, formatNumber, formatPercent } from '@/lib/utils';
-import { STATUS_LABELS, type PlacementLeg, type TreeNode } from '@/lib/types/db';
+import { type PlacementLeg, type TreeNode } from '@/lib/types/db';
 import { NODE_HEIGHT, NODE_WIDTH } from './layout';
 
 /**
@@ -131,20 +131,25 @@ function MarketerNodeImpl({ data, selected: rfSelected }: NodeProps) {
             <span className="truncate text-sm font-semibold leading-tight text-foreground">
               {node.display_name}
             </span>
-            {/* Renewal status: verde = attivo, rosso = non attivo (scaduto). */}
+            {/* CRM access: verde = CRM attivo, grigio = profilo non attivo. */}
             <span
-              title={STATUS_LABELS[node.status]}
-              aria-label={STATUS_LABELS[node.status]}
+              title={node.crm_access ? t('crm_active') : t('crm_inactive')}
+              aria-label={node.crm_access ? t('crm_active') : t('crm_inactive')}
               className={cn(
                 'h-2.5 w-2.5 shrink-0 rounded-full ring-2',
-                node.status === 'active'
+                node.crm_access
                   ? 'bg-success ring-success/30'
-                  : 'bg-danger ring-danger/30',
+                  : 'bg-muted-foreground/40 ring-muted-foreground/20',
               )}
             />
           </div>
           <div className="mt-1 flex items-center gap-1.5">
             <RankBadge rank={node.rank} className="px-1.5 py-0 text-[10px]" />
+            {!node.crm_access && (
+              <span className="truncate text-[10px] font-medium text-muted-foreground">
+                {t('crm_inactive')}
+              </span>
+            )}
           </div>
         </div>
       </div>

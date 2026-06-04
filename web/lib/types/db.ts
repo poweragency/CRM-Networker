@@ -292,6 +292,9 @@ export interface TreeNode {
 
   rank: MarketerRank;
   status: MarketerStatus;
+  /** Whether the marketer has an ACTIVE CRM login (active membership).
+   *  Optional: undefined (mock / not loaded) is treated as "no CRM". */
+  crm_access?: boolean;
 
   /** Closure-derived team aggregates (doc 14 §6). */
   team_size: number;

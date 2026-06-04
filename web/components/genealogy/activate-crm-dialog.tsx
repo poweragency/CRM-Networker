@@ -72,7 +72,11 @@ export function ActivateCrmDialog({
       setError(
         res.errorKey === 'password_short'
           ? t('activate_password_short')
-          : t('activate_email_invalid'),
+          : res.errorKey === 'service_missing'
+            ? t('activate_service_missing')
+            : res.errorKey === 'failed'
+              ? t('activate_failed')
+              : t('activate_email_invalid'),
       );
       return;
     }

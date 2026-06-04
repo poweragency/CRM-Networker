@@ -10,7 +10,7 @@ import type {
 } from '@/lib/types/db';
 import { getNode } from '@/lib/data/genealogy';
 import { listMarketers } from '@/lib/data/admin';
-import { getClient } from '@/lib/data/crm-shared';
+import { getClient, getOwnerContext } from '@/lib/data/crm-shared';
 import { setMarketerIdentity } from '@/lib/data/mock/runtime';
 import { mockExtra } from '@/lib/data/mock/team';
 
@@ -97,10 +97,13 @@ function resolveExtra(id: string): MarketerExtra {
 /** The team roster: one compact row per marketer, clickable → /team/[id]. */
 export async function listTeamMembers(): Promise<TeamResult<TeamMemberRow[]>> {
   const { data, demo } = await listMarketers();
+  const { marketerId: selfId } = await getOwnerContext();
   const supabase = getClient();
-  const extras = supabase ? await fetchExtras(data.map((m) => m.id)) : null;
+  // "Le persone del mio team" excludes the viewer themselves.
+  const team = data.filter((m) => m.id !== selfId);
+  const extras = supabase ? await fetchExtras(team.map((m) => m.id)) : null;
 
-  const rows: TeamMemberRow[] = data.map((m) => {
+  const rows: TeamMemberRow[] = team.map((m) => {
     const ex = extras ? extras.get(m.id) ?? EMPTY_EXTRA : resolveExtra(m.id);
     return {
       id: m.id,

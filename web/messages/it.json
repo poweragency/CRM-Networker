@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "CRM Networker",
+    "appName": "Gestionale GG",
     "loading": "Caricamento…",
     "configMissingTitle": "Configurazione mancante",
     "configMissingBody": "Le variabili d'ambiente di Supabase non sono impostate. Copia .env.example in .env.local e inserisci NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY, poi riavvia il server di sviluppo.",
@@ -201,6 +201,8 @@
     "kpi_calls": "Chiamate",
     "kpi_iscrizioni": "Iscrizioni",
     "kpi_conversion": "Conversione",
+    "crm_active": "CRM attivo",
+    "crm_inactive": "Profilo non attivo",
     "activate_crm": "Attiva accesso CRM",
     "activate_crm_hint": "Crea un accesso CRM per questo profilo esistente.",
     "activate_crm_loading": "Attivazione in corso…",
@@ -214,6 +216,8 @@
     "activate_password_hide": "Nascondi password",
     "activate_email_invalid": "Inserisci un'email valida.",
     "activate_password_short": "La password deve contenere almeno 8 caratteri.",
+    "activate_failed": "Impossibile attivare l'accesso. L'email potrebbe essere già in uso. Riprova.",
+    "activate_service_missing": "Attivazione non configurata sul server. Aggiungi la chiave SUPABASE_SERVICE_ROLE_KEY.",
     "activate_submit": "Attiva accesso",
     "activate_security_note": "La password viene usata per creare l'accesso e gestita in modo sicuro: non viene mai salvata in chiaro.",
     "summary_total": "Totale",
