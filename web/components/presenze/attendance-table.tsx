@@ -59,6 +59,31 @@ export function AttendanceTable({
     setState(Object.fromEntries(members.map((m) => [m.id, { ...m.present }])));
   }, [members]);
 
+  // Camera on/off per member per call — client-side only for now (no backend
+  // field yet); defaults to off ("Cam spenta").
+  const [cam, setCam] = React.useState<
+    Record<string, Record<ZoomCall, boolean>>
+  >(() =>
+    Object.fromEntries(
+      members.map((m) => [m.id, {} as Record<ZoomCall, boolean>]),
+    ),
+  );
+
+  React.useEffect(() => {
+    setCam(
+      Object.fromEntries(
+        members.map((m) => [m.id, {} as Record<ZoomCall, boolean>]),
+      ),
+    );
+  }, [members]);
+
+  function toggleCam(memberId: string, call: ZoomCall) {
+    setCam((prev) => ({
+      ...prev,
+      [memberId]: { ...prev[memberId], [call]: !prev[memberId]?.[call] },
+    }));
+  }
+
   function go(nextDate: string) {
     router.push(`/presenze?date=${nextDate}`);
   }
@@ -163,36 +188,54 @@ export function AttendanceTable({
                   </div>
                 </div>
                 {/* Dense, wrapping grid: each cell = name + presence toggle. */}
-                <div className="grid gap-1.5 [grid-template-columns:repeat(auto-fill,minmax(12rem,1fr))]">
+                <div className="grid gap-1.5 [grid-template-columns:repeat(auto-fill,minmax(13rem,1fr))]">
                   {members.map((m) => {
                     const present = state[m.id]?.[c] ?? false;
+                    const camOn = cam[m.id]?.[c] ?? false;
                     return (
                       <div
                         key={m.id}
-                        className="flex items-center justify-between gap-2 rounded-md border bg-background py-1 pl-2.5 pr-1"
+                        className="flex flex-col gap-1.5 rounded-md border bg-background p-2"
                       >
                         <Link
                           href={`/team/${m.id}`}
                           title={m.display_name}
-                          className="min-w-0 flex-1 truncate text-xs font-medium text-foreground hover:text-primary hover:underline"
+                          className="truncate text-xs font-medium text-foreground hover:text-primary hover:underline"
                         >
                           {m.display_name}
                         </Link>
-                        <button
-                          type="button"
-                          role="checkbox"
-                          aria-checked={present}
-                          aria-label={`${m.display_name} — ${ZOOM_CALL_LABELS[c]}`}
-                          onClick={() => toggle(m, c)}
-                          className={cn(
-                            'inline-flex h-6 min-w-[2.75rem] shrink-0 items-center justify-center rounded-full px-2 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                            present
-                              ? 'bg-success/15 text-success hover:bg-success/25'
-                              : 'bg-muted text-muted-foreground hover:bg-muted/70',
-                          )}
-                        >
-                          {present ? t('present') : t('absent')}
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            role="checkbox"
+                            aria-checked={present}
+                            aria-label={`${m.display_name} — ${ZOOM_CALL_LABELS[c]} — ${present ? t('present') : t('absent')}`}
+                            onClick={() => toggle(m, c)}
+                            className={cn(
+                              'inline-flex h-6 flex-1 items-center justify-center rounded-full px-2 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                              present
+                                ? 'bg-success/15 text-success hover:bg-success/25'
+                                : 'bg-danger/15 text-danger hover:bg-danger/25',
+                            )}
+                          >
+                            {present ? t('present') : t('absent')}
+                          </button>
+                          <button
+                            type="button"
+                            role="checkbox"
+                            aria-checked={camOn}
+                            aria-label={`${m.display_name} — ${camOn ? t('cam_on') : t('cam_off')}`}
+                            onClick={() => toggleCam(m.id, c)}
+                            className={cn(
+                              'inline-flex h-6 flex-1 items-center justify-center rounded-full px-2 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                              camOn
+                                ? 'bg-success/15 text-success hover:bg-success/25'
+                                : 'bg-danger/15 text-danger hover:bg-danger/25',
+                            )}
+                          >
+                            {camOn ? t('cam_on') : t('cam_off')}
+                          </button>
+                        </div>
                       </div>
                     );
                   })}
