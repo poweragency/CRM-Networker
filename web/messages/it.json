@@ -294,6 +294,8 @@
     "cat_percorsi_unit": "{count} percorsi",
     "cat_conversion": "Conversione più alta",
     "cat_conversion_desc": "Tasso di conversione più alto",
+    "cat_cam": "Cam più attiva",
+    "cat_cam_desc": "% di camera attiva sulle Zoom in cui era presente.",
     "you_badge": "Tu"
   },
   "error": {

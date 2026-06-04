@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { Eye, Route, TrendingUp } from 'lucide-react';
+import { Eye, Route, TrendingUp, Video } from 'lucide-react';
 import { getCurrentClaims } from '@/lib/data/session';
 import { getMonthlyTopMarketers } from '@/lib/data/dashboard';
 import type { TopMarketerEntry } from '@/lib/data/mock/dashboard';
@@ -79,6 +79,16 @@ export default async function DashboardPage() {
       formatValue: (n) => formatPercent(n),
       spotlightValue: (n) => formatPercent(n),
     },
+    {
+      key: 'cam',
+      label: t('cat_cam'),
+      description: t('cat_cam_desc'),
+      icon: Video,
+      accent: 'warning',
+      entries: top.data.cam,
+      formatValue: (n) => formatPercent(n),
+      spotlightValue: (n) => formatPercent(n),
+    },
   ];
 
   return (
@@ -86,7 +96,7 @@ export default async function DashboardPage() {
       {isDemo && <ConfigNotice variant="inline" />}
 
       {/* Tier 1 — Spotlight: the #1 of each category */}
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {categories.map((c) => (
           <SpotlightCard
             key={c.key}
@@ -102,7 +112,7 @@ export default async function DashboardPage() {
       </section>
 
       {/* Tier 2 — Full leaderboards (podium + value bars) */}
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {categories.map((c) => (
           <LeaderboardCard
             key={c.key}
