@@ -46,6 +46,7 @@ import {
   deleteListaContattiAction,
   updateListaContattiAction,
 } from '@/app/(app)/lista-contatti/actions';
+import { useListaContattiStore } from '@/components/team/lista-contatti-store';
 import { ListaContattiFormSheet } from './lista-contatti-form-sheet';
 import { ListaContattiDetailSheet } from './lista-contatti-detail-sheet';
 import type { toListaContattiInput } from './lista-contatti-form-schema';
@@ -63,11 +64,6 @@ import type { toListaContattiInput } from './lista-contatti-form-schema';
  *
  * Mutations call demo-safe Server Actions; local state is patched optimistically.
  */
-
-export interface ListaContattiManagerProps {
-  initialEntries: ListaContattiEntry[];
-  initialDemo: boolean;
-}
 
 /** The 5 percorso phases (funnel stages after the invite). */
 const PERCORSO_STAGES: ProspectStage[] = [
@@ -173,25 +169,15 @@ function PercorsoChecks({
   );
 }
 
-export function ListaContattiManager({
-  initialEntries,
-  initialDemo,
-}: ListaContattiManagerProps) {
+export function ListaContattiManager() {
   const t = useTranslations('listaContatti');
   const tc = useTranslations('crm');
   const { toast } = useToast();
 
-  // ── Local source-of-truth list (mutations patch this) ──────────────────────
-  const [entries, setEntries] = React.useState<ListaContattiEntry[]>(() =>
-    sortByPosition(initialEntries),
-  );
-  const [demo, setDemo] = React.useState(initialDemo);
-  // Order of the Percorsi pane: invited entries in invite-order (newest LAST).
-  const [invitedOrder, setInvitedOrder] = React.useState<string[]>(() =>
-    sortByPosition(initialEntries)
-      .filter((e) => e.stato !== 'non_invitato')
-      .map((e) => e.id),
-  );
+  // Shared store (above the tabs) is the source of truth, so the Lista list and
+  // the Percorsi informativi kanban stay in sync and edits survive tab switches.
+  const { entries, setEntries, demo, setDemo, invitedOrder, setField } =
+    useListaContattiStore();
 
   // ── Filter state ────────────────────────────────────────────────────────────
   const [search, setSearch] = React.useState('');
@@ -361,39 +347,6 @@ export function ListaContattiManager({
     setDeleteTarget(null);
   };
 
-  // Inline edit of rapporto / stato / percorso — optimistic, reverts on failure.
-  const handleSetField = React.useCallback(
-    async (entry: ListaContattiEntry, patch: Partial<ListaContattiInput>) => {
-      // Newly invited → push the contact to the bottom of the Percorsi pane.
-      if (
-        patch.stato &&
-        patch.stato !== 'non_invitato' &&
-        entry.stato === 'non_invitato'
-      ) {
-        setInvitedOrder((order) => [
-          ...order.filter((id) => id !== entry.id),
-          entry.id,
-        ]);
-      }
-      const prev = entry;
-      setEntries((list) =>
-        list.map((e) => (e.id === entry.id ? { ...e, ...patch } : e)),
-      );
-      const res = await updateListaContattiAction(entry.id, patch);
-      if (!res.ok) {
-        setEntries((list) => list.map((e) => (e.id === prev.id ? prev : e)));
-        toast({ title: tc('mutation_error'), variant: 'error' });
-        return;
-      }
-      const updated: ListaContattiEntry =
-        res.entry ?? ({ ...entry, ...patch } as ListaContattiEntry);
-      setEntries((list) => list.map((e) => (e.id === entry.id ? updated : e)));
-      syncDetail(updated);
-      setDemo((d) => d || res.demo);
-    },
-    [toast, tc, syncDetail],
-  );
-
   const hasFilters = search.length > 0 || Object.keys(filterValues).length > 0;
 
   return (
@@ -537,7 +490,7 @@ export function ListaContattiManager({
                             })),
                           ]}
                           onChange={(v) =>
-                            handleSetField(e, {
+                            setField(e, {
                               rapporto: v ? (v as ListaContattiRapporto) : null,
                             })
                           }
@@ -551,7 +504,7 @@ export function ListaContattiManager({
                             label: LISTA_CONTATTI_STATUS_LABELS[s],
                           }))}
                           onChange={(v) =>
-                            handleSetField(e, {
+                            setField(e, {
                               stato: v as ListaContattiStatus,
                             })
                           }
@@ -624,7 +577,7 @@ export function ListaContattiManager({
                     <PercorsoChecks
                       current={e.percorso ?? 0}
                       ariaPrefix={e.full_name}
-                      onSet={(phase) => handleSetField(e, { percorso: phase })}
+                      onSet={(phase) => setField(e, { percorso: phase })}
                     />
                   </li>
                 ))}

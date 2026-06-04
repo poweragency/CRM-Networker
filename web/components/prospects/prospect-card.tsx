@@ -46,12 +46,14 @@ export const ProspectCardBody = React.forwardRef<
 ) {
   const days = daysInStage(prospect.current_stage_since);
   const stale = days >= 7;
+  const fromList = Boolean(prospect.listaContattiId);
 
   return (
     <div
       ref={ref}
       className={cn(
-        'group relative rounded-lg border bg-card p-3 pl-7 text-card-foreground shadow-sm transition-shadow',
+        'group relative rounded-lg border bg-card p-3 text-card-foreground shadow-sm transition-shadow',
+        fromList ? 'pl-3' : 'pl-7',
         'hover:shadow-md focus-within:ring-2 focus-within:ring-ring',
         overlay && 'rotate-1 cursor-grabbing shadow-xl ring-2 ring-primary/40',
         dragging && 'opacity-40',
@@ -63,10 +65,17 @@ export const ProspectCardBody = React.forwardRef<
       {link}
 
       <div className="min-w-0 space-y-2">
-        {/* Name */}
-        <p className="truncate text-sm font-medium leading-snug text-foreground">
-          {prospect.full_name}
-        </p>
+        {/* Name + (for mirrored Lista contatti cards) a small source badge */}
+        <div className="flex items-start justify-between gap-2">
+          <p className="truncate text-sm font-medium leading-snug text-foreground">
+            {prospect.full_name}
+          </p>
+          {fromList && (
+            <span className="shrink-0 rounded-full bg-info/12 px-1.5 py-0.5 text-[10px] font-medium text-info">
+              Lista contatti
+            </span>
+          )}
+        </div>
 
         {/* Owner */}
         <div className="flex items-center gap-1.5">

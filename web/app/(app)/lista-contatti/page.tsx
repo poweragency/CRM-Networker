@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { listListaContatti } from '@/lib/data/lista-contatti';
 import { ListaContattiManager } from '@/components/lista-contatti/lista-contatti-manager';
+import { ListaContattiStoreProvider } from '@/components/team/lista-contatti-store';
 
 /**
  * /lista-contatti — the "Lista contatti" (list of 100) manager (CRM, doc 01 §4.2 /
@@ -28,6 +29,11 @@ export default async function ListaContattiPage() {
   const listRes = await listListaContatti();
 
   return (
-    <ListaContattiManager initialEntries={listRes.data} initialDemo={listRes.demo} />
+    <ListaContattiStoreProvider
+      initialEntries={listRes.data}
+      initialDemo={listRes.demo}
+    >
+      <ListaContattiManager />
+    </ListaContattiStoreProvider>
   );
 }

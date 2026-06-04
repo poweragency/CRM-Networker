@@ -4,7 +4,7 @@
  * StatusPill, …), the slice-1 `ui/` primitives and the demo-safe lista contatti data
  * layer.
  */
-export { ListaContattiManager, type ListaContattiManagerProps } from './lista-contatti-manager';
+export { ListaContattiManager } from './lista-contatti-manager';
 export {
   ListaContattiFormSheet,
   type ListaContattiFormSheetProps,

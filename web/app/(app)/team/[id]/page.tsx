@@ -15,6 +15,7 @@ import { EmptyState } from '@/components/crm/empty-state';
 import { ProspectBoard } from '@/components/prospects/prospect-board';
 import type { BoardView, ProspectView } from '@/components/prospects/types';
 import { ListaContattiManager } from '@/components/lista-contatti/lista-contatti-manager';
+import { ListaContattiStoreProvider } from '@/components/team/lista-contatti-store';
 import { SevenWhysDetail } from '@/components/seven-whys/seven-whys-detail';
 import { MarketerProfileTabs } from '@/components/team/marketer-profile-tabs';
 import { AnagraficaModal } from '@/components/team/anagrafica-modal';
@@ -133,9 +134,7 @@ export default async function MarketerProfilePage({
     <ProspectBoard board={board} demo={demo} contacts={[]} ownerName={node.display_name} />
   );
 
-  const listaContattiPanel = (
-    <ListaContattiManager initialEntries={listaContattiRes.data} initialDemo={demo} />
-  );
+  const listaContattiPanel = <ListaContattiManager />;
 
   const sevenWhysPanel = whysRow ? (
     <SevenWhysDetail
@@ -189,11 +188,16 @@ export default async function MarketerProfilePage({
             <div className="flex">
               <PerformanceModal prospects={personalProspects} />
             </div>
-            <MarketerProfileTabs
-              defaultTab={parseTab(searchParams?.tab)}
-              prospects={prospectsPanel}
-              listaContatti={listaContattiPanel}
-            />
+            <ListaContattiStoreProvider
+              initialEntries={listaContattiRes.data}
+              initialDemo={demo}
+            >
+              <MarketerProfileTabs
+                defaultTab={parseTab(searchParams?.tab)}
+                prospects={prospectsPanel}
+                listaContatti={listaContattiPanel}
+              />
+            </ListaContattiStoreProvider>
           </>
         }
         formazione={

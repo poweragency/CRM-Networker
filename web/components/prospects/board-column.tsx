@@ -10,8 +10,8 @@ import { cn } from '@/lib/utils';
 import { STAGE_DESCRIPTIONS, STAGE_LABELS, stageIndex } from '@/lib/types/db';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Info } from 'lucide-react';
-import { ProspectCard } from './prospect-card';
-import type { StageColumnView } from './types';
+import { ProspectCard, ProspectCardBody } from './prospect-card';
+import type { ProspectView, StageColumnView } from './types';
 
 /**
  * BoardColumn — one of the 6 canonical funnel columns. A droppable target whose
@@ -25,14 +25,26 @@ export interface BoardColumnProps {
   isDraggingActive?: boolean;
   /** disable card dragging while a move is committing. */
   busy?: boolean;
+  /**
+   * Read-only cards mirrored from the Lista contatti (invited contacts at this
+   * phase). Not draggable here — moved via the Percorso checkboxes.
+   */
+  extraCards?: ProspectView[];
 }
 
-export function BoardColumn({ column, isDraggingActive, busy }: BoardColumnProps) {
+export function BoardColumn({
+  column,
+  isDraggingActive,
+  busy,
+  extraCards = [],
+}: BoardColumnProps) {
   const { stage, prospects } = column;
   const { setNodeRef, isOver } = useDroppable({
     id: stage,
     data: { type: 'column', stage },
   });
+
+  const count = prospects.length + extraCards.length;
 
   const idx = stageIndex(stage);
   const isEnrollment = stage === 'iscrizione';
@@ -76,7 +88,7 @@ export function BoardColumn({ column, isDraggingActive, busy }: BoardColumnProps
             </Tooltip>
           </div>
           <span className="shrink-0 rounded-full bg-background px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
-            {prospects.length}
+            {count}
           </span>
         </div>
       </div>
@@ -103,7 +115,12 @@ export function BoardColumn({ column, isDraggingActive, busy }: BoardColumnProps
           ))}
         </SortableContext>
 
-        {prospects.length === 0 && (
+        {/* Mirrored Lista-contatti cards (read-only here). */}
+        {extraCards.map((c) => (
+          <ProspectCardBody key={c.id} prospect={c} />
+        ))}
+
+        {count === 0 && (
           <div
             className={cn(
               'flex h-24 items-center justify-center rounded-lg border border-dashed text-center text-xs',

@@ -10,6 +10,12 @@ import type { Prospect, ProspectStage } from '@/lib/types/db';
 /** A prospect enriched with its resolved owner display name (board card). */
 export interface ProspectView extends Prospect {
   owner_name: string;
+  /**
+   * Set when this card is a Lista contatti contact mirrored into the board (not a
+   * real prospect row). Holds the lista_contatti entry id. Such cards are
+   * read-only on the board — their phase is driven by the Percorso checkboxes.
+   */
+  listaContattiId?: string;
 }
 
 /** A board column ready for render: stage + its prospect views. */

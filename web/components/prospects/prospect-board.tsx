@@ -16,10 +16,16 @@ import {
 } from '@dnd-kit/core';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { Plus } from 'lucide-react';
-import { STAGE_LABELS, STAGE_ORDER, type ProspectStage } from '@/lib/types/db';
+import {
+  STAGE_LABELS,
+  STAGE_ORDER,
+  type ListaContattiEntry,
+  type ProspectStage,
+} from '@/lib/types/db';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/crm/toaster';
 import { ConfigNotice } from '@/components/config-notice';
+import { useListaContattiStoreOptional } from '@/components/team/lista-contatti-store';
 import { changeStageAction } from '@/app/(app)/percorso-prospect/actions';
 import { BoardColumn } from './board-column';
 import { ProspectCardBody } from './prospect-card';
@@ -61,6 +67,40 @@ function findStageOf(map: StageMap, id: string): ProspectStage | null {
   return null;
 }
 
+/**
+ * Mirror an invited Lista contatti entry into a read-only board card. The entry's
+ * `percorso` (0..5) IS the funnel stage index, so the card lands in the matching
+ * column; phase changes are made via the Percorso checkboxes (this card is not
+ * draggable here).
+ */
+function listaContattiToCard(
+  e: ListaContattiEntry,
+  ownerName: string,
+): ProspectView {
+  const stage =
+    STAGE_ORDER[Math.min(Math.max(e.percorso ?? 0, 0), STAGE_ORDER.length - 1)];
+  return {
+    id: `lc-${e.id}`,
+    org_id: e.org_id,
+    owner_marketer_id: e.owner_marketer_id,
+    contact_id: null,
+    full_name: e.full_name,
+    current_stage: stage,
+    outcome: stage === 'iscrizione' ? 'enrolled' : 'open',
+    current_stage_since: e.updated_at,
+    entered_funnel_at: e.created_at,
+    closed_at: null,
+    notes: e.relationship ?? null,
+    created_by: e.owner_marketer_id,
+    updated_by: e.owner_marketer_id,
+    created_at: e.created_at,
+    updated_at: e.updated_at,
+    deleted_at: null,
+    owner_name: ownerName,
+    listaContattiId: e.id,
+  };
+}
+
 export function ProspectBoard({
   board,
   demo,
@@ -69,6 +109,24 @@ export function ProspectBoard({
 }: ProspectBoardProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const listaStore = useListaContattiStoreOptional();
+
+  // Invited Lista contatti contacts mirrored into the board (read-only here),
+  // grouped by the stage their `percorso` maps to. Live: re-derives whenever the
+  // shared store changes (e.g. a Percorso checkbox toggled in the Lista tab).
+  const lcByStage = React.useMemo(() => {
+    const map = {} as Record<ProspectStage, ProspectView[]>;
+    for (const s of STAGE_ORDER) map[s] = [];
+    if (listaStore) {
+      for (const e of listaStore.entries) {
+        if (e.stato === 'non_invitato') continue;
+        const card = listaContattiToCard(e, ownerName);
+        map[card.current_stage].push(card);
+      }
+    }
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listaStore?.entries, ownerName]);
 
   const [stageMap, setStageMap] = React.useState<StageMap>(() =>
     toStageMap(board),
@@ -208,7 +266,7 @@ export function ProspectBoard({
   }
 
   const total = STAGE_ORDER.reduce(
-    (acc, s) => acc + stageMap[s].length,
+    (acc, s) => acc + stageMap[s].length + lcByStage[s].length,
     0,
   );
 
@@ -252,6 +310,7 @@ export function ProspectBoard({
                 }}
                 isDraggingActive={activeId !== null}
                 busy={busyId !== null}
+                extraCards={lcByStage[stage]}
               />
             );
           })}
