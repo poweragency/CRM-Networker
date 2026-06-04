@@ -83,7 +83,9 @@ export async function getCurrentClaims(): Promise<SessionResult> {
     const claims: SessionClaims = {
       org_id: String(payload?.org_id ?? appMeta.org_id ?? ''),
       marketer_id: String(payload?.marketer_id ?? appMeta.marketer_id ?? ''),
-      role: asRole(payload?.role ?? appMeta.app_role),
+      // App role is the dedicated `app_role` claim — NOT the top-level `role`
+      // claim, which must stay 'authenticated' for PostgREST (see migration 0030).
+      role: asRole(payload?.app_role ?? appMeta.app_role),
       rank: asRank(payload?.rank ?? appMeta.rank),
       crm_access: Boolean(
         (appMeta.permissions as Record<string, unknown> | undefined)
