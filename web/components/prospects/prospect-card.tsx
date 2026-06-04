@@ -15,10 +15,10 @@ import type { ProspectView } from './types';
  * owner (avatar + chip), how long it has sat in the current stage, and the
  * outcome pill for non-open prospects.
  *
- * Interaction split (avoids the classic drag-vs-click conflict): the left grip
- * is the ONLY drag handle (dnd-kit listeners bound there), while the card body
- * is a link into the detail route. So a click opens the prospect and a drag
- * starts only from the grip.
+ * The WHOLE card is the drag surface (dnd-kit listeners on the root), so you can
+ * grab it from anywhere — the left grip is just a visual affordance. A real
+ * prospect's body is still a link to its detail route; the sensor's activation
+ * distance keeps a plain click (open) distinct from a drag (move).
  */
 
 /** Pure presentation — shared by the sortable item and the drag overlay. */
@@ -107,7 +107,6 @@ export function ProspectCard({ prospect, disabled }: ProspectCardProps) {
     attributes,
     listeners,
     setNodeRef,
-    setActivatorNodeRef,
     transform,
     transition,
     isDragging,
@@ -128,22 +127,20 @@ export function ProspectCard({ prospect, disabled }: ProspectCardProps) {
       prospect={prospect}
       dragging={isDragging}
       style={style}
+      // Drag from anywhere on the card.
+      {...attributes}
+      {...listeners}
+      className={cn(
+        'touch-none',
+        disabled ? 'cursor-default' : 'cursor-grab active:cursor-grabbing',
+      )}
       handle={
-        <button
-          type="button"
-          ref={setActivatorNodeRef}
-          {...attributes}
-          {...listeners}
-          disabled={disabled}
-          aria-label={`Trascina ${prospect.full_name}`}
-          className={cn(
-            'absolute left-0 top-0 z-20 flex h-full w-7 touch-none items-center justify-center rounded-l-lg text-muted-foreground/40 transition-colors',
-            'hover:bg-muted/60 hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-            disabled ? 'cursor-default' : 'cursor-grab active:cursor-grabbing',
-          )}
+        <span
+          aria-hidden
+          className="absolute left-0 top-0 flex h-full w-7 items-center justify-center text-muted-foreground/40"
         >
-          <GripVertical className="h-4 w-4" aria-hidden />
-        </button>
+          <GripVertical className="h-4 w-4" />
+        </span>
       }
       link={
         // Mirrored Lista contatti cards have no detail route — drag-only.
