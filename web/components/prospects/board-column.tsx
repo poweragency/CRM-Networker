@@ -46,6 +46,10 @@ export function BoardColumn({
   });
 
   const count = prospects.length + extraCards.length;
+  // Real prospects + mirrored Lista contatti cards, always alphabetical by name.
+  const cards = [...prospects, ...extraCards].sort((a, b) =>
+    a.full_name.localeCompare(b.full_name, 'it', { sensitivity: 'base' }),
+  );
 
   const idx = stageIndex(stage);
   const isEnrollment = stage === 'iscrizione';
@@ -108,13 +112,10 @@ export function BoardColumn({
         )}
       >
         <SortableContext
-          items={[...prospects, ...extraCards].map((p) => p.id)}
+          items={cards.map((c) => c.id)}
           strategy={verticalListSortingStrategy}
         >
-          {prospects.map((p) => (
-            <ProspectCard key={p.id} prospect={p} disabled={busy} />
-          ))}
-          {extraCards.map((c) => (
+          {cards.map((c) => (
             <ProspectCard key={c.id} prospect={c} disabled={busy} />
           ))}
         </SortableContext>

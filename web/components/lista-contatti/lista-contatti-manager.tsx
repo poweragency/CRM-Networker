@@ -87,6 +87,11 @@ function sortByPosition(rows: ListaContattiEntry[]): ListaContattiEntry[] {
   return [...rows].sort((a, b) => a.position - b.position);
 }
 
+/** Alphabetical by full name (case/accent-insensitive). */
+function byName(a: ListaContattiEntry, b: ListaContattiEntry): number {
+  return a.full_name.localeCompare(b.full_name, 'it', { sensitivity: 'base' });
+}
+
 /** A colored native <select> for an in-row enum edit (stops row-click). */
 function InlineSelect({
   value,
@@ -176,7 +181,7 @@ export function ListaContattiManager() {
 
   // Shared store (above the tabs) is the source of truth, so the Lista list and
   // the Percorsi informativi kanban stay in sync and edits survive tab switches.
-  const { entries, setEntries, demo, setDemo, invitedOrder, setField } =
+  const { entries, setEntries, demo, setDemo, setField } =
     useListaContattiStore();
 
   // ── Filter state ────────────────────────────────────────────────────────────
@@ -198,48 +203,33 @@ export function ListaContattiManager() {
           label: LISTA_CONTATTI_STATUS_LABELS[s],
         })),
       },
-      {
-        key: 'rapporto',
-        label: t('filter_rapporto'),
-        options: LISTA_CONTATTI_RAPPORTO_ORDER.map((r) => ({
-          value: r,
-          label: LISTA_CONTATTI_RAPPORTO_LABELS[r],
-        })),
-      },
     ],
     [t],
   );
 
   const filtered = React.useMemo(() => {
     const q = search.trim().toLowerCase();
-    return entries.filter((e) => {
-      if (q) {
-        const hay =
-          `${e.full_name} ${e.relationship ?? ''} ${e.notes ?? ''}`.toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      if (statusFilter.length && !statusFilter.includes(e.stato)) return false;
-      if (rapportoFilter.length && !rapportoFilter.includes(e.rapporto ?? ''))
-        return false;
-      return true;
-    });
+    return entries
+      .filter((e) => {
+        if (q) {
+          const hay =
+            `${e.full_name} ${e.relationship ?? ''} ${e.notes ?? ''}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        if (statusFilter.length && !statusFilter.includes(e.stato)) return false;
+        if (rapportoFilter.length && !rapportoFilter.includes(e.rapporto ?? ''))
+          return false;
+        return true;
+      })
+      .sort(byName);
   }, [entries, search, statusFilter, rapportoFilter]);
 
-  // Invited (or beyond) contacts → the Percorsi pane, ordered by invite-order so
-  // a freshly-invited contact lands in the LAST row. From the full list, so the
-  // journey view is stable regardless of the left-list filters.
-  const percorsi = React.useMemo(() => {
-    const byId = new Map(entries.map((e) => [e.id, e] as const));
-    const invitedIds = new Set(
-      entries.filter((e) => e.stato !== 'non_invitato').map((e) => e.id),
-    );
-    const ordered = invitedOrder
-      .filter((id) => invitedIds.has(id))
-      .map((id) => byId.get(id)!);
-    const seen = new Set(ordered.map((e) => e.id));
-    const rest = entries.filter((e) => invitedIds.has(e.id) && !seen.has(e.id));
-    return [...ordered, ...rest];
-  }, [entries, invitedOrder]);
+  // Invited (or beyond) contacts → the Percorsi pane, alphabetical by name. From
+  // the full list, so the journey view is stable regardless of the list filters.
+  const percorsi = React.useMemo(
+    () => entries.filter((e) => e.stato !== 'non_invitato').sort(byName),
+    [entries],
+  );
 
   // ── Progress stats (over the full list, not the filtered view) ──────────────
   const stats = React.useMemo(() => {
@@ -422,6 +412,31 @@ export function ListaContattiManager() {
         filters={filters}
         values={filterValues}
         onValuesChange={setFilterValues}
+        trailing={
+          <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            {t('filter_rapporto')}
+            <select
+              value={rapportoFilter[0] ?? ''}
+              onChange={(e) => {
+                const v = e.target.value;
+                setFilterValues((prev) => {
+                  const next = { ...prev };
+                  if (v) next.rapporto = [v];
+                  else delete next.rapporto;
+                  return next;
+                });
+              }}
+              className="rounded-md border border-input bg-background px-2 py-1 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="">{t('filter_all')}</option>
+              {LISTA_CONTATTI_RAPPORTO_ORDER.map((r) => (
+                <option key={r} value={r}>
+                  {LISTA_CONTATTI_RAPPORTO_LABELS[r]}
+                </option>
+              ))}
+            </select>
+          </label>
+        }
       />
 
       {/* Two panes: list (left) + percorsi (right) */}
@@ -456,14 +471,14 @@ export function ListaContattiManager() {
               </div>
             ) : (
               <ul className="divide-y">
-                {filtered.map((e) => (
+                {filtered.map((e, i) => (
                   <li
                     key={e.id}
                     onClick={() => openEdit(e)}
                     className="flex cursor-pointer items-start gap-3 p-3 transition-colors hover:bg-muted/40"
                   >
                     <span className="w-5 shrink-0 pt-1 text-xs tabular-nums text-muted-foreground">
-                      {e.position}
+                      {i + 1}
                     </span>
                     <Avatar name={e.full_name} size="sm" className="mt-0.5" />
                     <div className="min-w-0 flex-1">
