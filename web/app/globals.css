@@ -53,6 +53,13 @@
     --rank-executive-vice-president: 270 72% 58%;
     --rank-global-director: 232 55% 42%;
 
+    /* starting-package accent tones — signature viola, premium oro,
+       standard blu, starter marrone. Consumed by PackageBadge. */
+    --package-signature: 270 70% 56%;
+    --package-premium: 43 92% 47%;
+    --package-standard: 215 85% 54%;
+    --package-starter: 25 55% 40%;
+
     /* node activity indicator (hot / warm / cold / dormant — doc 14 §7.2) */
     --activity-hot: 0 72% 51%;
     --activity-warm: 38 92% 50%;
@@ -121,6 +128,11 @@
     --rank-senior-vice-president: 28 88% 62%;
     --rank-executive-vice-president: 270 70% 70%;
     --rank-global-director: 232 60% 68%;
+
+    --package-signature: 270 72% 72%;
+    --package-premium: 43 92% 60%;
+    --package-standard: 215 85% 67%;
+    --package-starter: 28 52% 57%;
 
     --activity-hot: 0 72% 60%;
     --activity-warm: 38 92% 58%;

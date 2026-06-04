@@ -76,6 +76,12 @@ const config: Config = {
           executiveVicePresident: 'hsl(var(--rank-executive-vice-president))',
           globalDirector: 'hsl(var(--rank-global-director))',
         },
+        package: {
+          signature: 'hsl(var(--package-signature))',
+          premium: 'hsl(var(--package-premium))',
+          standard: 'hsl(var(--package-standard))',
+          starter: 'hsl(var(--package-starter))',
+        },
         activity: {
           hot: 'hsl(var(--activity-hot))',
           warm: 'hsl(var(--activity-warm))',

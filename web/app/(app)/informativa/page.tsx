@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { STARTING_PACKAGE_LABELS } from '@/lib/types/db';
+import { PACKAGE_TONE } from '@/components/ui/package-badge';
 import {
   MATERIAL_FOLDERS,
   PACKAGE_INFO,
@@ -43,33 +44,41 @@ export default async function InformativaPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {PACKAGE_INFO.map((p) => (
-            <div
-              key={p.key}
-              className={cn(
-                'relative flex flex-col overflow-hidden rounded-xl border bg-card p-5 shadow-sm transition-[box-shadow,transform] duration-base ease-standard hover:-translate-y-0.5 hover:shadow-md',
-                p.featured && 'border-primary/40 ring-1 ring-primary/15',
-              )}
-            >
-              {p.featured && (
-                <div
-                  className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/[0.08] to-transparent"
+          {PACKAGE_INFO.map((p) => {
+            const tone = PACKAGE_TONE[p.key];
+            return (
+              <div
+                key={p.key}
+                className={cn(
+                  'relative flex flex-col overflow-hidden rounded-xl border bg-card p-5 pt-6 shadow-sm transition-[box-shadow,transform] duration-base ease-standard hover:-translate-y-0.5 hover:shadow-md',
+                  p.featured && 'ring-1 ring-border',
+                )}
+              >
+                {/* Package accent bar (colore del pacchetto) */}
+                <span
+                  className={cn('pointer-events-none absolute inset-x-0 top-0 h-1', tone.dot)}
                   aria-hidden
                 />
-              )}
-              <span className="relative text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                {STARTING_PACKAGE_LABELS[p.key]}
-              </span>
-              <p className="relative mt-2 flex items-baseline gap-1.5">
-                <span className="text-3xl font-semibold tabular-nums tracking-tight text-foreground">
-                  {p.price}
+                <span
+                  className={cn(
+                    'relative inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider',
+                    tone.text,
+                  )}
+                >
+                  <span className={cn('h-1.5 w-1.5 rounded-full', tone.dot)} aria-hidden />
+                  {STARTING_PACKAGE_LABELS[p.key]}
                 </span>
-                <span className="text-xs font-medium text-muted-foreground">
-                  {t('vat')}
-                </span>
-              </p>
-            </div>
-          ))}
+                <p className="relative mt-2 flex items-baseline gap-1.5">
+                  <span className="text-3xl font-semibold tabular-nums tracking-tight text-foreground">
+                    {p.price}
+                  </span>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {t('vat')}
+                  </span>
+                </p>
+              </div>
+            );
+          })}
         </div>
       </section>
 

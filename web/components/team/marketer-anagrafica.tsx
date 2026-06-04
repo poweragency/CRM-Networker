@@ -2,13 +2,32 @@
 
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
-import { Check, Pencil, X } from 'lucide-react';
+import {
+  Award,
+  Briefcase,
+  Cake,
+  CalendarPlus,
+  Check,
+  Map,
+  MapPin,
+  MousePointerClick,
+  Package,
+  Pencil,
+  Phone,
+  Puzzle,
+  RefreshCw,
+  StickyNote,
+  User,
+  Users,
+  X,
+  type LucideIcon,
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { RankBadge } from '@/components/ui/rank-badge';
+import { PackageBadge } from '@/components/ui/package-badge';
 import { useToast } from '@/components/crm/toaster';
 import { WhatsAppButton } from '@/components/crm/whatsapp-button';
 import { cn, formatDate } from '@/lib/utils';
@@ -32,13 +51,13 @@ import {
 } from '@/app/(app)/team/[id]/actions';
 
 /**
- * MarketerAnagrafica — the per-member details card on /team/[id]. The identity
- * block (nome, cognome, sponsor, data iscrizione, rank) is read-only; the
- * anagrafica extras (pacchetto di partenza, addon, click piattaforma, città,
- * regione, data di nascita, studia/lavora, note) are editable in place by the
- * viewer themselves or a manager. Persistence is mock-backed for now (frontend +
- * mock only) — a save reflects locally and raises a "simulato in modalità demo"
- * toast.
+ * MarketerAnagrafica — the per-member details card on /team/[id]. Grouped into
+ * three visual sections (Identità, Dati personali, Business), each a grid of
+ * labelled "tiles" with an icon. The identity block (nome, cognome, sponsor,
+ * data iscrizione) is read-only; rank + renewal are editable only for a downline
+ * (canEditIdentity); the anagrafica extras (pacchetto, addon, click, telefono,
+ * città, regione, data di nascita, studia/lavora, note) are editable in place by
+ * the viewer themselves or a manager. The same tiles flip to inputs in edit mode.
  */
 
 const fieldCx =
@@ -166,23 +185,24 @@ export function MarketerAnagrafica({
         )}
       </CardHeader>
 
-      <CardContent className={cn('p-5 pt-0', bare && 'px-0 pb-0')}>
-        <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
-          {/* Read-only identity */}
-          <ReadField label={t('f_first_name')} value={profile.first_name} />
-          <ReadField label={t('f_last_name')} value={profile.last_name} />
-          <ReadField label={t('f_sponsor')} value={profile.sponsor_name} />
-          <ReadField
+      <CardContent className={cn('space-y-6 p-5 pt-2', bare && 'px-0 pb-0')}>
+        {/* Identità — read-only, except rank/renewal for a downline. */}
+        <Section icon={User} title={t('sec_identity')}>
+          <Field icon={User} label={t('f_first_name')} value={profile.first_name} />
+          <Field icon={User} label={t('f_last_name')} value={profile.last_name} />
+          <Field icon={Users} label={t('f_sponsor')} value={profile.sponsor_name} />
+          <Field
+            icon={CalendarPlus}
             label={t('f_registration')}
             value={profile.registration_date ? formatDate(profile.registration_date) : null}
           />
-          {/* Rank — editable only for a downline (canEditIdentity). */}
-          <div className="space-y-1">
-            <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {t('f_rank')}
-            </dt>
-            <dd>
-              {editing && canEditIdentity ? (
+          <Field
+            icon={Award}
+            label={t('f_rank')}
+            editing={editing}
+            valueNode={<RankBadge rank={savedRank} />}
+            editor={
+              canEditIdentity ? (
                 <select
                   className={fieldCx}
                   value={rank}
@@ -194,19 +214,20 @@ export function MarketerAnagrafica({
                     </option>
                   ))}
                 </select>
-              ) : (
-                <RankBadge rank={savedRank} />
-              )}
-            </dd>
-          </div>
-
-          {/* Renewal (status) — editable only for a downline (canEditIdentity). */}
-          <div className="space-y-1">
-            <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {t('f_renewal')}
-            </dt>
-            <dd>
-              {editing && canEditIdentity ? (
+              ) : undefined
+            }
+          />
+          <Field
+            icon={RefreshCw}
+            label={t('f_renewal')}
+            editing={editing}
+            valueNode={
+              <Badge variant={savedStatus === 'active' ? 'success' : 'secondary'}>
+                {savedStatus === 'active' ? t('renewal_active') : t('renewal_inactive')}
+              </Badge>
+            }
+            editor={
+              canEditIdentity ? (
                 <select
                   className={fieldCx}
                   value={status === 'active' ? 'active' : 'inactive'}
@@ -218,137 +239,162 @@ export function MarketerAnagrafica({
                     </option>
                   ))}
                 </select>
-              ) : (
-                <Badge variant={savedStatus === 'active' ? 'success' : 'secondary'}>
-                  {savedStatus === 'active' ? t('renewal_active') : t('renewal_inactive')}
-                </Badge>
-              )}
-            </dd>
-          </div>
-
-          {/* Editable extras */}
-          <EditableField label={t('f_package')} editing={editing}
-            display={v.starting_package ? STARTING_PACKAGE_LABELS[v.starting_package] : null}>
-            <select
-              className={fieldCx}
-              value={form.starting_package ?? ''}
-              onChange={(e) =>
-                set('starting_package', (e.target.value || null) as StartingPackage | null)
-              }
-            >
-              <option value="">{t('package_none')}</option>
-              {STARTING_PACKAGE_ORDER.map((p) => (
-                <option key={p} value={p}>
-                  {STARTING_PACKAGE_LABELS[p]}
-                </option>
-              ))}
-            </select>
-          </EditableField>
-
-          <EditableField label={t('f_addon')} editing={editing} display={v.addon}>
-            <Input
-              value={form.addon ?? ''}
-              placeholder={t('f_addon_placeholder')}
-              onChange={(e) => set('addon', e.target.value || null)}
-            />
-          </EditableField>
-
-          <EditableField
-            label={t('f_platform_click')}
-            editing={editing}
-            display={v.platform_click ? t('yes') : t('no')}
-            displayNode={
-              <Badge variant={v.platform_click ? 'success' : 'secondary'}>
-                {v.platform_click ? t('yes') : t('no')}
-              </Badge>
+              ) : undefined
             }
-          >
-            <label className="inline-flex h-9 items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-input accent-primary"
-                checked={form.platform_click}
-                onChange={(e) => set('platform_click', e.target.checked)}
-              />
-              {form.platform_click ? t('yes') : t('no')}
-            </label>
-          </EditableField>
+          />
+        </Section>
 
-          <EditableField
+        {/* Dati personali */}
+        <Section icon={MapPin} title={t('sec_personal')}>
+          <Field
+            icon={Cake}
+            label={t('f_birth_date')}
+            editing={editing}
+            value={v.birth_date ? formatDate(v.birth_date) : null}
+            editor={
+              <input
+                type="date"
+                className={fieldCx}
+                value={form.birth_date ?? ''}
+                onChange={(e) => set('birth_date', e.target.value || null)}
+              />
+            }
+          />
+          <Field
+            icon={MapPin}
+            label={t('f_city')}
+            editing={editing}
+            value={v.city}
+            editor={
+              <Input
+                value={form.city ?? ''}
+                onChange={(e) => set('city', e.target.value || null)}
+              />
+            }
+          />
+          <Field
+            icon={Map}
+            label={t('f_region')}
+            editing={editing}
+            value={v.region}
+            editor={
+              <Input
+                value={form.region ?? ''}
+                onChange={(e) => set('region', e.target.value || null)}
+              />
+            }
+          />
+          <Field
+            icon={Briefcase}
+            label={t('f_occupation')}
+            editing={editing}
+            value={v.occupation ? OCCUPATION_LABELS[v.occupation] : null}
+            editor={
+              <select
+                className={fieldCx}
+                value={form.occupation ?? ''}
+                onChange={(e) =>
+                  set('occupation', (e.target.value || null) as Occupation | null)
+                }
+              >
+                <option value="">{t('occupation_none')}</option>
+                {OCCUPATION_ORDER.map((o) => (
+                  <option key={o} value={o}>
+                    {OCCUPATION_LABELS[o]}
+                  </option>
+                ))}
+              </select>
+            }
+          />
+          <Field
+            icon={Phone}
             label={t('f_phone')}
             editing={editing}
-            display={v.phone}
-            displayNode={
+            value={v.phone}
+            valueNode={
               v.phone ? (
                 <span className="flex items-center gap-1.5">
-                  <span className="text-sm text-foreground">{v.phone}</span>
+                  <span className="text-sm font-medium text-foreground">{v.phone}</span>
                   <WhatsAppButton phone={v.phone} name={profile.display_name} />
                 </span>
               ) : undefined
             }
-          >
-            <Input
-              type="tel"
-              value={form.phone ?? ''}
-              placeholder="+39 ___ ___ ____"
-              onChange={(e) => set('phone', e.target.value || null)}
-            />
-          </EditableField>
+            editor={
+              <Input
+                type="tel"
+                value={form.phone ?? ''}
+                placeholder="+39 ___ ___ ____"
+                onChange={(e) => set('phone', e.target.value || null)}
+              />
+            }
+          />
+        </Section>
 
-          <EditableField label={t('f_city')} editing={editing} display={v.city}>
-            <Input
-              value={form.city ?? ''}
-              onChange={(e) => set('city', e.target.value || null)}
-            />
-          </EditableField>
-
-          <EditableField label={t('f_region')} editing={editing} display={v.region}>
-            <Input
-              value={form.region ?? ''}
-              onChange={(e) => set('region', e.target.value || null)}
-            />
-          </EditableField>
-
-          <EditableField
-            label={t('f_birth_date')}
+        {/* Business */}
+        <Section icon={Package} title={t('sec_business')}>
+          <Field
+            icon={Package}
+            label={t('f_package')}
             editing={editing}
-            display={v.birth_date ? formatDate(v.birth_date) : null}
-          >
-            <input
-              type="date"
-              className={fieldCx}
-              value={form.birth_date ?? ''}
-              onChange={(e) => set('birth_date', e.target.value || null)}
-            />
-          </EditableField>
-
-          <EditableField
-            label={t('f_occupation')}
+            valueNode={
+              v.starting_package ? <PackageBadge pkg={v.starting_package} /> : undefined
+            }
+            editor={
+              <select
+                className={fieldCx}
+                value={form.starting_package ?? ''}
+                onChange={(e) =>
+                  set('starting_package', (e.target.value || null) as StartingPackage | null)
+                }
+              >
+                <option value="">{t('package_none')}</option>
+                {STARTING_PACKAGE_ORDER.map((p) => (
+                  <option key={p} value={p}>
+                    {STARTING_PACKAGE_LABELS[p]}
+                  </option>
+                ))}
+              </select>
+            }
+          />
+          <Field
+            icon={Puzzle}
+            label={t('f_addon')}
             editing={editing}
-            display={v.occupation ? OCCUPATION_LABELS[v.occupation] : null}
-          >
-            <select
-              className={fieldCx}
-              value={form.occupation ?? ''}
-              onChange={(e) =>
-                set('occupation', (e.target.value || null) as Occupation | null)
-              }
-            >
-              <option value="">{t('occupation_none')}</option>
-              {OCCUPATION_ORDER.map((o) => (
-                <option key={o} value={o}>
-                  {OCCUPATION_LABELS[o]}
-                </option>
-              ))}
-            </select>
-          </EditableField>
-        </dl>
+            value={v.addon}
+            editor={
+              <Input
+                value={form.addon ?? ''}
+                placeholder={t('f_addon_placeholder')}
+                onChange={(e) => set('addon', e.target.value || null)}
+              />
+            }
+          />
+          <Field
+            icon={MousePointerClick}
+            label={t('f_platform_click')}
+            editing={editing}
+            valueNode={
+              <Badge variant={v.platform_click ? 'success' : 'secondary'}>
+                {v.platform_click ? t('yes') : t('no')}
+              </Badge>
+            }
+            editor={
+              <label className="inline-flex h-9 items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-input accent-primary"
+                  checked={form.platform_click}
+                  onChange={(e) => set('platform_click', e.target.checked)}
+                />
+                {form.platform_click ? t('yes') : t('no')}
+              </label>
+            }
+          />
+        </Section>
 
-        {/* Notes spans full width */}
-        <div className="mt-4 space-y-1">
-          <Label htmlFor="anagrafica-notes" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {t('f_notes')}
-          </Label>
+        {/* Note — full width */}
+        <section>
+          <SectionTitle icon={StickyNote} title={t('f_notes')} />
           {editing ? (
             <textarea
               id="anagrafica-notes"
@@ -359,56 +405,85 @@ export function MarketerAnagrafica({
               onChange={(e) => set('notes', e.target.value || null)}
             />
           ) : (
-            <p className="whitespace-pre-wrap text-sm text-foreground">
-              {v.notes || <span className="text-muted-foreground">{t('not_set')}</span>}
-            </p>
+            <div className="rounded-lg border bg-background/40 px-3 py-2.5">
+              <p className="whitespace-pre-wrap text-sm text-foreground">
+                {v.notes || <span className="text-muted-foreground">{t('not_set')}</span>}
+              </p>
+            </div>
           )}
-        </div>
+        </section>
       </CardContent>
     </Card>
   );
 }
 
-function ReadField({ label, value }: { label: string; value: string | null }) {
-  const t = useTranslations('team');
+function Section({
+  icon,
+  title,
+  children,
+}: {
+  icon: LucideIcon;
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="space-y-1">
-      <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        {label}
-      </dt>
-      <dd className="text-sm text-foreground">
-        {value || <span className="text-muted-foreground">{t('not_set')}</span>}
-      </dd>
+    <section>
+      <SectionTitle icon={icon} title={title} />
+      <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {children}
+      </dl>
+    </section>
+  );
+}
+
+function SectionTitle({ icon: Icon, title }: { icon: LucideIcon; title: string }) {
+  return (
+    <div className="mb-3 flex items-center gap-2">
+      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+        <Icon className="h-4 w-4" aria-hidden />
+      </span>
+      <h3 className="text-sm font-semibold tracking-tight text-foreground">{title}</h3>
     </div>
   );
 }
 
-function EditableField({
+/**
+ * A single labelled tile. Read mode shows `valueNode` (rich, e.g. a badge) or
+ * `value` (plain text) or the not-set dash; edit mode shows `editor` when the
+ * card is editing and an editor was provided (read-only fields pass none).
+ */
+function Field({
+  icon: Icon,
   label,
-  editing,
-  display,
-  displayNode,
-  children,
+  editing = false,
+  value = null,
+  valueNode,
+  editor,
 }: {
+  icon: LucideIcon;
   label: string;
-  editing: boolean;
-  display: string | null;
-  displayNode?: React.ReactNode;
-  children: React.ReactNode;
+  editing?: boolean;
+  value?: string | null;
+  valueNode?: React.ReactNode;
+  editor?: React.ReactNode;
 }) {
   const t = useTranslations('team');
+  const showEditor = Boolean(editing && editor);
   return (
-    <div className="space-y-1">
-      <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+    <div className="rounded-lg border bg-background/40 px-3 py-2.5 transition-colors hover:border-border/80">
+      <dt className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <Icon className="h-3.5 w-3.5" aria-hidden />
         {label}
       </dt>
-      <dd className="text-sm text-foreground">
-        {editing ? (
-          children
-        ) : displayNode ? (
-          displayNode
+      <dd className="mt-1.5">
+        {showEditor ? (
+          editor
+        ) : valueNode ? (
+          valueNode
+        ) : value ? (
+          <span className="text-sm font-medium text-foreground">{value}</span>
         ) : (
-          display || <span className="text-muted-foreground">{t('not_set')}</span>
+          <span className="text-sm text-muted-foreground">{t('not_set')}</span>
         )}
       </dd>
     </div>

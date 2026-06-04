@@ -7,13 +7,12 @@ import { MapPin, Search, Users, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Avatar } from '@/components/ui/avatar';
 import { RankBadge } from '@/components/ui/rank-badge';
-import { Badge } from '@/components/ui/badge';
+import { PackageBadge } from '@/components/ui/package-badge';
 import { EmptyState } from '@/components/crm/empty-state';
 import { WhatsAppButton } from '@/components/crm/whatsapp-button';
 import { TopbarSlot } from '@/components/shell/topbar-slot';
 import { cn, formatDate, formatNumber } from '@/lib/utils';
 import {
-  STARTING_PACKAGE_LABELS,
   STATUS_LABELS,
   type MarketerStatus,
   type TeamMemberRow,
@@ -175,9 +174,7 @@ export function TeamRoster({ rows }: { rows: TeamMemberRow[] }) {
                     </td>
                     <td className="px-3 py-3">
                       {r.starting_package ? (
-                        <Badge variant="secondary">
-                          {STARTING_PACKAGE_LABELS[r.starting_package]}
-                        </Badge>
+                        <PackageBadge pkg={r.starting_package} />
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
