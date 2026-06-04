@@ -101,34 +101,44 @@ function buildNodes(): Map<string, TreeNode> {
     return kids.reduce((acc, k) => acc + 1 + subtreeCount(k.id), 0);
   }
 
-  // Aggregate KPIs over the WHOLE subtree (self + all descendants, both legs):
-  // prospects / calls / iscrizioni are sums; conversion is the AVERAGE of the
-  // per-node conversion ratios across nodes that actually have prospects.
+  // Sum prospects / calls / iscrizioni over the WHOLE subtree (self + all
+  // descendants, both legs).
   function subtreeAgg(id: string): {
     prospects: number;
     calls: number;
     iscrizioni: number;
-    convSum: number;
-    convCount: number;
   } {
     const self = seedById.get(id)!;
-    const hasP = self.kpis.prospects > 0;
     const acc = {
       prospects: self.kpis.prospects,
       calls: self.kpis.calls,
       iscrizioni: self.kpis.iscrizioni,
-      convSum: hasP ? self.kpis.conversion_rate : 0,
-      convCount: hasP ? 1 : 0,
     };
     for (const k of childrenOf.get(id) ?? []) {
       const sub = subtreeAgg(k.id);
       acc.prospects += sub.prospects;
       acc.calls += sub.calls;
       acc.iscrizioni += sub.iscrizioni;
-      acc.convSum += sub.convSum;
-      acc.convCount += sub.convCount;
     }
     return acc;
+  }
+
+  // Structure conversion = an EQUAL-WEIGHT average: each node contributes its own
+  // conversion (when it has prospects) PLUS each branch's structure-conversion,
+  // all weighted the same — so the left and right structures count equally
+  // regardless of how many people they have (right 20% + left 10% → 15%), and the
+  // starting account itself is one of those equal parts. Returns null when there
+  // is nothing with prospects to average.
+  function structureConv(id: string): number | null {
+    const self = seedById.get(id)!;
+    const parts: number[] = [];
+    if (self.kpis.prospects > 0) parts.push(self.kpis.conversion_rate);
+    for (const k of childrenOf.get(id) ?? []) {
+      const sub = structureConv(k.id);
+      if (sub !== null) parts.push(sub);
+    }
+    if (parts.length === 0) return null;
+    return parts.reduce((a, b) => a + b, 0) / parts.length;
   }
 
   const map = new Map<string, TreeNode>();
@@ -162,7 +172,7 @@ function buildNodes(): Map<string, TreeNode> {
         prospects: agg.prospects,
         calls: agg.calls,
         iscrizioni: agg.iscrizioni,
-        conversion_rate: agg.convCount > 0 ? agg.convSum / agg.convCount : 0,
+        conversion_rate: structureConv(s.id) ?? 0,
       },
       children_loaded: true,
     });
