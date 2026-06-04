@@ -156,7 +156,26 @@ export interface CreateMarketerResult {
   ok: boolean;
 }
 
-/** Pre-register a marketer profile via `place_marketer` (operator-driven, ADR-001). */
+/** DB-valid marketer ranks (the UI adds 'cliente'/'no_rank' which are NOT in the enum). */
+const DB_RANKS: readonly MarketerRank[] = [
+  'executive',
+  'consultant',
+  'team_leader',
+  'senior_team_leader',
+  'executive_team_leader',
+  'vice_president',
+  'senior_vice_president',
+  'executive_vice_president',
+  'global_director',
+];
+
+/**
+ * Pre-register a marketer profile. Direct RLS-bound INSERT into `marketers`:
+ * the BEFORE INSERT trigger computes the ltree path, the AFTER INSERT triggers
+ * build the closure + write the audit/rank-history rows, and the partial unique
+ * index enforces the one-child-per-leg (no-spillover) rule. Ranks the UI exposes
+ * but the DB enum lacks (cliente/no_rank) map to the entry rank `executive`.
+ */
 export async function createMarketer(
   input: CreateMarketerInput,
 ): Promise<CreateMarketerResult> {
@@ -164,21 +183,27 @@ export async function createMarketer(
   if (!supabase) return { id: `m-${input.lastName.toLowerCase()}`, demo: true, ok: true };
   try {
     const { orgId, marketerId } = await getOwnerContext();
-    const { data, error } = await supabase.rpc('place_marketer', {
-      p_org_id: orgId,
-      p_parent_id: input.parentId,
-      p_leg: input.leg,
-      p_sponsor_id: input.sponsorId,
-      p_name: input.firstName,
-      p_surname: input.lastName,
-      p_rank: input.rank,
-      p_status: input.status,
-      p_created_by: marketerId,
-    });
+    const rank: MarketerRank = DB_RANKS.includes(input.rank) ? input.rank : 'executive';
+    const { data, error } = await supabase
+      .from('marketers')
+      .insert({
+        org_id: orgId,
+        first_name: input.firstName,
+        last_name: input.lastName,
+        parent_id: input.parentId,
+        leg: input.leg,
+        sponsor_id: input.sponsorId,
+        rank,
+        status: input.status,
+        created_by: marketerId,
+        updated_by: marketerId,
+      })
+      .select('id')
+      .single();
     if (error || !data) return { id: null, demo: false, ok: false };
-    return { id: String(data), demo: false, ok: true };
+    return { id: String((data as { id: string }).id), demo: false, ok: true };
   } catch {
-    return { id: `m-${input.lastName.toLowerCase()}`, demo: true, ok: true };
+    return { id: null, demo: false, ok: false };
   }
 }
 

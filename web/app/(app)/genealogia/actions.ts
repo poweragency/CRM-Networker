@@ -6,6 +6,7 @@ import {
   searchMarketers,
 } from '@/lib/data/genealogy';
 import { updateMarketerExtra } from '@/lib/data/team';
+import { createMarketer } from '@/lib/data/admin';
 import {
   addRuntimeNode,
   nextRuntimeId,
@@ -90,8 +91,54 @@ export interface AddMemberResult {
 export async function addMarketerAction(
   input: AddMemberInput,
 ): Promise<AddMemberResult> {
-  const id = nextRuntimeId();
   const display = `${input.firstName} ${input.lastName}`.trim();
+
+  // LIVE: persist the new member via the RLS-bound data layer (direct INSERT;
+  // triggers build the ltree path + closure). The new member starts at the entry
+  // rank `executive` (the DB enum has no `no_rank`), status `active`, sponsored by
+  // the parent. Anagrafica extras (pacchetto/click) have no DB columns yet, so
+  // they remain in the in-memory override store.
+  if (isSupabaseConfigured) {
+    const res = await createMarketer({
+      firstName: input.firstName,
+      lastName: input.lastName,
+      parentId: input.parentId,
+      leg: input.leg,
+      sponsorId: input.parentId,
+      rank: 'executive',
+      status: 'active',
+    });
+    if (!res.ok || !res.id) return { node: null, demo: false, ok: false };
+
+    await updateMarketerExtra(res.id, {
+      starting_package: input.pack,
+      platform_click: input.click,
+    });
+
+    const node: TreeNode = {
+      id: res.id,
+      first_name: input.firstName,
+      last_name: input.lastName,
+      display_name: display,
+      parent_id: input.parentId,
+      leg: input.leg,
+      sponsor_id: input.parentId,
+      rank: 'executive',
+      status: 'active',
+      team_size: 0,
+      left_count: 0,
+      right_count: 0,
+      has_left_child: false,
+      has_right_child: false,
+      activity: 'cold',
+      kpis: { prospects: 0, calls: 0, iscrizioni: 0, conversion_rate: 0 },
+      children_loaded: true,
+    };
+    return { node, demo: false, ok: true };
+  }
+
+  // DEMO (no env): in-memory runtime store, resets on restart.
+  const id = nextRuntimeId();
   const node: TreeNode = {
     id,
     first_name: input.firstName,
@@ -111,14 +158,11 @@ export async function addMarketerAction(
     kpis: { prospects: 0, calls: 0, iscrizioni: 0, conversion_rate: 0 },
     children_loaded: true,
   };
-
   addRuntimeNode(node);
-  // Stamp the anagrafica extras chosen in the dialog (frontend + mock for now).
   await updateMarketerExtra(id, {
     starting_package: input.pack,
     platform_click: input.click,
   });
-
   return { node, demo: true, ok: true };
 }
 
