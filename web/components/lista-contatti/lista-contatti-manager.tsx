@@ -290,8 +290,13 @@ export function ListaContattiManager() {
         toast({ title: tc('mutation_error'), variant: 'error' });
         return;
       }
+      // In demo the mock rebuilds the row from static seed data (would clobber
+      // percorso etc.), so keep the optimistic merge; adopt the server row only
+      // for real writes.
       const updated: ListaContattiEntry =
-        res.entry ?? ({ ...editing, ...input } as ListaContattiEntry);
+        !res.demo && res.entry
+          ? res.entry
+          : ({ ...editing, ...input } as ListaContattiEntry);
       setEntries((prev) =>
         sortByPosition(prev.map((e) => (e.id === editing.id ? updated : e))),
       );

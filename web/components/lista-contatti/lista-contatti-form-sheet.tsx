@@ -72,11 +72,28 @@ export function ListaContattiFormSheet({
     defaultValues: toFormValues(entry),
   });
 
+  // Auto-grow the free-text areas so a long "Chi è" expands instead of scrolling
+  // inside a fixed box (hard to read).
+  const relationshipRef = React.useRef<HTMLTextAreaElement | null>(null);
+  const notesRef = React.useRef<HTMLTextAreaElement | null>(null);
+  const autosize = React.useCallback((el: HTMLTextAreaElement | null) => {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, []);
+  const relationshipReg = register('relationship');
+  const notesReg = register('notes');
+
   // Reset whenever the target entry (or open state) changes so the sheet shows
-  // the right values for create vs edit.
+  // the right values for create vs edit, then re-fit the textareas to content.
   React.useEffect(() => {
-    if (open) reset(toFormValues(entry));
-  }, [open, entry, reset]);
+    if (!open) return;
+    reset(toFormValues(entry));
+    requestAnimationFrame(() => {
+      autosize(relationshipRef.current);
+      autosize(notesRef.current);
+    });
+  }, [open, entry, reset, autosize]);
 
   const submit = handleSubmit(async (values) => {
     await onSubmit(toListaContattiInput(values));
@@ -132,11 +149,16 @@ export function ListaContattiFormSheet({
           <Label htmlFor={`${formId}-relationship`}>{t('relationship')}</Label>
           <textarea
             id={`${formId}-relationship`}
-            rows={5}
-            className="flex w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            rows={3}
             placeholder={t('relationship_placeholder')}
             aria-invalid={Boolean(errors.relationship)}
-            {...register('relationship')}
+            {...relationshipReg}
+            ref={(el) => {
+              relationshipReg.ref(el);
+              relationshipRef.current = el;
+            }}
+            onInput={(e) => autosize(e.currentTarget)}
+            className="flex min-h-[5rem] w-full resize-none overflow-hidden rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           />
           <FieldError message={errors.relationship?.message} />
         </div>
@@ -179,10 +201,15 @@ export function ListaContattiFormSheet({
           <Label htmlFor={`${formId}-notes`}>{t('notes')}</Label>
           <textarea
             id={`${formId}-notes`}
-            rows={4}
-            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            rows={3}
             placeholder={tc('notes_placeholder')}
-            {...register('notes')}
+            {...notesReg}
+            ref={(el) => {
+              notesReg.ref(el);
+              notesRef.current = el;
+            }}
+            onInput={(e) => autosize(e.currentTarget)}
+            className="flex min-h-[4.5rem] w-full resize-none overflow-hidden rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           />
           <FieldError message={errors.notes?.message} />
         </div>

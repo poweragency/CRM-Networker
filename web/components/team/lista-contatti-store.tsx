@@ -82,9 +82,15 @@ export function ListaContattiStoreProvider({
         toast({ title: tc('mutation_error'), variant: 'error' });
         return;
       }
-      const updated: ListaContattiEntry =
-        res.entry ?? ({ ...entry, ...patch } as ListaContattiEntry);
-      setEntries((list) => list.map((e) => (e.id === entry.id ? updated : e)));
+      // Adopt the server row ONLY for a real (Supabase) write. In demo the mock
+      // rebuilds the row from static seed data, which would clobber fields changed
+      // earlier this session (e.g. revert `stato` to non_invitato when we only
+      // patched `percorso`) — so keep the optimistic merge already applied above.
+      if (!res.demo && res.entry) {
+        setEntries((list) =>
+          list.map((e) => (e.id === entry.id ? res.entry! : e)),
+        );
+      }
       setDemo((d) => d || res.demo);
     },
     [toast, tc],
