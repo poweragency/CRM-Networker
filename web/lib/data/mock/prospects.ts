@@ -41,7 +41,7 @@ const SEEDS: Seed[] = [
   { id: 'pr-013', full_name: 'Nicoletta Villa', stage: 'check_soldi', owner: 'nL', ageDays: 29 },
   { id: 'pr-014', full_name: 'Gabriele Monti', stage: 'conoscitiva', owner: 'nLL', ageDays: 3 },
   { id: 'pr-015', full_name: 'Serena Palmieri', stage: 'iscrizione', owner: 'nL', ageDays: 35, notes: 'Iscrizione completata.', outcome: 'enrolled' },
-  { id: 'pr-016', full_name: 'Davide Fontana', stage: 'follow_up', contact_id: 'ct-005', ageDays: 14, notes: 'In pausa, ricontattare a fine mese.', outcome: 'on_hold' },
+  { id: 'pr-016', full_name: 'Davide Fontana', stage: 'follow_up', contact_id: 'ct-005', ageDays: 14, notes: 'Da ricontattare a fine mese.' },
 ];
 
 function buildProspect(s: Seed): Prospect {

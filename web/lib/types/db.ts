@@ -463,23 +463,21 @@ export function stageIndex(stage: ProspectStage): number {
 }
 
 /** `prospect_outcome` — funnel result. */
-export type ProspectOutcome = 'open' | 'enrolled' | 'lost' | 'on_hold';
+export type ProspectOutcome = 'open' | 'enrolled' | 'lost';
 
 export const PROSPECT_OUTCOME_LABELS: Record<ProspectOutcome, string> = {
   open: 'In corso',
   enrolled: 'Iscritto',
   lost: 'Perso',
-  on_hold: 'In pausa',
 };
 
 export const PROSPECT_OUTCOME_TONE: Record<
   ProspectOutcome,
-  'default' | 'success' | 'danger' | 'warning'
+  'default' | 'success' | 'danger'
 > = {
   open: 'default',
   enrolled: 'success',
   lost: 'danger',
-  on_hold: 'warning',
 };
 
 /** A row of `prospects` (current stage denormalized; history in events). */
