@@ -44,14 +44,14 @@
     /* rank accent ramp (9 ranks, ascending seniority → richer/warmer tone).
        Consumed by RankBadge; mirrors ranks_meta tone (doc 08 §6.2/§14). */
     --rank-executive: 220 9% 46%;
-    --rank-consultant: 199 89% 48%;
-    --rank-team-leader: 158 64% 40%;
-    --rank-senior-team-leader: 262 70% 56%;
-    --rank-executive-team-leader: 25 90% 52%;
-    --rank-vice-president: 42 95% 47%;
-    --rank-senior-vice-president: 0 74% 50%;
-    --rank-executive-vice-president: 190 90% 40%;
-    --rank-global-director: 222 47% 34%;
+    --rank-consultant: 330 75% 58%;
+    --rank-team-leader: 200 85% 52%;
+    --rank-senior-team-leader: 0 75% 52%;
+    --rank-executive-team-leader: 145 63% 42%;
+    --rank-vice-president: 45 93% 50%;
+    --rank-senior-vice-president: 28 90% 52%;
+    --rank-executive-vice-president: 270 72% 58%;
+    --rank-global-director: 232 55% 42%;
 
     /* node activity indicator (hot / warm / cold / dormant — doc 14 §7.2) */
     --activity-hot: 0 72% 51%;
@@ -113,14 +113,14 @@
     --branch-right: 170 65% 52%;
 
     --rank-executive: 217 12% 65%;
-    --rank-consultant: 199 85% 60%;
-    --rank-team-leader: 158 60% 50%;
-    --rank-senior-team-leader: 262 65% 70%;
-    --rank-executive-team-leader: 25 88% 62%;
-    --rank-vice-president: 42 92% 58%;
-    --rank-senior-vice-president: 0 72% 62%;
-    --rank-executive-vice-president: 190 80% 55%;
-    --rank-global-director: 222 30% 72%;
+    --rank-consultant: 330 75% 70%;
+    --rank-team-leader: 200 85% 65%;
+    --rank-senior-team-leader: 0 75% 64%;
+    --rank-executive-team-leader: 145 55% 55%;
+    --rank-vice-president: 45 90% 60%;
+    --rank-senior-vice-president: 28 88% 62%;
+    --rank-executive-vice-president: 270 70% 70%;
+    --rank-global-director: 232 60% 68%;
 
     --activity-hot: 0 72% 60%;
     --activity-warm: 38 92% 58%;
