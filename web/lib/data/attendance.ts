@@ -58,10 +58,9 @@ export async function getZoomAttendance(
   // Load persisted present + cam flags for the visible people on this day.
   const present = new Map<string, boolean>(); // key: id|call
   const camera = new Map<string, boolean>();
-  const camRate = new Map<string, number>(); // per-person cam-on share over ALL presences
   if (supabase) {
-    const ids = sub.data.map((n) => n.id);
     try {
+      const ids = sub.data.map((n) => n.id);
       const { data } = await supabase
         .from('zoom_attendance')
         .select('marketer_id,call,present,cam')
@@ -73,24 +72,6 @@ export async function getZoomAttendance(
       }
     } catch {
       /* fall through to defaults */
-    }
-    try {
-      // All-time camera-on share per person: present&cam / total present.
-      const { data } = await supabase
-        .from('zoom_attendance')
-        .select('marketer_id,cam')
-        .eq('present', true)
-        .in('marketer_id', ids);
-      const agg = new Map<string, { present: number; cam: number }>();
-      for (const r of (data as { marketer_id: string; cam: boolean }[] | null) ?? []) {
-        const a = agg.get(r.marketer_id) ?? { present: 0, cam: 0 };
-        a.present += 1;
-        if (r.cam) a.cam += 1;
-        agg.set(r.marketer_id, a);
-      }
-      for (const [id, v] of agg) if (v.present > 0) camRate.set(id, v.cam / v.present);
-    } catch {
-      /* leave camRate empty */
     }
   }
 
@@ -120,7 +101,6 @@ export async function getZoomAttendance(
         golden: resolveCam(n.id, 'golden'),
         join_the_dream: resolveCam(n.id, 'join_the_dream'),
       },
-      cam_rate: camRate.has(n.id) ? camRate.get(n.id)! : null,
     }))
     // Alphabetical by name (it-IT), not by tree/rank order.
     .sort((a, b) => a.display_name.localeCompare(b.display_name, 'it'));

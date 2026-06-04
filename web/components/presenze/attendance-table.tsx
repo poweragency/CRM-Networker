@@ -198,23 +198,13 @@ export function AttendanceTable({
                         key={m.id}
                         className="flex flex-col gap-1.5 rounded-md border bg-background p-2"
                       >
-                        <div className="flex items-center justify-between gap-1.5">
-                          <Link
-                            href={`/team/${m.id}`}
-                            title={m.display_name}
-                            className="truncate text-xs font-medium text-foreground hover:text-primary hover:underline"
-                          >
-                            {m.display_name}
-                          </Link>
-                          {m.cam_rate != null && (
-                            <span
-                              title={t('cam_rate_title')}
-                              className="shrink-0 rounded bg-info/15 px-1 py-0.5 text-[10px] font-semibold tabular-nums text-info"
-                            >
-                              {Math.round(m.cam_rate * 100)}%
-                            </span>
-                          )}
-                        </div>
+                        <Link
+                          href={`/team/${m.id}`}
+                          title={m.display_name}
+                          className="truncate text-xs font-medium text-foreground hover:text-primary hover:underline"
+                        >
+                          {m.display_name}
+                        </Link>
                         <div className="flex items-center gap-1.5">
                           <button
                             type="button"
