@@ -153,11 +153,13 @@ export function ProspectBoard({
   const activeProspect = React.useMemo(() => {
     if (!activeId) return null;
     for (const stage of STAGE_ORDER) {
-      const found = stageMap[stage].find((p) => p.id === activeId);
+      const found =
+        stageMap[stage].find((p) => p.id === activeId) ??
+        lcByStage[stage].find((p) => p.id === activeId);
       if (found) return found;
     }
     return null;
-  }, [activeId, stageMap]);
+  }, [activeId, stageMap, lcByStage]);
 
   function onDragStart(e: DragStartEvent) {
     setActiveId(String(e.active.id));
@@ -203,7 +205,24 @@ export function ProspectBoard({
     setActiveId(null);
     if (!over) return;
 
-    const destStage = resolveOverStage(stageMap, String(over.id));
+    const overId = String(over.id);
+    const destStage = (STAGE_ORDER as readonly string[]).includes(overId)
+      ? (overId as ProspectStage)
+      : (findStageOf(stageMap, overId) ?? findStageOf(lcByStage, overId));
+
+    // Lista contatti card → update its `percorso` via the shared store; the card
+    // then re-derives into the destination column (optimistic, no server prospect).
+    if (id.startsWith('lc-')) {
+      if (destStage && listaStore) {
+        const entry = listaStore.entries.find((x) => x.id === id.slice(3));
+        const target = STAGE_ORDER.indexOf(destStage);
+        if (entry && (entry.percorso ?? 0) !== target) {
+          void listaStore.setField(entry, { percorso: target });
+        }
+      }
+      return;
+    }
+
     const originStage =
       board.columns.find((c) => c.prospects.some((p) => p.id === id))?.stage ??
       null;

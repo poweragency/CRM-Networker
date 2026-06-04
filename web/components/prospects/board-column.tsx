@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { STAGE_DESCRIPTIONS, STAGE_LABELS, stageIndex } from '@/lib/types/db';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Info } from 'lucide-react';
-import { ProspectCard, ProspectCardBody } from './prospect-card';
+import { ProspectCard } from './prospect-card';
 import type { ProspectView, StageColumnView } from './types';
 
 /**
@@ -26,8 +26,9 @@ export interface BoardColumnProps {
   /** disable card dragging while a move is committing. */
   busy?: boolean;
   /**
-   * Read-only cards mirrored from the Lista contatti (invited contacts at this
-   * phase). Not draggable here — moved via the Percorso checkboxes.
+   * Cards mirrored from the Lista contatti (invited contacts at this phase).
+   * Draggable like any other card — dropping one updates its `percorso` via the
+   * shared store; they carry no detail route.
    */
   extraCards?: ProspectView[];
 }
@@ -107,18 +108,16 @@ export function BoardColumn({
         )}
       >
         <SortableContext
-          items={prospects.map((p) => p.id)}
+          items={[...prospects, ...extraCards].map((p) => p.id)}
           strategy={verticalListSortingStrategy}
         >
           {prospects.map((p) => (
             <ProspectCard key={p.id} prospect={p} disabled={busy} />
           ))}
+          {extraCards.map((c) => (
+            <ProspectCard key={c.id} prospect={c} disabled={busy} />
+          ))}
         </SortableContext>
-
-        {/* Mirrored Lista-contatti cards (read-only here). */}
-        {extraCards.map((c) => (
-          <ProspectCardBody key={c.id} prospect={c} />
-        ))}
 
         {count === 0 && (
           <div

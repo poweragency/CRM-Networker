@@ -4,7 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { CalendarClock, GripVertical } from 'lucide-react';
+import { GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar } from '@/components/ui/avatar';
 import { StatusPill } from '@/components/crm/status-pill';
@@ -20,12 +20,6 @@ import type { ProspectView } from './types';
  * is a link into the detail route. So a click opens the prospect and a drag
  * starts only from the grip.
  */
-
-/** Days a prospect has been in its current stage (>= 0). */
-function daysInStage(since: string): number {
-  const diff = Date.now() - new Date(since).getTime();
-  return Math.max(0, Math.floor(diff / 86_400_000));
-}
 
 /** Pure presentation — shared by the sortable item and the drag overlay. */
 export const ProspectCardBody = React.forwardRef<
@@ -44,16 +38,13 @@ export const ProspectCardBody = React.forwardRef<
   { prospect, overlay, dragging, handle, link, className, ...props },
   ref,
 ) {
-  const days = daysInStage(prospect.current_stage_since);
-  const stale = days >= 7;
   const fromList = Boolean(prospect.listaContattiId);
 
   return (
     <div
       ref={ref}
       className={cn(
-        'group relative rounded-lg border bg-card p-3 text-card-foreground shadow-sm transition-shadow',
-        fromList ? 'pl-3' : 'pl-7',
+        'group relative rounded-lg border bg-card p-3 pl-7 text-card-foreground shadow-sm transition-shadow',
         'hover:shadow-md focus-within:ring-2 focus-within:ring-ring',
         overlay && 'rotate-1 cursor-grabbing shadow-xl ring-2 ring-primary/40',
         dragging && 'opacity-40',
@@ -86,20 +77,6 @@ export const ProspectCardBody = React.forwardRef<
           />
           <span className="truncate text-xs text-muted-foreground">
             {prospect.owner_name}
-          </span>
-        </div>
-
-        {/* Meta row */}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-          <span
-            className={cn(
-              'inline-flex items-center gap-1 tabular-nums',
-              stale ? 'text-warning' : 'text-muted-foreground',
-            )}
-            title={`In fase da ${days} giorni`}
-          >
-            <CalendarClock className="h-3.5 w-3.5" aria-hidden />
-            {days === 0 ? 'oggi' : `${days}g in fase`}
           </span>
         </div>
 
@@ -169,11 +146,14 @@ export function ProspectCard({ prospect, disabled }: ProspectCardProps) {
         </button>
       }
       link={
-        <Link
-          href={`/percorso-prospect/${prospect.id}`}
-          className="absolute inset-y-0 left-7 right-0 z-0 rounded-r-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          aria-label={`Apri ${prospect.full_name}`}
-        />
+        // Mirrored Lista contatti cards have no detail route — drag-only.
+        prospect.listaContattiId ? undefined : (
+          <Link
+            href={`/percorso-prospect/${prospect.id}`}
+            className="absolute inset-y-0 left-7 right-0 z-0 rounded-r-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={`Apri ${prospect.full_name}`}
+          />
+        )
       }
     />
   );
