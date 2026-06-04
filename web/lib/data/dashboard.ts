@@ -7,7 +7,9 @@ import type { MarketerRank } from '@/lib/types/db';
 /**
  * Dashboard data access (server-only) for the "migliori marketer del mese"
  * rankings. The Zoom podium is REAL — derived from `zoom_attendance` (present=true
- * records) for the current month, scoped (by RLS) to the caller's subtree.
+ * records) for the current month, scoped (by RLS) to the caller's subtree. Each
+ * Zoom entry also carries `cam_rate`: the share of THIS MONTH's presences where
+ * the camera was on (present&cam / present), shown next to the Zoom count.
  * "Percorsi" and "conversione" have no wired source yet → empty when connected.
  * In pure demo mode (no env) the demo dataset populates all categories.
  */
@@ -28,6 +30,7 @@ export interface MonthlyTopResult {
 
 interface PresentRow {
   marketer_id: string;
+  cam: boolean;
   name: string;
   rank: MarketerRank;
 }
@@ -48,7 +51,7 @@ async function fetchPresentRows(): Promise<PresentRow[]> {
   try {
     const { data, error } = await supabase
       .from('zoom_attendance')
-      .select('marketer_id, marketers(display_name,rank)')
+      .select('marketer_id, cam, marketers(display_name,rank)')
       .eq('present', true)
       .gte('call_date', from)
       .lte('call_date', to);
@@ -57,6 +60,7 @@ async function fetchPresentRows(): Promise<PresentRow[]> {
       const mk = (r.marketers ?? {}) as { display_name?: string; rank?: string };
       return {
         marketer_id: String(r.marketer_id),
+        cam: Boolean(r.cam),
         name: mk.display_name ?? '—',
         rank: (mk.rank as MarketerRank) ?? 'executive',
       };
@@ -66,12 +70,16 @@ async function fetchPresentRows(): Promise<PresentRow[]> {
   }
 }
 
-/** Rank by number of present Zooms (descending). */
+/**
+ * Rank by number of present Zooms this month (descending). Each entry also gets
+ * `cam_rate` = camera-on share among that person's present Zooms this month.
+ */
 function rankZoom(rows: PresentRow[], limit: number, selfId: string): TopMarketerEntry[] {
-  const counts = new Map<string, { name: string; rank: MarketerRank; count: number }>();
+  const counts = new Map<string, { name: string; rank: MarketerRank; count: number; cam: number }>();
   for (const r of rows) {
-    const cur = counts.get(r.marketer_id) ?? { name: r.name, rank: r.rank, count: 0 };
+    const cur = counts.get(r.marketer_id) ?? { name: r.name, rank: r.rank, count: 0, cam: 0 };
     cur.count += 1;
+    if (r.cam) cur.cam += 1;
     counts.set(r.marketer_id, cur);
   }
   return [...counts.entries()]
@@ -84,6 +92,7 @@ function rankZoom(rows: PresentRow[], limit: number, selfId: string): TopMarkete
       value: v.count,
       position: i + 1,
       is_self: id === selfId,
+      cam_rate: v.count > 0 ? v.cam / v.count : null,
     }));
 }
 

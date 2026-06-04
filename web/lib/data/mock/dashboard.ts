@@ -21,6 +21,8 @@ export interface TopMarketerEntry {
   /** 1-based ranking position. */
   position: number;
   is_self: boolean;
+  /** % di cam attiva sulle Zoom del periodo (0..1). Valorizzato solo per la categoria zoom. */
+  cam_rate?: number | null;
 }
 
 function metricValue(node: TreeNode, category: TopCategory): number {
@@ -61,5 +63,10 @@ export function mockTopMarketers(
     value: r.value,
     position: i + 1,
     is_self: r.n.id === MOCK_ROOT_ID,
+    // Solo per la classifica Zoom: % cam attiva (proxy demo derivato dal KPI).
+    cam_rate:
+      category === 'zoom'
+        ? Math.min(1, 0.4 + r.n.kpis.conversion_rate * 0.55)
+        : undefined,
   }));
 }

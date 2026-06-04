@@ -135,10 +135,18 @@ export function SpotlightCard({
         </div>
       </div>
 
-      <div className="relative">
+      <div className="relative flex items-baseline gap-2">
         <span className="text-3xl font-semibold tabular-nums tracking-tight text-foreground">
           {valueText}
         </span>
+        {entry.cam_rate != null && (
+          <span
+            className="text-sm font-medium tabular-nums text-muted-foreground"
+            title="% di cam attiva sulle Zoom del mese"
+          >
+            {Math.round(entry.cam_rate * 100)}% cam
+          </span>
+        )}
       </div>
     </Link>
   );
@@ -231,8 +239,18 @@ export function LeaderboardCard({
                         />
                       </span>
                     </div>
-                    <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
-                      {formatValue(e.value)}
+                    <span className="flex shrink-0 flex-col items-end gap-0.5">
+                      <span className="text-sm font-semibold tabular-nums text-foreground">
+                        {formatValue(e.value)}
+                      </span>
+                      {e.cam_rate != null && (
+                        <span
+                          className="text-[11px] font-medium tabular-nums text-muted-foreground"
+                          title="% di cam attiva sulle Zoom del mese"
+                        >
+                          {Math.round(e.cam_rate * 100)}% cam
+                        </span>
+                      )}
                     </span>
                   </Link>
                 </li>
