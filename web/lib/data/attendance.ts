@@ -1,4 +1,5 @@
 import 'server-only';
+import { isSupabaseConfigured } from '@/lib/env';
 import { getSubtree } from '@/lib/data/genealogy';
 import { getCurrentClaims } from '@/lib/data/session';
 import {
@@ -52,7 +53,10 @@ function defaultPresent(id: string, date: string, call: ZoomCall): boolean {
 
 function resolve(id: string, date: string, call: ZoomCall): boolean {
   const k = keyOf(id, date, call);
-  return overrides.has(k) ? overrides.get(k)! : defaultPresent(id, date, call);
+  if (overrides.has(k)) return overrides.get(k)!;
+  // Connected: no fabricated attendance — everyone starts "assente" until the
+  // viewer toggles it. The deterministic demo pattern is only for pure demo mode.
+  return isSupabaseConfigured ? false : defaultPresent(id, date, call);
 }
 
 /** Attendance for the viewer's subtree on a given day (ISO `YYYY-MM-DD`). */

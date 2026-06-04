@@ -59,8 +59,10 @@ export async function getLeaderboard(
     if (latest?.period_start) query = query.eq('period_start', latest.period_start);
 
     const { data, error } = await query;
+    // Connected: an empty/absent snapshot means the period hasn't been computed
+    // yet (no cron) — show an EMPTY board, not fake names.
     if (error || !data || data.length === 0) {
-      return { data: mockLeaderboard(metric, scope, branch, limit), demo: true };
+      return { data: [], demo: false };
     }
 
     const entries: LeaderboardEntry[] = (data as Record<string, unknown>[]).map(
@@ -78,6 +80,6 @@ export async function getLeaderboard(
     );
     return { data: entries, demo: false };
   } catch {
-    return { data: mockLeaderboard(metric, scope, branch, limit), demo: true };
+    return { data: [], demo: false };
   }
 }

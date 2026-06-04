@@ -1,4 +1,5 @@
 import 'server-only';
+import { isSupabaseConfigured } from '@/lib/env';
 import type { WishlistItem } from '@/lib/types/db';
 import { mockWishlist } from '@/lib/data/mock/wishlist';
 
@@ -20,8 +21,12 @@ const overrides = new Map<string, WishlistItem[]>();
 
 /** The 100's list for a marketer (override wins over the mock default). */
 export async function getWishlist(marketerId: string): Promise<WishlistResult> {
-  const items = overrides.get(marketerId) ?? mockWishlist(marketerId);
-  return { items, demo: true };
+  const override = overrides.get(marketerId);
+  if (override) return { items: override, demo: !isSupabaseConfigured };
+  // Connected: persistence isn't wired to wishlist_items yet → start EMPTY (no
+  // fake items). Pure demo mode (no env) seeds the sample list for the showcase.
+  if (isSupabaseConfigured) return { items: [], demo: false };
+  return { items: mockWishlist(marketerId), demo: true };
 }
 
 export interface SaveWishlistResult {

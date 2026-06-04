@@ -30,14 +30,19 @@ export interface MonthlyTopResult {
 export async function getMonthlyTopMarketers(
   limit = 5,
 ): Promise<MonthlyTopResult> {
+  // When connected to a real project the underlying ranking sources (Zoom-di-team
+  // views / percorsi events) are not wired to the schema yet, so we return EMPTY
+  // rankings rather than fake names. The demo dataset is shown only in pure demo
+  // mode (env missing) so the showcase UI stays populated.
+  if (isSupabaseConfigured) {
+    return { data: { zoom: [], percorsi: [], conversion: [] }, demo: false };
+  }
   return {
     data: {
       zoom: mockTopMarketers('zoom', limit),
       percorsi: mockTopMarketers('percorsi', limit),
       conversion: mockTopMarketers('conversion', limit),
     },
-    // Rankings are mock/derived regardless of env; surface the notice only when
-    // Supabase isn't configured (pure demo mode).
-    demo: !isSupabaseConfigured,
+    demo: true,
   };
 }

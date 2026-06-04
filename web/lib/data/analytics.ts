@@ -65,6 +65,26 @@ function rowToMetrics(r: Record<string, unknown>): SubtreeMetrics {
   };
 }
 
+/** All-zero metrics / branch — the real "no activity yet" state when connected. */
+function zeroMetrics(): SubtreeMetrics {
+  return {
+    calls_total: 0,
+    calls_connected: 0,
+    calls_duration_secs: 0,
+    new_prospects: 0,
+    conoscitiva: 0,
+    business_info: 0,
+    follow_up: 0,
+    closing: 0,
+    check_soldi: 0,
+    iscrizione: 0,
+    new_recruits: 0,
+  };
+}
+function zeroBranch(): BranchMetrics {
+  return { GLOBAL: zeroMetrics(), LEFT: zeroMetrics(), RIGHT: zeroMetrics() };
+}
+
 /**
  * The /analytics overview for a scope over the trailing 30 days. Resilient: a
  * failure in any sub-query degrades that piece to mock and flips `demo`.
@@ -94,8 +114,9 @@ export async function getAnalyticsOverview(
 
   let demo = false;
 
-  // Branch breakdown (also yields the per-scope summary).
-  let branch: BranchMetrics = mockBranchMetrics();
+  // Branch breakdown (also yields the per-scope summary). When connected, an
+  // empty result is the real "no activity" state → zeros, never demo numbers.
+  let branch: BranchMetrics = zeroBranch();
   try {
     const { data, error } = await supabase.rpc('branch_metrics', {
       p_org_id: orgId,
@@ -103,8 +124,8 @@ export async function getAnalyticsOverview(
       p_from,
       p_to,
     });
-    if (error || !Array.isArray(data) || data.length === 0) throw error ?? new Error('empty');
-    const next = { ...mockBranchMetrics() };
+    if (error || !Array.isArray(data)) throw error ?? new Error('rpc');
+    const next = zeroBranch();
     for (const row of data as Record<string, unknown>[]) {
       const side = String(row.branch_side) as BranchScope;
       if (side === 'GLOBAL' || side === 'LEFT' || side === 'RIGHT') {
@@ -207,9 +228,9 @@ export async function getAnalyticsOverview(
     demo = true;
   }
 
-  // Daily trend: no single subtree RPC — best-effort own-fact aggregation,
-  // otherwise the demo wave.
-  let trend = mockMetricTrend();
+  // Daily trend: own-fact aggregation. When connected an empty window is the
+  // real "no activity yet" state — show an empty trend, not the demo wave.
+  let trend: MetricDayPoint[] = [];
   try {
     const { data, error } = await supabase
       .from('daily_marketer_metrics')
@@ -227,8 +248,7 @@ export async function getAnalyticsOverview(
       cur.iscrizioni += Number(r.stage_iscrizione ?? 0);
       byDay.set(date, cur);
     }
-    if (byDay.size > 0) trend = [...byDay.values()];
-    else demo = true;
+    trend = byDay.size > 0 ? [...byDay.values()] : [];
   } catch {
     demo = true;
   }
