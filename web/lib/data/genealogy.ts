@@ -1,6 +1,7 @@
 import 'server-only';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
+import { getCurrentClaims } from '@/lib/data/session';
 import type {
   BranchScope,
   MarketerRank,
@@ -95,18 +96,33 @@ export async function getRootMarketer(): Promise<GenealogyResult<TreeNode>> {
     const supabase = createClient();
     if (!supabase) return { data: mockRoot(), demo: true };
 
-    const { data, error } = await supabase
+    const cols =
+      'id,parent_id,leg,sponsor_id,first_name,last_name,display_name,rank,status,memberships(status)';
+
+    // Admins/owners can see the ORG root (parent_id NULL). A member CANNOT — the
+    // org root is their upline, not their downline — so RLS returns no row.
+    const { data: rootData } = await supabase
       .from('marketers')
-      .select(
-        'id,parent_id,leg,sponsor_id,first_name,last_name,display_name,rank,status,memberships(status)',
-      )
+      .select(cols)
       .is('parent_id', null)
       .is('deleted_at', null)
       .limit(1)
       .maybeSingle<MarketerRow>();
+    if (rootData) return { data: toTreeNode(rootData), demo: false };
 
-    if (error || !data) return { data: mockRoot(), demo: true };
-    return { data: toTreeNode(data), demo: false };
+    // Fallback: root the tree at the caller's OWN marketer (top of their subtree).
+    const { claims } = await getCurrentClaims();
+    if (claims.marketer_id) {
+      const { data: selfData } = await supabase
+        .from('marketers')
+        .select(cols)
+        .eq('id', claims.marketer_id)
+        .is('deleted_at', null)
+        .maybeSingle<MarketerRow>();
+      if (selfData) return { data: toTreeNode(selfData), demo: false };
+    }
+
+    return { data: mockRoot(), demo: true };
   } catch {
     return { data: mockRoot(), demo: true };
   }
