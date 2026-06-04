@@ -6,7 +6,6 @@ import {
   ListChecks,
   Plus,
   MoreHorizontal,
-  Pencil,
   Trash2,
   CheckCircle2,
   Check,
@@ -21,7 +20,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { PageHeader } from '@/components/crm/page-header';
@@ -188,6 +186,12 @@ export function ListaContattiManager({
     sortByPosition(initialEntries),
   );
   const [demo, setDemo] = React.useState(initialDemo);
+  // Order of the Percorsi pane: invited entries in invite-order (newest LAST).
+  const [invitedOrder, setInvitedOrder] = React.useState<string[]>(() =>
+    sortByPosition(initialEntries)
+      .filter((e) => e.stato !== 'non_invitato')
+      .map((e) => e.id),
+  );
 
   // ── Filter state ────────────────────────────────────────────────────────────
   const [search, setSearch] = React.useState('');
@@ -235,12 +239,21 @@ export function ListaContattiManager({
     });
   }, [entries, search, statusFilter, rapportoFilter]);
 
-  // Invited (or beyond) contacts → the Percorsi pane. Always from the full list
-  // so the journey view is stable regardless of the left-list filters.
-  const percorsi = React.useMemo(
-    () => entries.filter((e) => e.stato !== 'non_invitato'),
-    [entries],
-  );
+  // Invited (or beyond) contacts → the Percorsi pane, ordered by invite-order so
+  // a freshly-invited contact lands in the LAST row. From the full list, so the
+  // journey view is stable regardless of the left-list filters.
+  const percorsi = React.useMemo(() => {
+    const byId = new Map(entries.map((e) => [e.id, e] as const));
+    const invitedIds = new Set(
+      entries.filter((e) => e.stato !== 'non_invitato').map((e) => e.id),
+    );
+    const ordered = invitedOrder
+      .filter((id) => invitedIds.has(id))
+      .map((id) => byId.get(id)!);
+    const seen = new Set(ordered.map((e) => e.id));
+    const rest = entries.filter((e) => invitedIds.has(e.id) && !seen.has(e.id));
+    return [...ordered, ...rest];
+  }, [entries, invitedOrder]);
 
   // ── Progress stats (over the full list, not the filtered view) ──────────────
   const stats = React.useMemo(() => {
@@ -331,7 +344,13 @@ export function ListaContattiManager({
       toast({ title: tc('mutation_error'), variant: 'error' });
       return;
     }
-    setEntries((prev) => prev.filter((e) => e.id !== target.id));
+    // Re-number positions so the list stays 1..N contiguous after a delete.
+    setEntries((prev) =>
+      sortByPosition(prev.filter((e) => e.id !== target.id)).map((e, i) => ({
+        ...e,
+        position: i + 1,
+      })),
+    );
     if (detail?.id === target.id) setDetailOpen(false);
     setDemo((d) => d || res.demo);
     toast({
@@ -345,6 +364,17 @@ export function ListaContattiManager({
   // Inline edit of rapporto / stato / percorso — optimistic, reverts on failure.
   const handleSetField = React.useCallback(
     async (entry: ListaContattiEntry, patch: Partial<ListaContattiInput>) => {
+      // Newly invited → push the contact to the bottom of the Percorsi pane.
+      if (
+        patch.stato &&
+        patch.stato !== 'non_invitato' &&
+        entry.stato === 'non_invitato'
+      ) {
+        setInvitedOrder((order) => [
+          ...order.filter((id) => id !== entry.id),
+          entry.id,
+        ]);
+      }
       const prev = entry;
       setEntries((list) =>
         list.map((e) => (e.id === entry.id ? { ...e, ...patch } : e)),
@@ -471,7 +501,7 @@ export function ListaContattiManager({
                 {filtered.map((e) => (
                   <li
                     key={e.id}
-                    onClick={() => openDetail(e)}
+                    onClick={() => openEdit(e)}
                     className="flex cursor-pointer items-start gap-3 p-3 transition-colors hover:bg-muted/40"
                   >
                     <span className="w-5 shrink-0 pt-1 text-xs tabular-nums text-muted-foreground">
@@ -541,14 +571,6 @@ export function ListaContattiManager({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openDetail(e)}>
-                            {tc('details')}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openEdit(e)}>
-                            <Pencil className="h-4 w-4" aria-hidden />
-                            {tc('edit')}
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
                           <DropdownMenuItem
                             destructive
                             onClick={() => setDeleteTarget(e)}

@@ -128,7 +128,9 @@ export function ListaContattiDetailSheet({
         <div className="divide-y divide-border">
           <DetailRow icon={<Users2 />} label={t('relationship')}>
             {entry.relationship ? (
-              <span className="whitespace-pre-wrap">{entry.relationship}</span>
+              <span className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+                {entry.relationship}
+              </span>
             ) : (
               <span className="text-muted-foreground">—</span>
             )}
@@ -151,7 +153,7 @@ export function ListaContattiDetailSheet({
             <Separator />
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground">{t('notes')}</p>
-              <p className="whitespace-pre-wrap rounded-lg border bg-muted/40 p-3 text-sm text-foreground">
+              <p className="whitespace-pre-wrap break-words rounded-lg border bg-muted/40 p-3 text-sm text-foreground [overflow-wrap:anywhere]">
                 {entry.notes}
               </p>
             </div>
