@@ -9,7 +9,6 @@ import { getSevenWhysFor } from '@/lib/data/seven-whys';
 import { getMarketerProfile } from '@/lib/data/team';
 import { getWishlist } from '@/lib/data/wishlist';
 import { getFormazioneProgress } from '@/lib/data/formazione';
-import { RANK_ORDER } from '@/lib/types/db';
 import { ConfigNotice } from '@/components/config-notice';
 import { EmptyState } from '@/components/crm/empty-state';
 import { ProspectBoard } from '@/components/prospects/prospect-board';
@@ -87,14 +86,11 @@ export default async function MarketerProfilePage({
   ]);
 
   const isSelf = claimsRes.claims.marketer_id === node.id;
-  const claims = claimsRes.claims;
-  // The viewer can edit this anagrafica if it's their own profile, or they are an
-  // admin/owner, or rank ≥ team_leader (consistent with the activation gating).
-  const canEdit =
-    isSelf ||
-    claims.role === 'admin' ||
-    claims.role === 'owner' ||
-    RANK_ORDER.indexOf(claims.rank) >= RANK_ORDER.indexOf('team_leader');
+  // RLS scopes profiles to the viewer's subtree, so any profile that loads is the
+  // viewer's own or a downline's — both editable. Rank/renewal: downline only
+  // (the server re-enforces the self-guard + the strict-upline rule).
+  const canEdit = true;
+  const canEditIdentity = !isSelf;
   const profile = profileRes.data;
   const demo =
     nodeRes.demo ||
@@ -164,7 +160,7 @@ export default async function MarketerProfilePage({
             <AnagraficaModal
               profile={profile}
               canEdit={canEdit}
-              canEditIdentity={canEdit && !isSelf}
+              canEditIdentity={canEditIdentity}
             />
           ) : null
         }

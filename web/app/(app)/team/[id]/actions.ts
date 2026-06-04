@@ -1,10 +1,9 @@
 'use server';
 
-import { updateMarketerExtra } from '@/lib/data/team';
+import { updateMarketerExtra, updateMarketerIdentity } from '@/lib/data/team';
 import { saveWishlist } from '@/lib/data/wishlist';
 import { saveFormazioneProgress } from '@/lib/data/formazione';
 import { getCurrentClaims } from '@/lib/data/session';
-import { setMarketerIdentity } from '@/lib/data/mock/runtime';
 import { isSupabaseConfigured } from '@/lib/env';
 import type {
   MarketerExtra,
@@ -79,6 +78,6 @@ export async function saveMarketerIdentityAction(
   if (claims.marketer_id === id) {
     return { ok: false, demo: !isSupabaseConfigured, forbidden: true };
   }
-  setMarketerIdentity(id, patch);
-  return { ok: true, demo: !isSupabaseConfigured };
+  const res = await updateMarketerIdentity(id, patch);
+  return { ok: res.ok, demo: res.demo };
 }
