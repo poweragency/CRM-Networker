@@ -18,7 +18,7 @@ import { demoId } from '@/lib/data/mock/_shared';
  */
 
 const SELECT =
-  'id,org_id,owner_marketer_id,position,full_name,phone,relationship,rating,rapporto,stato,contacted,promoted_contact_id,notes,created_at,updated_at,deleted_at';
+  'id,org_id,owner_marketer_id,position,full_name,phone,relationship,rating,rapporto,stato,percorso,contacted,promoted_contact_id,notes,created_at,updated_at,deleted_at';
 
 /**
  * List Lista contatti entries ordered by position. Defaults to the caller's own list;
@@ -65,6 +65,8 @@ export interface ListaContattiInput {
   rating?: number | null;
   rapporto?: ListaContattiRapporto | null;
   stato?: ListaContattiStatus;
+  /** Percorso phase reached (0..5). */
+  percorso?: number;
   position?: number;
   contacted?: boolean;
   notes?: string | null;
@@ -91,6 +93,7 @@ export async function createListaContatti(
     rating: input.rating ?? null,
     rapporto: input.rapporto ?? null,
     stato: input.stato ?? 'non_invitato',
+    percorso: input.percorso ?? 0,
     contacted: input.contacted ?? false,
     promoted_contact_id: null,
     notes: input.notes ?? null,

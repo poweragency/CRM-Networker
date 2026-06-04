@@ -62,21 +62,34 @@ function seedStato(s: Seed): ListaContattiStatus {
   return 'non_invitato';
 }
 
-export const MOCK_LISTA_CONTATTI: ListaContattiEntry[] = SEEDS.map((s) => ({
-  id: `cn-${String(s.position).padStart(3, '0')}`,
-  org_id: DEMO_ORG_ID,
-  owner_marketer_id: DEMO_OWNER_ID,
-  position: s.position,
-  full_name: s.full_name,
-  phone: s.phone ?? null,
-  relationship: s.relationship,
-  rating: s.rating,
-  rapporto: seedRapporto(s.rating),
-  stato: seedStato(s),
-  contacted: s.contacted,
-  promoted_contact_id: s.promoted ?? null,
-  notes: s.notes ?? null,
-  created_at: daysAgo(50 - s.position),
-  updated_at: daysAgo(5),
-  deleted_at: null,
-}));
+/** Seed a percorso phase (0..5) consistent with the funnel status, so the
+ * Percorsi panel shows a realistic mix of progress for invited contacts. */
+function seedPercorso(stato: ListaContattiStatus, rating: number): number {
+  if (stato === 'iscritto') return 5;
+  if (stato === 'non_iscritto') return 3;
+  if (stato === 'invitato') return rating >= 4 ? 3 : rating === 3 ? 2 : 1;
+  return 0;
+}
+
+export const MOCK_LISTA_CONTATTI: ListaContattiEntry[] = SEEDS.map((s) => {
+  const stato = seedStato(s);
+  return {
+    id: `cn-${String(s.position).padStart(3, '0')}`,
+    org_id: DEMO_ORG_ID,
+    owner_marketer_id: DEMO_OWNER_ID,
+    position: s.position,
+    full_name: s.full_name,
+    phone: s.phone ?? null,
+    relationship: s.relationship,
+    rating: s.rating,
+    rapporto: seedRapporto(s.rating),
+    stato,
+    percorso: seedPercorso(stato, s.rating),
+    contacted: s.contacted,
+    promoted_contact_id: s.promoted ?? null,
+    notes: s.notes ?? null,
+    created_at: daysAgo(50 - s.position),
+    updated_at: daysAgo(5),
+    deleted_at: null,
+  };
+});

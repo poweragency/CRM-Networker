@@ -693,6 +693,8 @@ export interface ListaContattiEntry {
   rapporto: ListaContattiRapporto | null;
   /** Funnel status (set explicitly). */
   stato: ListaContattiStatus;
+  /** Percorso phase reached: 0 = none, 1..5 = Business Info → Iscrizione (progressive). */
+  percorso: number;
   contacted: boolean;
   promoted_contact_id: string | null;
   notes: string | null;

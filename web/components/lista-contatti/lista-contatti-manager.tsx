@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
-import type { ColumnDef } from '@tanstack/react-table';
 import {
   ListChecks,
   Plus,
@@ -10,6 +9,8 @@ import {
   Pencil,
   Trash2,
   CheckCircle2,
+  Check,
+  Route,
   Send,
   Users2,
 } from 'lucide-react';
@@ -25,7 +26,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { PageHeader } from '@/components/crm/page-header';
 import { FilterBar, type FilterConfig } from '@/components/crm/filter-bar';
-import { DataTable } from '@/components/crm/data-table';
 import { ConfirmDialog } from '@/components/crm/confirm-dialog';
 import { useToast } from '@/components/crm/toaster';
 import { ConfigNotice } from '@/components/config-notice';
@@ -36,9 +36,11 @@ import {
   LISTA_CONTATTI_STATUS_LABELS,
   LISTA_CONTATTI_STATUS_ORDER,
   LISTA_CONTATTI_STATUS_TONE,
+  STAGE_LABELS,
   type ListaContattiEntry,
   type ListaContattiRapporto,
   type ListaContattiStatus,
+  type ProspectStage,
 } from '@/lib/types/db';
 import type { ListaContattiInput } from '@/lib/data/lista-contatti';
 import {
@@ -51,26 +53,32 @@ import { ListaContattiDetailSheet } from './lista-contatti-detail-sheet';
 import type { toListaContattiInput } from './lista-contatti-form-schema';
 
 /**
- * ListaContattiManager — the full client container for /lista-contatti. The page (RSC) fetches
- * the caller's position-ordered Lista contatti entries via the demo-safe data layer and
- * hands them in as props; everything interactive lives here:
+ * ListaContattiManager — the full client container for the Lista contatti. The
+ * page (RSC) fetches the caller's position-ordered entries and hands them in;
+ * everything interactive lives here. Layout: header + progress stats + filters
+ * on top, then TWO panes —
+ *   • left  (half): the scrolling list (no pagination), with rapporto/stato as
+ *     colored inline dropdowns editable in place;
+ *   • right (half): "Percorsi" — every contact marked Invitato (or oltre), each
+ *     with 5 progressive checkboxes for the funnel phase reached
+ *     (Business Info → Follow-up → Closing → Check Soldi → Iscrizione).
  *
- *  - a header with progress (invitati / iscritti) + a FilterBar (search over
- *    name/relationship/notes + stato & rapporto filters) that filter the list
- *    client-side (instant, no round-trips);
- *  - a DataTable with sortable columns (#, nome, chi è, rapporto, stato) where
- *    rapporto and stato are colored inline dropdowns editable in place;
- *  - "Aggiungi nome" + edit via ListaContattiFormSheet, a detail slide-over and delete.
- *
- * Mutations call the Server Actions, which are demo-safe: in "modalità demo" they
- * return simulated results and we patch local state optimistically. Nothing
- * throws; the local list stays the source of truth.
+ * Mutations call demo-safe Server Actions; local state is patched optimistically.
  */
 
 export interface ListaContattiManagerProps {
   initialEntries: ListaContattiEntry[];
   initialDemo: boolean;
 }
+
+/** The 5 percorso phases (funnel stages after the invite). */
+const PERCORSO_STAGES: ProspectStage[] = [
+  'business_info',
+  'follow_up',
+  'closing',
+  'check_soldi',
+  'iscrizione',
+];
 
 /** Tone → text color for the inline status/rapporto dropdowns. */
 const TONE_TEXT: Record<string, string> = {
@@ -106,7 +114,7 @@ function InlineSelect({
       onClick={(e) => e.stopPropagation()}
       onChange={(e) => onChange(e.target.value)}
       className={cn(
-        'cursor-pointer rounded-md border border-input bg-card px-2 py-1 text-sm font-medium shadow-sm transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'cursor-pointer rounded-md border border-input bg-card px-2 py-1 text-xs font-medium shadow-sm transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         TONE_TEXT[tone] ?? 'text-foreground',
       )}
     >
@@ -116,6 +124,54 @@ function InlineSelect({
         </option>
       ))}
     </select>
+  );
+}
+
+/** The 5 progressive percorso checkboxes for one invited contact. */
+function PercorsoChecks({
+  current,
+  onSet,
+  ariaPrefix,
+}: {
+  current: number;
+  onSet: (phase: number) => void;
+  ariaPrefix: string;
+}) {
+  return (
+    <div className="flex items-stretch gap-1.5">
+      {PERCORSO_STAGES.map((stage, i) => {
+        const n = i + 1;
+        const done = n <= current;
+        return (
+          <button
+            key={stage}
+            type="button"
+            // Progressive: clicking the current last-filled step unfills it.
+            onClick={() => onSet(n === current ? n - 1 : n)}
+            aria-pressed={done}
+            aria-label={`${ariaPrefix}: ${STAGE_LABELS[stage]}`}
+            title={STAGE_LABELS[stage]}
+            className={cn(
+              'flex flex-1 flex-col items-center gap-1 rounded-md border p-1.5 text-[10px] leading-tight transition-colors',
+              done
+                ? 'border-success/50 bg-success/10 text-success'
+                : 'border-input text-muted-foreground hover:bg-muted/40',
+            )}
+          >
+            <span
+              className={cn(
+                'flex h-5 w-5 items-center justify-center rounded border',
+                done ? 'border-success bg-success text-white' : 'border-input',
+              )}
+              aria-hidden
+            >
+              {done && <Check className="h-3 w-3" />}
+            </span>
+            <span className="text-center">{STAGE_LABELS[stage]}</span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -179,6 +235,13 @@ export function ListaContattiManager({
     });
   }, [entries, search, statusFilter, rapportoFilter]);
 
+  // Invited (or beyond) contacts → the Percorsi pane. Always from the full list
+  // so the journey view is stable regardless of the left-list filters.
+  const percorsi = React.useMemo(
+    () => entries.filter((e) => e.stato !== 'non_invitato'),
+    [entries],
+  );
+
   // ── Progress stats (over the full list, not the filtered view) ──────────────
   const stats = React.useMemo(() => {
     let invited = 0;
@@ -198,13 +261,8 @@ export function ListaContattiManager({
   const [editing, setEditing] = React.useState<ListaContattiEntry | null>(null);
   const [detail, setDetail] = React.useState<ListaContattiEntry | null>(null);
   const [detailOpen, setDetailOpen] = React.useState(false);
-  const [deleteTarget, setDeleteTarget] = React.useState<ListaContattiEntry | null>(
-    null,
-  );
-  // Ids whose "Chi è" cell is expanded to show the full text inline.
-  const [expandedRel, setExpandedRel] = React.useState<Set<string>>(
-    () => new Set(),
-  );
+  const [deleteTarget, setDeleteTarget] =
+    React.useState<ListaContattiEntry | null>(null);
 
   const openCreate = () => {
     setEditing(null);
@@ -251,7 +309,9 @@ export function ListaContattiManager({
         toast({ title: tc('mutation_error'), variant: 'error' });
         return;
       }
-      setEntries((prev) => sortByPosition([...prev, res.entry as ListaContattiEntry]));
+      setEntries((prev) =>
+        sortByPosition([...prev, res.entry as ListaContattiEntry]),
+      );
       setDemo((d) => d || res.demo);
       toast({
         title: t('created'),
@@ -282,7 +342,7 @@ export function ListaContattiManager({
     setDeleteTarget(null);
   };
 
-  // Inline edit of rapporto / stato — optimistic, reverts on failure.
+  // Inline edit of rapporto / stato / percorso — optimistic, reverts on failure.
   const handleSetField = React.useCallback(
     async (entry: ListaContattiEntry, patch: Partial<ListaContattiInput>) => {
       const prev = entry;
@@ -302,166 +362,6 @@ export function ListaContattiManager({
       setDemo((d) => d || res.demo);
     },
     [toast, tc, syncDetail],
-  );
-
-  // ── Columns ─────────────────────────────────────────────────────────────────
-  const columns = React.useMemo<ColumnDef<ListaContattiEntry, unknown>[]>(
-    () => [
-      {
-        id: 'position',
-        accessorKey: 'position',
-        header: t('col_position'),
-        size: 56,
-        cell: ({ row }) => (
-          <span className="tabular-nums text-sm text-muted-foreground">
-            {row.original.position}
-          </span>
-        ),
-      },
-      {
-        id: 'full_name',
-        accessorKey: 'full_name',
-        header: t('col_name'),
-        cell: ({ row }) => {
-          const e = row.original;
-          return (
-            <div className="flex items-center gap-2.5">
-              <Avatar name={e.full_name} size="sm" />
-              <p className="truncate font-medium text-foreground">
-                {e.full_name}
-              </p>
-            </div>
-          );
-        },
-      },
-      {
-        id: 'relationship',
-        accessorFn: (e) => e.relationship ?? '',
-        header: t('col_relationship'),
-        size: 320,
-        cell: ({ row }) => {
-          const e = row.original;
-          const rel = e.relationship;
-          if (!rel) return <span className="text-muted-foreground">—</span>;
-          const expanded = expandedRel.has(e.id);
-          return (
-            <button
-              type="button"
-              onClick={(ev) => {
-                // Toggle inline expand without opening the row detail sheet.
-                ev.stopPropagation();
-                setExpandedRel((prev) => {
-                  const next = new Set(prev);
-                  if (next.has(e.id)) next.delete(e.id);
-                  else next.add(e.id);
-                  return next;
-                });
-              }}
-              title={expanded ? undefined : rel}
-              className={cn(
-                'block w-full max-w-[20rem] text-left text-sm text-muted-foreground transition-colors hover:text-foreground',
-                expanded ? 'whitespace-pre-wrap' : 'truncate',
-              )}
-            >
-              {rel}
-            </button>
-          );
-        },
-      },
-      {
-        id: 'rapporto',
-        accessorFn: (e) => e.rapporto ?? '',
-        header: t('col_rapporto'),
-        size: 150,
-        cell: ({ row }) => {
-          const e = row.original;
-          return (
-            <InlineSelect
-              ariaLabel={t('col_rapporto')}
-              value={e.rapporto ?? ''}
-              tone={e.rapporto ? LISTA_CONTATTI_RAPPORTO_TONE[e.rapporto] : 'secondary'}
-              options={[
-                { value: '', label: t('rapporto_none') },
-                ...LISTA_CONTATTI_RAPPORTO_ORDER.map((r) => ({
-                  value: r,
-                  label: LISTA_CONTATTI_RAPPORTO_LABELS[r],
-                })),
-              ]}
-              onChange={(v) =>
-                handleSetField(e, {
-                  rapporto: v ? (v as ListaContattiRapporto) : null,
-                })
-              }
-            />
-          );
-        },
-      },
-      {
-        id: 'status',
-        accessorFn: (e) => e.stato,
-        header: t('col_status'),
-        size: 160,
-        cell: ({ row }) => {
-          const e = row.original;
-          return (
-            <InlineSelect
-              ariaLabel={t('col_status')}
-              value={e.stato}
-              tone={LISTA_CONTATTI_STATUS_TONE[e.stato]}
-              options={LISTA_CONTATTI_STATUS_ORDER.map((s) => ({
-                value: s,
-                label: LISTA_CONTATTI_STATUS_LABELS[s],
-              }))}
-              onChange={(v) => handleSetField(e, { stato: v as ListaContattiStatus })}
-            />
-          );
-        },
-      },
-      {
-        id: '__actions',
-        enableSorting: false,
-        size: 48,
-        header: () => <span className="sr-only">Azioni</span>,
-        cell: ({ row }) => {
-          const e = row.original;
-          return (
-            <div onClick={(ev) => ev.stopPropagation()}>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    aria-label="Azioni nome"
-                  >
-                    <MoreHorizontal className="h-4 w-4" aria-hidden />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => openDetail(e)}>
-                    {tc('details')}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => openEdit(e)}>
-                    <Pencil className="h-4 w-4" aria-hidden />
-                    {tc('edit')}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    destructive
-                    onClick={() => setDeleteTarget(e)}
-                  >
-                    <Trash2 className="h-4 w-4" aria-hidden />
-                    {tc('delete')}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          );
-        },
-      },
-    ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [t, tc, expandedRel, handleSetField],
   );
 
   const hasFilters = search.length > 0 || Object.keys(filterValues).length > 0;
@@ -536,28 +436,181 @@ export function ListaContattiManager({
         onValuesChange={setFilterValues}
       />
 
-      <p className="text-sm text-muted-foreground" aria-live="polite">
-        {t('count', { count: filtered.length })}
-      </p>
+      {/* Two panes: list (left) + percorsi (right) */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* ── Left: the scrolling list ── */}
+        <section className="space-y-2">
+          <p
+            className="text-sm text-muted-foreground"
+            aria-live="polite"
+          >
+            {t('count', { count: filtered.length })}
+          </p>
+          <div className="max-h-[68vh] overflow-y-auto rounded-xl border bg-card shadow-sm">
+            {filtered.length === 0 ? (
+              <div className="px-6 py-12 text-center">
+                <p className="text-sm font-medium text-foreground">
+                  {hasFilters ? tc('no_results_title') : t('empty_title')}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {hasFilters ? tc('no_results_body') : t('empty_body')}
+                </p>
+                {!hasFilters && (
+                  <Button
+                    onClick={openCreate}
+                    size="sm"
+                    className="mt-4 gap-2"
+                  >
+                    <Plus className="h-4 w-4" aria-hidden />
+                    {t('new_entry')}
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <ul className="divide-y">
+                {filtered.map((e) => (
+                  <li
+                    key={e.id}
+                    onClick={() => openDetail(e)}
+                    className="flex cursor-pointer items-start gap-3 p-3 transition-colors hover:bg-muted/40"
+                  >
+                    <span className="w-5 shrink-0 pt-1 text-xs tabular-nums text-muted-foreground">
+                      {e.position}
+                    </span>
+                    <Avatar name={e.full_name} size="sm" className="mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium text-foreground">
+                        {e.full_name}
+                      </p>
+                      {e.relationship && (
+                        <p className="truncate text-xs text-muted-foreground">
+                          {e.relationship}
+                        </p>
+                      )}
+                      <div
+                        className="mt-2 flex flex-wrap items-center gap-1.5"
+                        onClick={(ev) => ev.stopPropagation()}
+                      >
+                        <InlineSelect
+                          ariaLabel={t('col_rapporto')}
+                          value={e.rapporto ?? ''}
+                          tone={
+                            e.rapporto
+                              ? LISTA_CONTATTI_RAPPORTO_TONE[e.rapporto]
+                              : 'secondary'
+                          }
+                          options={[
+                            { value: '', label: t('rapporto_none') },
+                            ...LISTA_CONTATTI_RAPPORTO_ORDER.map((r) => ({
+                              value: r,
+                              label: LISTA_CONTATTI_RAPPORTO_LABELS[r],
+                            })),
+                          ]}
+                          onChange={(v) =>
+                            handleSetField(e, {
+                              rapporto: v ? (v as ListaContattiRapporto) : null,
+                            })
+                          }
+                        />
+                        <InlineSelect
+                          ariaLabel={t('col_status')}
+                          value={e.stato}
+                          tone={LISTA_CONTATTI_STATUS_TONE[e.stato]}
+                          options={LISTA_CONTATTI_STATUS_ORDER.map((s) => ({
+                            value: s,
+                            label: LISTA_CONTATTI_STATUS_LABELS[s],
+                          }))}
+                          onChange={(v) =>
+                            handleSetField(e, {
+                              stato: v as ListaContattiStatus,
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
+                    <div onClick={(ev) => ev.stopPropagation()}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            aria-label="Azioni nome"
+                          >
+                            <MoreHorizontal className="h-4 w-4" aria-hidden />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openDetail(e)}>
+                            {tc('details')}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openEdit(e)}>
+                            <Pencil className="h-4 w-4" aria-hidden />
+                            {tc('edit')}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            destructive
+                            onClick={() => setDeleteTarget(e)}
+                          >
+                            <Trash2 className="h-4 w-4" aria-hidden />
+                            {tc('delete')}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
 
-      <DataTable
-        columns={columns}
-        data={filtered}
-        getRowId={(row) => row.id}
-        onRowClick={openDetail}
-        pageSize={15}
-        empty={{
-          title: hasFilters ? tc('no_results_title') : t('empty_title'),
-          description: hasFilters ? tc('no_results_body') : t('empty_body'),
-          icon: <ListChecks />,
-          action: hasFilters ? undefined : (
-            <Button onClick={openCreate} size="sm" className="gap-2">
-              <Plus className="h-4 w-4" aria-hidden />
-              {t('new_entry')}
-            </Button>
-          ),
-        }}
-      />
+        {/* ── Right: Percorsi ── */}
+        <section className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Route className="h-4 w-4 text-muted-foreground" aria-hidden />
+            <p className="text-sm font-medium text-foreground">
+              {t('percorsi_title')}
+            </p>
+            {percorsi.length > 0 && (
+              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold tabular-nums text-muted-foreground">
+                {percorsi.length}
+              </span>
+            )}
+          </div>
+          <div className="max-h-[68vh] overflow-y-auto rounded-xl border bg-card shadow-sm">
+            {percorsi.length === 0 ? (
+              <div className="px-6 py-12 text-center">
+                <p className="text-sm font-medium text-foreground">
+                  {t('percorsi_empty')}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {t('percorsi_empty_body')}
+                </p>
+              </div>
+            ) : (
+              <ul className="divide-y">
+                {percorsi.map((e) => (
+                  <li key={e.id} className="p-3">
+                    <div className="mb-2 flex items-center gap-2.5">
+                      <Avatar name={e.full_name} size="sm" />
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {e.full_name}
+                      </p>
+                    </div>
+                    <PercorsoChecks
+                      current={e.percorso ?? 0}
+                      ariaPrefix={e.full_name}
+                      onSet={(phase) => handleSetField(e, { percorso: phase })}
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+      </div>
 
       {/* Create / edit slide-over */}
       <ListaContattiFormSheet
