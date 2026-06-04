@@ -72,6 +72,9 @@ const config: Config = {
           seniorTeamLeader: 'hsl(var(--rank-senior-team-leader))',
           executiveTeamLeader: 'hsl(var(--rank-executive-team-leader))',
           vicePresident: 'hsl(var(--rank-vice-president))',
+          seniorVicePresident: 'hsl(var(--rank-senior-vice-president))',
+          executiveVicePresident: 'hsl(var(--rank-executive-vice-president))',
+          globalDirector: 'hsl(var(--rank-global-director))',
         },
         activity: {
           hot: 'hsl(var(--activity-hot))',

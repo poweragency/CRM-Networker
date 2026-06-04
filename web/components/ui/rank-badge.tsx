@@ -50,6 +50,21 @@ const rankTone: Record<MarketerRank, { text: string; bg: string; dot: string }> 
     bg: 'bg-rank-vicePresident/12',
     dot: 'bg-rank-vicePresident',
   },
+  senior_vice_president: {
+    text: 'text-rank-seniorVicePresident',
+    bg: 'bg-rank-seniorVicePresident/12',
+    dot: 'bg-rank-seniorVicePresident',
+  },
+  executive_vice_president: {
+    text: 'text-rank-executiveVicePresident',
+    bg: 'bg-rank-executiveVicePresident/12',
+    dot: 'bg-rank-executiveVicePresident',
+  },
+  global_director: {
+    text: 'text-rank-globalDirector',
+    bg: 'bg-rank-globalDirector/12',
+    dot: 'bg-rank-globalDirector',
+  },
 };
 
 export interface RankBadgeProps

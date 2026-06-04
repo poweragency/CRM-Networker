@@ -23,7 +23,10 @@ export type MarketerRank =
   | 'team_leader'
   | 'senior_team_leader'
   | 'executive_team_leader'
-  | 'vice_president';
+  | 'vice_president'
+  | 'senior_vice_president'
+  | 'executive_vice_president'
+  | 'global_director';
 
 /** Canonical seniority order (low → high). Use for `>=` rank gating. */
 export const RANK_ORDER: readonly MarketerRank[] = [
@@ -35,6 +38,9 @@ export const RANK_ORDER: readonly MarketerRank[] = [
   'senior_team_leader',
   'executive_team_leader',
   'vice_president',
+  'senior_vice_president',
+  'executive_vice_president',
+  'global_director',
 ] as const;
 
 /** Italian display labels for ranks (mirrors `ranks_meta.label_it`). */
@@ -47,6 +53,9 @@ export const RANK_LABELS: Record<MarketerRank, string> = {
   senior_team_leader: 'Senior Team Leader',
   executive_team_leader: 'Executive Team Leader',
   vice_president: 'Vice President',
+  senior_vice_president: 'Senior Vice President',
+  executive_vice_president: 'Executive Vice President',
+  global_director: 'Global Director',
 };
 
 /* ─────────────────── Marketer profile extras (anagrafica) ─────────────────── */
