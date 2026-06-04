@@ -8,15 +8,14 @@ import {
   PanelLeft,
   PanelRight,
   Target,
-  UserPlus,
+  TrendingUp,
   Users,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Avatar } from '@/components/ui/avatar';
 import { RankBadge } from '@/components/ui/rank-badge';
-import { StatusDot } from '@/components/ui/status-dot';
 import { cn, formatNumber, formatPercent } from '@/lib/utils';
-import type { PlacementLeg, TreeNode } from '@/lib/types/db';
+import { STATUS_LABELS, type PlacementLeg, type TreeNode } from '@/lib/types/db';
 import { NODE_HEIGHT, NODE_WIDTH } from './layout';
 
 /**
@@ -132,11 +131,16 @@ function MarketerNodeImpl({ data, selected: rfSelected }: NodeProps) {
             <span className="truncate text-sm font-semibold leading-tight text-foreground">
               {node.display_name}
             </span>
-            <StatusDot
-              kind="activity"
-              value={node.activity}
-              pulse={node.activity === 'hot'}
-              className="shrink-0"
+            {/* Renewal status: verde = attivo, rosso = non attivo (scaduto). */}
+            <span
+              title={STATUS_LABELS[node.status]}
+              aria-label={STATUS_LABELS[node.status]}
+              className={cn(
+                'h-2.5 w-2.5 shrink-0 rounded-full ring-2',
+                node.status === 'active'
+                  ? 'bg-success ring-success/30'
+                  : 'bg-danger ring-danger/30',
+              )}
             />
           </div>
           <div className="mt-1 flex items-center gap-1.5">
@@ -162,7 +166,7 @@ function MarketerNodeImpl({ data, selected: rfSelected }: NodeProps) {
       </div>
 
       {/* KPI strip */}
-      <div className="mt-auto grid grid-cols-3 items-center gap-1 rounded-b-[inherit] border-t bg-muted/30 px-1 py-2">
+      <div className="mt-auto grid grid-cols-2 items-center gap-1 rounded-b-[inherit] border-t bg-muted/30 px-1 py-2">
         <KpiCell
           icon={Target}
           value={formatNumber(node.kpis.prospects)}
@@ -170,13 +174,7 @@ function MarketerNodeImpl({ data, selected: rfSelected }: NodeProps) {
           accent="text-info"
         />
         <KpiCell
-          icon={UserPlus}
-          value={formatNumber(node.kpis.iscrizioni)}
-          label={t('kpi_iscrizioni')}
-          accent="text-success"
-        />
-        <KpiCell
-          icon={Target}
+          icon={TrendingUp}
           value={formatPercent(node.kpis.conversion_rate, 0)}
           label={t('kpi_conversion')}
           accent="text-warning"

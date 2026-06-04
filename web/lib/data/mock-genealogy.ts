@@ -85,7 +85,9 @@ function deriveActivity(kpis: TreeNodeKpis, status: MarketerStatus): ActivityInd
 /** Build the fully-derived node map once (team sizes via closure-style counts). */
 function buildNodes(): Map<string, TreeNode> {
   const childrenOf = new Map<string, Seed[]>();
+  const seedById = new Map<string, Seed>();
   for (const s of SEEDS) {
+    seedById.set(s.id, s);
     if (s.parent) {
       const arr = childrenOf.get(s.parent) ?? [];
       arr.push(s);
@@ -99,6 +101,36 @@ function buildNodes(): Map<string, TreeNode> {
     return kids.reduce((acc, k) => acc + 1 + subtreeCount(k.id), 0);
   }
 
+  // Aggregate KPIs over the WHOLE subtree (self + all descendants, both legs):
+  // prospects / calls / iscrizioni are sums; conversion is the AVERAGE of the
+  // per-node conversion ratios across nodes that actually have prospects.
+  function subtreeAgg(id: string): {
+    prospects: number;
+    calls: number;
+    iscrizioni: number;
+    convSum: number;
+    convCount: number;
+  } {
+    const self = seedById.get(id)!;
+    const hasP = self.kpis.prospects > 0;
+    const acc = {
+      prospects: self.kpis.prospects,
+      calls: self.kpis.calls,
+      iscrizioni: self.kpis.iscrizioni,
+      convSum: hasP ? self.kpis.conversion_rate : 0,
+      convCount: hasP ? 1 : 0,
+    };
+    for (const k of childrenOf.get(id) ?? []) {
+      const sub = subtreeAgg(k.id);
+      acc.prospects += sub.prospects;
+      acc.calls += sub.calls;
+      acc.iscrizioni += sub.iscrizioni;
+      acc.convSum += sub.convSum;
+      acc.convCount += sub.convCount;
+    }
+    return acc;
+  }
+
   const map = new Map<string, TreeNode>();
   for (const s of SEEDS) {
     const kids = childrenOf.get(s.id) ?? [];
@@ -106,6 +138,8 @@ function buildNodes(): Map<string, TreeNode> {
     const rightChild = kids.find((k) => k.leg === 'RIGHT');
     const leftCount = leftChild ? 1 + subtreeCount(leftChild.id) : 0;
     const rightCount = rightChild ? 1 + subtreeCount(rightChild.id) : 0;
+
+    const agg = subtreeAgg(s.id);
 
     map.set(s.id, {
       id: s.id,
@@ -123,7 +157,13 @@ function buildNodes(): Map<string, TreeNode> {
       has_left_child: Boolean(leftChild),
       has_right_child: Boolean(rightChild),
       activity: deriveActivity(s.kpis, s.status),
-      kpis: s.kpis,
+      // Subtree-aggregated KPIs (the binary card shows the whole structure).
+      kpis: {
+        prospects: agg.prospects,
+        calls: agg.calls,
+        iscrizioni: agg.iscrizioni,
+        conversion_rate: agg.convCount > 0 ? agg.convSum / agg.convCount : 0,
+      },
       children_loaded: true,
     });
   }
