@@ -6,12 +6,10 @@ import type { MarketerRank } from '@/lib/types/db';
 
 /**
  * Dashboard data access (server-only) for the "migliori marketer del mese"
- * rankings. The Zoom and Cam podiums are REAL — derived from `zoom_attendance`
- * for the current month, scoped (by RLS) to the caller's subtree:
- *   - zoom: number of present=true records.
- *   - cam:  share of those present records where the camera was on (cam=true).
+ * rankings. The Zoom podium is REAL — derived from `zoom_attendance` (present=true
+ * records) for the current month, scoped (by RLS) to the caller's subtree.
  * "Percorsi" and "conversione" have no wired source yet → empty when connected.
- * In pure demo mode (no env) the demo dataset populates all four.
+ * In pure demo mode (no env) the demo dataset populates all categories.
  */
 
 export interface MonthlyTopMarketers {
@@ -21,8 +19,6 @@ export interface MonthlyTopMarketers {
   percorsi: TopMarketerEntry[];
   /** Tasso di conversione Business Info → Closing più alto (0..1). */
   conversion: TopMarketerEntry[];
-  /** % di camera attiva sulle Zoom in cui era presente (0..1). */
-  cam: TopMarketerEntry[];
 }
 
 export interface MonthlyTopResult {
@@ -32,7 +28,6 @@ export interface MonthlyTopResult {
 
 interface PresentRow {
   marketer_id: string;
-  cam: boolean;
   name: string;
   rank: MarketerRank;
 }
@@ -53,7 +48,7 @@ async function fetchPresentRows(): Promise<PresentRow[]> {
   try {
     const { data, error } = await supabase
       .from('zoom_attendance')
-      .select('marketer_id, cam, marketers(display_name,rank)')
+      .select('marketer_id, marketers(display_name,rank)')
       .eq('present', true)
       .gte('call_date', from)
       .lte('call_date', to);
@@ -62,7 +57,6 @@ async function fetchPresentRows(): Promise<PresentRow[]> {
       const mk = (r.marketers ?? {}) as { display_name?: string; rank?: string };
       return {
         marketer_id: String(r.marketer_id),
-        cam: Boolean(r.cam),
         name: mk.display_name ?? '—',
         rank: (mk.rank as MarketerRank) ?? 'executive',
       };
@@ -93,35 +87,6 @@ function rankZoom(rows: PresentRow[], limit: number, selfId: string): TopMarkete
     }));
 }
 
-/** Rank by camera-on share among present Zooms (descending; ties → more presences). */
-function rankCam(rows: PresentRow[], limit: number, selfId: string): TopMarketerEntry[] {
-  const agg = new Map<string, { name: string; rank: MarketerRank; present: number; cam: number }>();
-  for (const r of rows) {
-    const cur = agg.get(r.marketer_id) ?? { name: r.name, rank: r.rank, present: 0, cam: 0 };
-    cur.present += 1;
-    if (r.cam) cur.cam += 1;
-    agg.set(r.marketer_id, cur);
-  }
-  return [...agg.entries()]
-    .filter(([, v]) => v.present > 0)
-    .map(([id, v]) => ({ id, v, rate: v.cam / v.present }))
-    .sort(
-      (a, b) =>
-        b.rate - a.rate ||
-        b.v.present - a.v.present ||
-        a.v.name.localeCompare(b.v.name, 'it'),
-    )
-    .slice(0, limit)
-    .map((e, i) => ({
-      marketer_id: e.id,
-      display_name: e.v.name,
-      rank: e.v.rank,
-      value: e.rate,
-      position: i + 1,
-      is_self: e.id === selfId,
-    }));
-}
-
 export async function getMonthlyTopMarketers(
   limit = 5,
 ): Promise<MonthlyTopResult> {
@@ -132,7 +97,6 @@ export async function getMonthlyTopMarketers(
         zoom: mockTopMarketers('zoom', limit),
         percorsi: mockTopMarketers('percorsi', limit),
         conversion: mockTopMarketers('conversion', limit),
-        cam: mockTopMarketers('cam', limit),
       },
       demo: true,
     };
@@ -141,7 +105,6 @@ export async function getMonthlyTopMarketers(
   const { marketerId: selfId } = await getOwnerContext();
   const rows = await fetchPresentRows();
   const zoom = rankZoom(rows, limit, selfId);
-  const cam = rankCam(rows, limit, selfId);
   // "percorsi" and "conversione" have no wired source yet → empty (no fake data).
-  return { data: { zoom, percorsi: [], conversion: [], cam }, demo: false };
+  return { data: { zoom, percorsi: [], conversion: [] }, demo: false };
 }

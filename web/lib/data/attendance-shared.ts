@@ -53,4 +53,6 @@ export interface AttendanceMember {
   present: Record<ZoomCall, boolean>;
   /** Camera on/off per call (verde = attiva, rosso = spenta). */
   cam: Record<ZoomCall, boolean>;
+  /** Share of presences with camera on (present&cam / present), all-time. Null = mai presente. */
+  cam_rate: number | null;
 }

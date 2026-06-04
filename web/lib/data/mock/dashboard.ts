@@ -10,7 +10,7 @@ import { MOCK_NODES, MOCK_ROOT_ID } from '@/lib/data/mock-genealogy';
  * (product decision). Pure & deterministic — safe to import server-side.
  */
 
-export type TopCategory = 'zoom' | 'percorsi' | 'conversion' | 'cam';
+export type TopCategory = 'zoom' | 'percorsi' | 'conversion';
 
 export interface TopMarketerEntry {
   marketer_id: string;
@@ -36,9 +36,6 @@ function metricValue(node: TreeNode, category: TopCategory): number {
     case 'conversion':
       // Business Info → Closing conversion (0..1 ratio).
       return node.kpis.conversion_rate;
-    case 'cam':
-      // % camera attiva quando presente (0..1 ratio) — demo proxy.
-      return Math.min(1, 0.45 + node.kpis.conversion_rate * 0.5);
   }
 }
 
