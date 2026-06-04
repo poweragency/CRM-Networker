@@ -1,14 +1,14 @@
 import 'server-only';
-import { isSupabaseConfigured } from '@/lib/env';
-import type { WishlistItem } from '@/lib/types/db';
+import type { WishlistItem, WishlistHorizon } from '@/lib/types/db';
+import { getClient, getOwnerContext } from '@/lib/data/crm-shared';
 import { mockWishlist } from '@/lib/data/mock/wishlist';
 
 /**
  * 100's list (bucket list) data access (server-only). Per-marketer list of the
- * things a person wants to do/have, catalogued nearest → furthest. Frontend +
- * mock only for now (no DB table yet): a deterministic default seeds the demo
- * caller, and edits are kept in an in-memory override map so a save reflects
- * within the running server. Demo-safe; never throws.
+ * things a person wants to do/have, catalogued nearest → furthest. Persisted in
+ * `wishlist_items` (RLS-scoped to the owner's visible subtree). In pure demo mode
+ * (no env) a deterministic default seeds the demo caller and edits are kept in an
+ * in-memory override map. Never throws.
  */
 
 export interface WishlistResult {
@@ -16,30 +16,72 @@ export interface WishlistResult {
   demo: boolean;
 }
 
-/** In-memory edit store (mock-only; resets on server restart). */
+/** In-memory edit store (demo-only; resets on server restart). */
 const overrides = new Map<string, WishlistItem[]>();
 
-/** The 100's list for a marketer (override wins over the mock default). */
+const ROW = 'id,title,horizon,done,position';
+
+/** The 100's list for a marketer (position-ordered). */
 export async function getWishlist(marketerId: string): Promise<WishlistResult> {
-  const override = overrides.get(marketerId);
-  if (override) return { items: override, demo: !isSupabaseConfigured };
-  // Connected: persistence isn't wired to wishlist_items yet → start EMPTY (no
-  // fake items). Pure demo mode (no env) seeds the sample list for the showcase.
-  if (isSupabaseConfigured) return { items: [], demo: false };
-  return { items: mockWishlist(marketerId), demo: true };
+  const supabase = getClient();
+  if (!supabase) {
+    return { items: overrides.get(marketerId) ?? mockWishlist(marketerId), demo: true };
+  }
+  try {
+    const { data, error } = await supabase
+      .from('wishlist_items')
+      .select(ROW)
+      .eq('owner_marketer_id', marketerId)
+      .is('deleted_at', null)
+      .order('position', { ascending: true });
+    if (error || !data) return { items: [], demo: false };
+    const items: WishlistItem[] = (data as Record<string, unknown>[]).map((r) => ({
+      id: String(r.id),
+      title: String(r.title),
+      horizon: (r.horizon as WishlistHorizon) ?? 'vicino',
+      done: Boolean(r.done),
+    }));
+    return { items, demo: false };
+  } catch {
+    return { items: [], demo: false };
+  }
 }
 
 export interface SaveWishlistResult {
   ok: boolean;
-  /** Always true for now — the list is mock-backed (no DB table yet). */
+  /** true only when simulated (pure demo mode). */
   demo: boolean;
 }
 
-/** Replace the whole 100's list for a marketer (in-memory, demo-safe). */
+/** Replace the whole 100's list for a marketer (demo = in-memory). */
 export async function saveWishlist(
   marketerId: string,
   items: WishlistItem[],
 ): Promise<SaveWishlistResult> {
-  overrides.set(marketerId, items);
-  return { ok: true, demo: true };
+  const { orgId, demo } = await getOwnerContext();
+  const supabase = getClient();
+  if (!supabase || demo) {
+    overrides.set(marketerId, items);
+    return { ok: true, demo: true };
+  }
+  try {
+    // Replace semantics: clear the marketer's list, then insert the new ordering.
+    await supabase.from('wishlist_items').delete().eq('owner_marketer_id', marketerId);
+    if (items.length) {
+      const { error } = await supabase.from('wishlist_items').insert(
+        items.map((it, i) => ({
+          org_id: orgId,
+          owner_marketer_id: marketerId,
+          title: it.title,
+          horizon: it.horizon,
+          done: it.done,
+          position: i + 1,
+        })),
+      );
+      if (error) return { ok: false, demo: false };
+    }
+    return { ok: true, demo: false };
+  } catch {
+    return { ok: false, demo: false };
+  }
 }
