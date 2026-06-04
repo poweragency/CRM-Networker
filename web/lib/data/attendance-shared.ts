@@ -51,4 +51,6 @@ export interface AttendanceMember {
   rank: MarketerRank;
   status: MarketerStatus;
   present: Record<ZoomCall, boolean>;
+  /** Camera on/off per call (verde = attiva, rosso = spenta). */
+  cam: Record<ZoomCall, boolean>;
 }

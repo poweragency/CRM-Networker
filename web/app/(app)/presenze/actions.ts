@@ -1,6 +1,6 @@
 'use server';
 
-import { setZoomAttendance } from '@/lib/data/attendance';
+import { setZoomAttendance, setZoomCam } from '@/lib/data/attendance';
 import type { ZoomCall } from '@/lib/data/attendance-shared';
 
 /**
@@ -21,4 +21,13 @@ export async function setZoomAttendanceAction(
   present: boolean,
 ): Promise<SetAttendanceActionResult> {
   return setZoomAttendance(marketerId, date, call, present);
+}
+
+export async function setZoomCamAction(
+  marketerId: string,
+  date: string,
+  call: ZoomCall,
+  cam: boolean,
+): Promise<SetAttendanceActionResult> {
+  return setZoomCam(marketerId, date, call, cam);
 }

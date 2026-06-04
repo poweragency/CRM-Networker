@@ -15,7 +15,7 @@ import {
   type AttendanceMember,
   type ZoomCall,
 } from '@/lib/data/attendance-shared';
-import { setZoomAttendanceAction } from '@/app/(app)/presenze/actions';
+import { setZoomAttendanceAction, setZoomCamAction } from '@/app/(app)/presenze/actions';
 
 /**
  * AttendanceTable — the Presenze Zoom grid for one day. The people are the
@@ -59,29 +59,30 @@ export function AttendanceTable({
     setState(Object.fromEntries(members.map((m) => [m.id, { ...m.present }])));
   }, [members]);
 
-  // Camera on/off per member per call — client-side only for now (no backend
-  // field yet); defaults to off ("Cam spenta").
+  // Camera on/off per member per call — persisted to zoom_attendance.cam.
   const [cam, setCam] = React.useState<
     Record<string, Record<ZoomCall, boolean>>
-  >(() =>
-    Object.fromEntries(
-      members.map((m) => [m.id, {} as Record<ZoomCall, boolean>]),
-    ),
-  );
+  >(() => Object.fromEntries(members.map((m) => [m.id, { ...m.cam }])));
 
   React.useEffect(() => {
-    setCam(
-      Object.fromEntries(
-        members.map((m) => [m.id, {} as Record<ZoomCall, boolean>]),
-      ),
-    );
+    setCam(Object.fromEntries(members.map((m) => [m.id, { ...m.cam }])));
   }, [members]);
 
-  function toggleCam(memberId: string, call: ZoomCall) {
+  async function toggleCam(member: AttendanceMember, call: ZoomCall) {
+    const next = !cam[member.id]?.[call];
     setCam((prev) => ({
       ...prev,
-      [memberId]: { ...prev[memberId], [call]: !prev[memberId]?.[call] },
+      [member.id]: { ...prev[member.id]!, [call]: next },
     }));
+    const res = await setZoomCamAction(member.id, date, call, next);
+    if (!res.ok) {
+      // rollback
+      setCam((prev) => ({
+        ...prev,
+        [member.id]: { ...prev[member.id]!, [call]: !next },
+      }));
+      toast({ title: t('error'), variant: 'error' });
+    }
   }
 
   function go(nextDate: string) {
@@ -225,7 +226,7 @@ export function AttendanceTable({
                             role="checkbox"
                             aria-checked={camOn}
                             aria-label={`${m.display_name} — ${camOn ? t('cam_on') : t('cam_off')}`}
-                            onClick={() => toggleCam(m.id, c)}
+                            onClick={() => toggleCam(m, c)}
                             className={cn(
                               'inline-flex h-6 flex-1 items-center justify-center rounded-full px-2 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                               camOn
