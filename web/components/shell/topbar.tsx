@@ -10,7 +10,6 @@ import { ScopeSwitcher } from '@/components/scope-switcher';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { RankBadge } from '@/components/ui/rank-badge';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -90,8 +89,6 @@ export function Topbar({ user, unreadCount = 0, onOpenMobileNav }: TopbarProps) 
         <span className="hidden h-6 w-px bg-nav-foreground/15 sm:block" aria-hidden />
 
         <div className="flex items-center gap-0.5">
-        <ThemeToggle />
-
         {/* Notifications */}
         <Link
           href="/notifiche"
