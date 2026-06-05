@@ -184,24 +184,26 @@ export async function createMarketer(
   try {
     const { orgId, marketerId } = await getOwnerContext();
     const rank: MarketerRank = DB_RANKS.includes(input.rank) ? input.rank : 'executive';
-    const { data, error } = await supabase
-      .from('marketers')
-      .insert({
-        org_id: orgId,
-        first_name: input.firstName,
-        last_name: input.lastName,
-        parent_id: input.parentId,
-        leg: input.leg,
-        sponsor_id: input.sponsorId,
-        rank,
-        status: input.status,
-        created_by: marketerId,
-        updated_by: marketerId,
-      })
-      .select('id')
-      .single();
-    if (error || !data) return { id: null, demo: false, ok: false };
-    return { id: String((data as { id: string }).id), demo: false, ok: true };
+    // Generate the id server-side so we DON'T need RETURNING (`.select`): a
+    // non-admin can't yet SELECT the brand-new row (its visibility closure is
+    // built by an AFTER trigger), so RETURNING would trip the SELECT RLS policy
+    // with 42501. With an explicit id we just return it after a plain insert.
+    const id = crypto.randomUUID();
+    const { error } = await supabase.from('marketers').insert({
+      id,
+      org_id: orgId,
+      first_name: input.firstName,
+      last_name: input.lastName,
+      parent_id: input.parentId,
+      leg: input.leg,
+      sponsor_id: input.sponsorId,
+      rank,
+      status: input.status,
+      created_by: marketerId,
+      updated_by: marketerId,
+    });
+    if (error) return { id: null, demo: false, ok: false };
+    return { id, demo: false, ok: true };
   } catch {
     return { id: null, demo: false, ok: false };
   }
