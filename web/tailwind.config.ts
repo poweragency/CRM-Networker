@@ -101,6 +101,10 @@ const config: Config = {
         sm: '0 1px 3px rgba(16, 24, 40, 0.06)',
         md: '0 4px 12px rgba(16, 24, 40, 0.08)',
         lg: '0 12px 32px rgba(16, 24, 40, 0.12)',
+        // Gamified accent glows (achievement / leaderboard / primary actions).
+        glow: '0 0 0 1px hsl(var(--primary) / 0.25), 0 10px 30px -8px hsl(var(--primary) / 0.5)',
+        'glow-warning': '0 0 0 1px hsl(var(--warning) / 0.3), 0 12px 32px -8px hsl(var(--warning) / 0.55)',
+        'glow-success': '0 0 0 1px hsl(var(--success) / 0.3), 0 12px 32px -8px hsl(var(--success) / 0.5)',
       },
       transitionDuration: {
         fast: '80ms',
@@ -136,11 +140,38 @@ const config: Config = {
         shimmer: {
           '100%': { transform: 'translateX(100%)' },
         },
+        // ─── Gamification motion ───────────────────────────────────────────
+        pop: {
+          '0%': { transform: 'scale(1)' },
+          '40%': { transform: 'scale(1.18)' },
+          '100%': { transform: 'scale(1)' },
+        },
+        sheen: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(100%)' },
+        },
+        'glow-pulse': {
+          '0%, 100%': { opacity: '0.5', transform: 'scale(1)' },
+          '50%': { opacity: '1', transform: 'scale(1.08)' },
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-3px)' },
+        },
+        'rank-in': {
+          from: { opacity: '0', transform: 'translateY(6px) scale(0.98)' },
+          to: { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 150ms ease-out',
         'scale-in': 'scale-in 120ms ease-out',
         'slide-in-right': 'slide-in-right 200ms cubic-bezier(0.16, 1, 0.3, 1)',
+        pop: 'pop 360ms cubic-bezier(0.16, 1, 0.3, 1)',
+        sheen: 'sheen 2.4s ease-in-out infinite',
+        'glow-pulse': 'glow-pulse 2.4s ease-in-out infinite',
+        float: 'float 3s ease-in-out infinite',
+        'rank-in': 'rank-in 360ms cubic-bezier(0.16, 1, 0.3, 1) both',
       },
     },
   },

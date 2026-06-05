@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { PanelLeft, PanelRight, Users } from 'lucide-react';
-import { cn, formatNumber } from '@/lib/utils';
+import { cn } from '@/lib/utils';
+import { CountUp } from '@/components/ui/count-up';
 import type { TreeNode } from '@/lib/types/db';
 import {
   PersonalPerformance,
@@ -27,17 +28,17 @@ export async function MarketerKpis({
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
       {/* Team structure (genealogia) — these are downline aggregates. */}
       <div className="grid grid-cols-3 divide-x">
-        <HeroStat icon={Users} label={tg('team_size')} value={formatNumber(node.team_size)} />
+        <HeroStat icon={Users} label={tg('team_size')} value={node.team_size} />
         <HeroStat
           icon={PanelLeft}
           label={tg('left_count')}
-          value={formatNumber(node.left_count)}
+          value={node.left_count}
           accent="text-branch-left"
         />
         <HeroStat
           icon={PanelRight}
           label={tg('right_count')}
-          value={formatNumber(node.right_count)}
+          value={node.right_count}
           accent="text-branch-right"
         />
       </div>
@@ -56,7 +57,7 @@ function HeroStat({
 }: {
   icon: typeof Users;
   label: string;
-  value: string;
+  value: number;
   accent?: string;
 }) {
   return (
@@ -66,7 +67,7 @@ function HeroStat({
         <span className="truncate">{label}</span>
       </span>
       <span className="text-lg font-semibold tabular-nums tracking-tight text-foreground">
-        {value}
+        <CountUp value={value} />
       </span>
     </div>
   );

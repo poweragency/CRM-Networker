@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useTranslations } from 'next-intl';
 import { Target, TrendingUp, UserPlus } from 'lucide-react';
 import { cn, formatNumber, formatPercent } from '@/lib/utils';
+import { CountUp } from '@/components/ui/count-up';
 import { kpisFromStages } from '@/lib/prospect-kpis';
 import type { ProspectStage } from '@/lib/types/db';
 
@@ -163,19 +164,22 @@ export function PersonalPerformance({
         <Stat
           icon={Target}
           label={tg('kpi_prospects')}
-          value={formatNumber(kpis.prospects)}
+          value={kpis.prospects}
+          format={(n) => formatNumber(Math.round(n))}
           accent="text-info"
         />
         <Stat
           icon={UserPlus}
           label={tg('kpi_iscrizioni')}
-          value={formatNumber(kpis.iscrizioni)}
+          value={kpis.iscrizioni}
+          format={(n) => formatNumber(Math.round(n))}
           accent="text-success"
         />
         <Stat
           icon={TrendingUp}
           label={tg('kpi_conversion')}
-          value={formatPercent(kpis.conversionRate)}
+          value={kpis.conversionRate}
+          format={formatPercent}
           accent="text-warning"
           hint={t('kpi_conversion_caption')}
         />
@@ -188,12 +192,14 @@ function Stat({
   icon: Icon,
   label,
   value,
+  format,
   accent,
   hint,
 }: {
   icon: typeof Target;
   label: string;
-  value: string;
+  value: number;
+  format: (n: number) => string;
   accent?: string;
   hint?: string;
 }) {
@@ -204,7 +210,7 @@ function Stat({
         <span className="truncate">{label}</span>
       </span>
       <span className="text-lg font-semibold tabular-nums tracking-tight text-foreground">
-        {value}
+        <CountUp value={value} format={format} />
       </span>
       {hint && (
         <span className="text-[10px] leading-tight text-muted-foreground">{hint}</span>

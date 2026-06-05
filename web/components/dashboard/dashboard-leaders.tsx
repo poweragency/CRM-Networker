@@ -3,6 +3,7 @@ import type { LucideIcon } from 'lucide-react';
 import { Crown } from 'lucide-react';
 import { Avatar } from '@/components/ui/avatar';
 import { RankBadge } from '@/components/ui/rank-badge';
+import { CountUp } from '@/components/ui/count-up';
 import { cn } from '@/lib/utils';
 import type { TopMarketerEntry } from '@/lib/data/mock/dashboard';
 
@@ -63,7 +64,7 @@ export interface SpotlightCardProps {
   icon: LucideIcon;
   accent: Accent;
   entry: TopMarketerEntry | undefined;
-  valueText: string;
+  formatValue: (value: number) => string;
   youLabel: string;
   emptyLabel: string;
 }
@@ -73,7 +74,7 @@ export function SpotlightCard({
   icon: Icon,
   accent,
   entry,
-  valueText,
+  formatValue,
   youLabel,
   emptyLabel,
 }: SpotlightCardProps) {
@@ -92,7 +93,7 @@ export function SpotlightCard({
     <Link
       href={`/team/${entry.marketer_id}`}
       className={cn(
-        'group relative flex flex-col gap-4 overflow-hidden rounded-xl border bg-card p-5 shadow-sm outline-none transition-[box-shadow,transform] duration-base ease-standard hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring',
+        'group relative flex flex-col gap-4 overflow-hidden rounded-xl border bg-card p-5 shadow-sm outline-none transition-[box-shadow,transform] duration-base ease-standard hover:-translate-y-0.5 hover:shadow-glow focus-visible:ring-2 focus-visible:ring-ring',
       )}
     >
       {/* Accent gradient wash */}
@@ -108,7 +109,7 @@ export function SpotlightCard({
         <CategoryEyebrow icon={Icon} accent={accent} label={label} />
         <span
           className={cn(
-            'flex h-7 w-7 items-center justify-center rounded-full',
+            'flex h-7 w-7 items-center justify-center rounded-full animate-float shadow-glow-warning',
             MEDAL[1],
           )}
           title="1ª posizione"
@@ -137,7 +138,7 @@ export function SpotlightCard({
 
       <div className="relative flex items-baseline gap-2">
         <span className="text-3xl font-semibold tabular-nums tracking-tight text-foreground">
-          {valueText}
+          <CountUp value={entry.value} format={formatValue} />
         </span>
         {entry.cam_rate != null && (
           <span
@@ -202,10 +203,14 @@ export function LeaderboardCard({
           <p className="py-8 text-center text-sm text-muted-foreground">{emptyLabel}</p>
         ) : (
           <ol className="space-y-0.5">
-            {entries.map((e) => {
+            {entries.map((e, i) => {
               const pct = max > 0 ? Math.max(6, Math.round((e.value / max) * 100)) : 0;
               return (
-                <li key={e.marketer_id}>
+                <li
+                  key={e.marketer_id}
+                  className="animate-rank-in"
+                  style={{ animationDelay: `${i * 60}ms` }}
+                >
                   <Link
                     href={`/team/${e.marketer_id}`}
                     className={cn(
@@ -217,6 +222,7 @@ export function LeaderboardCard({
                       className={cn(
                         'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums',
                         MEDAL[e.position] ?? 'text-muted-foreground',
+                        e.position === 1 && 'shadow-glow-warning',
                       )}
                     >
                       {e.position}
@@ -241,7 +247,7 @@ export function LeaderboardCard({
                     </div>
                     <span className="flex shrink-0 flex-col items-end gap-0.5">
                       <span className="text-sm font-semibold tabular-nums text-foreground">
-                        {formatValue(e.value)}
+                        <CountUp value={e.value} format={formatValue} />
                       </span>
                       {e.cam_rate != null && (
                         <span

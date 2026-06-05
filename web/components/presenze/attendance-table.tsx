@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ProgressMeter } from '@/components/ui/progress-meter';
 import { EmptyState } from '@/components/crm/empty-state';
 import { useToast } from '@/components/crm/toaster';
 import { cn } from '@/lib/utils';
@@ -91,6 +92,7 @@ export function AttendanceTable({
 
   async function toggle(member: AttendanceMember, call: ZoomCall) {
     const next = !state[member.id]?.[call];
+    const before = members.filter((m) => state[m.id]?.[call]).length;
     setState((prev) => ({
       ...prev,
       [member.id]: { ...prev[member.id]!, [call]: next },
@@ -103,6 +105,16 @@ export function AttendanceTable({
         [member.id]: { ...prev[member.id]!, [call]: !next },
       }));
       toast({ title: t('error'), variant: 'error' });
+      return;
+    }
+    // Full house on this call → achievement (the toast rains confetti for us).
+    const after = before + (next ? 1 : -1);
+    if (next && members.length > 0 && after === members.length) {
+      toast({
+        title: t('full_house_title'),
+        description: t('full_house_body', { call: ZOOM_CALL_LABELS[call] }),
+        variant: 'achievement',
+      });
     }
   }
 
@@ -177,12 +189,12 @@ export function AttendanceTable({
                     {ZOOM_CALL_LABELS[c]}
                   </h2>
                   <div className="flex items-center gap-2.5">
-                    <span className="h-1.5 w-24 overflow-hidden rounded-full bg-muted">
-                      <span
-                        className="block h-full rounded-full bg-success transition-all"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </span>
+                    <ProgressMeter
+                      value={pct}
+                      gradient="from-success to-info"
+                      heightClass="h-1.5"
+                      className="w-24"
+                    />
                     <span className="text-xs font-medium tabular-nums text-muted-foreground">
                       {presentCount}/{members.length}
                     </span>
@@ -213,7 +225,7 @@ export function AttendanceTable({
                             aria-label={`${m.display_name} — ${ZOOM_CALL_LABELS[c]} — ${present ? t('present') : t('absent')}`}
                             onClick={() => toggle(m, c)}
                             className={cn(
-                              'inline-flex h-6 flex-1 items-center justify-center rounded-full px-2 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                              'inline-flex h-6 flex-1 items-center justify-center rounded-full px-2 text-[11px] font-semibold transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                               present
                                 ? 'bg-success/15 text-success hover:bg-success/25'
                                 : 'bg-danger/15 text-danger hover:bg-danger/25',
@@ -228,7 +240,7 @@ export function AttendanceTable({
                             aria-label={`${m.display_name} — ${camOn ? t('cam_on') : t('cam_off')}`}
                             onClick={() => toggleCam(m, c)}
                             className={cn(
-                              'inline-flex h-6 flex-1 items-center justify-center rounded-full px-2 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                              'inline-flex h-6 flex-1 items-center justify-center rounded-full px-2 text-[11px] font-semibold transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                               camOn
                                 ? 'bg-success/15 text-success hover:bg-success/25'
                                 : 'bg-danger/15 text-danger hover:bg-danger/25',

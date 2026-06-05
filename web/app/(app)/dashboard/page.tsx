@@ -94,7 +94,7 @@ export default async function DashboardPage() {
             icon={c.icon}
             accent={c.accent}
             entry={c.entries[0]}
-            valueText={c.entries[0] ? c.spotlightValue(c.entries[0].value) : ''}
+            formatValue={c.spotlightValue}
             youLabel={youLabel}
             emptyLabel={emptyLabel}
           />

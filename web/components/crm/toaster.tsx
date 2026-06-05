@@ -1,8 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { CheckCircle2, AlertTriangle, Info, X } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, Info, Trophy, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { celebrate } from '@/lib/celebrate';
 
 /**
  * Lightweight toast system (no external dep). Mount <Toaster /> once near the
@@ -11,7 +12,7 @@ import { cn } from '@/lib/utils';
  * "modalità demo" simulated-success notices (RESILIENCE).
  */
 
-export type ToastVariant = 'success' | 'error' | 'info';
+export type ToastVariant = 'success' | 'error' | 'info' | 'achievement';
 
 export interface ToastOptions {
   title: string;
@@ -35,11 +36,17 @@ const ToastContext = React.createContext<ToastContextValue | null>(null);
 
 const VARIANT_META: Record<
   ToastVariant,
-  { Icon: typeof Info; accent: string; iconColor: string }
+  { Icon: typeof Info; accent: string; iconColor: string; wrapCx?: string }
 > = {
   success: { Icon: CheckCircle2, accent: 'border-success/40', iconColor: 'text-success' },
   error: { Icon: AlertTriangle, accent: 'border-danger/40', iconColor: 'text-danger' },
   info: { Icon: Info, accent: 'border-info/40', iconColor: 'text-info' },
+  achievement: {
+    Icon: Trophy,
+    accent: 'border-warning/50',
+    iconColor: 'text-warning',
+    wrapCx: 'animate-pop bg-gradient-to-br from-warning/[0.12] to-card shadow-glow-warning',
+  },
 };
 
 /** Provider — holds toast state and renders the stack. Mount once. */
@@ -69,6 +76,8 @@ export function Toaster({ children }: { children?: React.ReactNode }) {
         duration: opts.duration ?? 4000,
       };
       setItems((prev) => [...prev, item]);
+      // An achievement always rains confetti — one line per "win" at the call site.
+      if (item.variant === 'achievement') celebrate();
       if (item.duration > 0) {
         timers.current.set(
           id,
@@ -102,7 +111,7 @@ export function Toaster({ children }: { children?: React.ReactNode }) {
         aria-label="Notifiche"
       >
         {items.map((t) => {
-          const { Icon, accent, iconColor } = VARIANT_META[t.variant];
+          const { Icon, accent, iconColor, wrapCx } = VARIANT_META[t.variant];
           return (
             <div
               key={t.id}
@@ -110,6 +119,7 @@ export function Toaster({ children }: { children?: React.ReactNode }) {
               className={cn(
                 'pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-lg border bg-card p-4 text-card-foreground shadow-lg animate-scale-in',
                 accent,
+                wrapCx,
               )}
             >
               <Icon className={cn('mt-0.5 h-5 w-5 shrink-0', iconColor)} aria-hidden />
