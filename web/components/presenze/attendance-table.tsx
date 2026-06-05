@@ -10,25 +10,18 @@ import { ProgressMeter } from '@/components/ui/progress-meter';
 import { EmptyState } from '@/components/crm/empty-state';
 import { useToast } from '@/components/crm/toaster';
 import { cn } from '@/lib/utils';
+import type { AttendanceMember, ZoomCallDef } from '@/lib/data/attendance-shared';
 import {
-  ZOOM_CALL_LABELS,
-  callsForDate,
-  type AttendanceMember,
-  type ZoomCall,
-} from '@/lib/data/attendance-shared';
-import { setZoomAttendanceAction, setZoomCamAction } from '@/app/(app)/presenze/actions';
+  setZoomAttendanceAction,
+  setZoomCamAction,
+} from '@/app/(app)/presenze/actions';
 
 /**
- * AttendanceTable — the Presenze Zoom grid for one day. The people are the
- * viewer's subtree (themselves + everyone below — each person only ever sees
- * their own downline). Each call runs on a FIXED weekday — Wake Up Call on
- * Monday, Golden Call on Thursday, Join The Dream on Sunday — so only the call(s)
- * scheduled on the selected day are shown (a notice when none).
- *
- * Layout is a dense horizontal grid of compact "Nome — presenza" cells that pack
- * as many per row as fit and then wrap, so large teams stay readable at a glance.
- * The day is driven by the `?date=` URL param (the table is "divided by days"):
- * prev/next/today + a date picker re-navigate. Toggles are optimistic, demo-safe.
+ * AttendanceTable — the Presenze Zoom grid for one day. People are the viewer's
+ * subtree (themselves + everyone below). Calls are DYNAMIC: the visible calls for
+ * the selected day are passed in (`calls`); each runs on a fixed weekday, so the
+ * day picker drives which calls show. Present + cam toggles are optimistic and
+ * persisted; a call hitting 100% of the team fires an achievement (confetti).
  */
 
 function shiftDay(iso: string, delta: number): string {
@@ -38,12 +31,20 @@ function shiftDay(iso: string, delta: number): string {
   return dt.toISOString().slice(0, 10);
 }
 
+type Flags = Record<string, Record<string, boolean>>; // memberId → callId → bool
+
+function seed(members: AttendanceMember[], pick: (m: AttendanceMember) => Record<string, boolean>): Flags {
+  return Object.fromEntries(members.map((m) => [m.id, { ...pick(m) }]));
+}
+
 export function AttendanceTable({
   date,
+  calls,
   members,
   today,
 }: {
   date: string;
+  calls: ZoomCallDef[];
   members: AttendanceMember[];
   today: string;
 }) {
@@ -51,70 +52,46 @@ export function AttendanceTable({
   const router = useRouter();
   const { toast } = useToast();
 
-  // Local optimistic copy of the attendance flags.
-  const [state, setState] = React.useState<Record<string, Record<ZoomCall, boolean>>>(
-    () => Object.fromEntries(members.map((m) => [m.id, { ...m.present }])),
-  );
+  const [present, setPresent] = React.useState<Flags>(() => seed(members, (m) => m.present));
+  const [cam, setCam] = React.useState<Flags>(() => seed(members, (m) => m.cam));
 
   React.useEffect(() => {
-    setState(Object.fromEntries(members.map((m) => [m.id, { ...m.present }])));
+    setPresent(seed(members, (m) => m.present));
+    setCam(seed(members, (m) => m.cam));
   }, [members]);
-
-  // Camera on/off per member per call — persisted to zoom_attendance.cam.
-  const [cam, setCam] = React.useState<
-    Record<string, Record<ZoomCall, boolean>>
-  >(() => Object.fromEntries(members.map((m) => [m.id, { ...m.cam }])));
-
-  React.useEffect(() => {
-    setCam(Object.fromEntries(members.map((m) => [m.id, { ...m.cam }])));
-  }, [members]);
-
-  async function toggleCam(member: AttendanceMember, call: ZoomCall) {
-    const next = !cam[member.id]?.[call];
-    setCam((prev) => ({
-      ...prev,
-      [member.id]: { ...prev[member.id]!, [call]: next },
-    }));
-    const res = await setZoomCamAction(member.id, date, call, next);
-    if (!res.ok) {
-      // rollback
-      setCam((prev) => ({
-        ...prev,
-        [member.id]: { ...prev[member.id]!, [call]: !next },
-      }));
-      toast({ title: t('error'), variant: 'error' });
-    }
-  }
 
   function go(nextDate: string) {
     router.push(`/presenze?date=${nextDate}`);
   }
 
-  async function toggle(member: AttendanceMember, call: ZoomCall) {
-    const next = !state[member.id]?.[call];
-    const before = members.filter((m) => state[m.id]?.[call]).length;
-    setState((prev) => ({
-      ...prev,
-      [member.id]: { ...prev[member.id]!, [call]: next },
-    }));
-    const res = await setZoomAttendanceAction(member.id, date, call, next);
+  async function togglePresent(member: AttendanceMember, callId: string) {
+    const next = !present[member.id]?.[callId];
+    const before = members.filter((m) => present[m.id]?.[callId]).length;
+    setPresent((prev) => ({ ...prev, [member.id]: { ...prev[member.id]!, [callId]: next } }));
+    const res = await setZoomAttendanceAction(member.id, date, callId, next);
     if (!res.ok) {
-      // rollback
-      setState((prev) => ({
-        ...prev,
-        [member.id]: { ...prev[member.id]!, [call]: !next },
-      }));
+      setPresent((prev) => ({ ...prev, [member.id]: { ...prev[member.id]!, [callId]: !next } }));
       toast({ title: t('error'), variant: 'error' });
       return;
     }
-    // Full house on this call → achievement (the toast rains confetti for us).
     const after = before + (next ? 1 : -1);
     if (next && members.length > 0 && after === members.length) {
+      const call = calls.find((c) => c.id === callId);
       toast({
         title: t('full_house_title'),
-        description: t('full_house_body', { call: ZOOM_CALL_LABELS[call] }),
+        description: t('full_house_body', { call: call?.title ?? '' }),
         variant: 'achievement',
       });
+    }
+  }
+
+  async function toggleCam(member: AttendanceMember, callId: string) {
+    const next = !cam[member.id]?.[callId];
+    setCam((prev) => ({ ...prev, [member.id]: { ...prev[member.id]!, [callId]: next } }));
+    const res = await setZoomCamAction(member.id, date, callId, next);
+    if (!res.ok) {
+      setCam((prev) => ({ ...prev, [member.id]: { ...prev[member.id]!, [callId]: !next } }));
+      toast({ title: t('error'), variant: 'error' });
     }
   }
 
@@ -124,9 +101,6 @@ export function AttendanceTable({
     month: 'long',
     year: 'numeric',
   }).format(new Date(`${date}T00:00:00`));
-
-  // Only the call(s) that actually run on this weekday get a column.
-  const calls = callsForDate(date);
 
   return (
     <div className="space-y-4">
@@ -173,20 +147,23 @@ export function AttendanceTable({
       ) : (
         <div className="space-y-5">
           {calls.map((c) => {
-            const presentCount = members.filter(
-              (m) => state[m.id]?.[c],
-            ).length;
-            const pct = members.length
-              ? Math.round((presentCount / members.length) * 100)
-              : 0;
+            const presentCount = members.filter((m) => present[m.id]?.[c.id]).length;
+            const pct = members.length ? Math.round((presentCount / members.length) * 100) : 0;
             return (
-              <section
-                key={c}
-                className="space-y-3 rounded-xl border bg-card p-4 shadow-sm"
-              >
+              <section key={c.id} className="space-y-3 rounded-xl border bg-card p-4 shadow-sm">
                 <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-sm font-semibold tracking-tight text-foreground">
-                    {ZOOM_CALL_LABELS[c]}
+                  <h2 className="flex items-baseline gap-2 text-sm font-semibold tracking-tight text-foreground">
+                    {c.title}
+                    {c.scope === 'team' && c.created_by_name && (
+                      <span className="text-[11px] font-normal text-muted-foreground">
+                        {t('call_by', { name: c.created_by_name })}
+                      </span>
+                    )}
+                    {c.start_time && (
+                      <span className="text-[11px] font-normal tabular-nums text-muted-foreground">
+                        {c.start_time}
+                      </span>
+                    )}
                   </h2>
                   <div className="flex items-center gap-2.5">
                     <ProgressMeter
@@ -200,16 +177,13 @@ export function AttendanceTable({
                     </span>
                   </div>
                 </div>
-                {/* Dense, wrapping grid: each cell = name + presence toggle. */}
+                {/* Dense, wrapping grid: each cell = name + presence/cam toggles. */}
                 <div className="grid gap-1.5 [grid-template-columns:repeat(auto-fill,minmax(13rem,1fr))]">
                   {members.map((m) => {
-                    const present = state[m.id]?.[c] ?? false;
-                    const camOn = cam[m.id]?.[c] ?? false;
+                    const isPresent = present[m.id]?.[c.id] ?? false;
+                    const camOn = cam[m.id]?.[c.id] ?? false;
                     return (
-                      <div
-                        key={m.id}
-                        className="flex flex-col gap-1.5 rounded-md border bg-background p-2"
-                      >
+                      <div key={m.id} className="flex flex-col gap-1.5 rounded-md border bg-background p-2">
                         <Link
                           href={`/team/${m.id}`}
                           title={m.display_name}
@@ -221,24 +195,24 @@ export function AttendanceTable({
                           <button
                             type="button"
                             role="checkbox"
-                            aria-checked={present}
-                            aria-label={`${m.display_name} — ${ZOOM_CALL_LABELS[c]} — ${present ? t('present') : t('absent')}`}
-                            onClick={() => toggle(m, c)}
+                            aria-checked={isPresent}
+                            aria-label={`${m.display_name} — ${c.title} — ${isPresent ? t('present') : t('absent')}`}
+                            onClick={() => togglePresent(m, c.id)}
                             className={cn(
                               'inline-flex h-6 flex-1 items-center justify-center rounded-full px-2 text-[11px] font-semibold transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                              present
+                              isPresent
                                 ? 'bg-success/15 text-success hover:bg-success/25'
                                 : 'bg-danger/15 text-danger hover:bg-danger/25',
                             )}
                           >
-                            {present ? t('present') : t('absent')}
+                            {isPresent ? t('present') : t('absent')}
                           </button>
                           <button
                             type="button"
                             role="checkbox"
                             aria-checked={camOn}
                             aria-label={`${m.display_name} — ${camOn ? t('cam_on') : t('cam_off')}`}
-                            onClick={() => toggleCam(m, c)}
+                            onClick={() => toggleCam(m, c.id)}
                             className={cn(
                               'inline-flex h-6 flex-1 items-center justify-center rounded-full px-2 text-[11px] font-semibold transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                               camOn

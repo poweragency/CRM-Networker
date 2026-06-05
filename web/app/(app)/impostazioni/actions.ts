@@ -3,6 +3,12 @@
 import { revalidatePath } from 'next/cache';
 import { saveOrgTheme, type SaveThemeResult } from '@/lib/data/org-theme';
 import { setMemberRole, type SetRoleResult } from '@/lib/data/roles';
+import {
+  createZoomCall,
+  deleteZoomCall,
+  type CallInput,
+  type CallResult,
+} from '@/lib/data/zoom-calls';
 import type { OrgTheme } from '@/lib/theme';
 import type { MembershipRole } from '@/lib/types/db';
 
@@ -30,5 +36,25 @@ export async function setMemberRoleAction(
 ): Promise<SetRoleResult> {
   const res = await setMemberRole(marketerId, role);
   if (res.ok && !res.demo) revalidatePath('/impostazioni');
+  return res;
+}
+
+/** Create a zoom call (admin → org/team; co-admin → team, RLS-enforced). */
+export async function createZoomCallAction(input: CallInput): Promise<CallResult> {
+  const res = await createZoomCall(input);
+  if (res.ok && !res.demo) {
+    revalidatePath('/impostazioni');
+    revalidatePath('/presenze');
+  }
+  return res;
+}
+
+/** Delete a zoom call (admin → any; co-admin → own, RLS-enforced). */
+export async function deleteZoomCallAction(id: string): Promise<CallResult> {
+  const res = await deleteZoomCall(id);
+  if (res.ok && !res.demo) {
+    revalidatePath('/impostazioni');
+    revalidatePath('/presenze');
+  }
   return res;
 }

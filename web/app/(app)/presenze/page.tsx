@@ -35,12 +35,12 @@ export default async function PresenzePage({
   const param = one(searchParams?.date);
   const date = param && ISO_DAY.test(param) ? param : today;
 
-  const { members, demo } = await getZoomAttendance(date);
+  const { calls, members, demo } = await getZoomAttendance(date);
 
   return (
     <div className="space-y-4">
       {demo && <ConfigNotice variant="inline" />}
-      <AttendanceTable date={date} members={members} today={today} />
+      <AttendanceTable date={date} calls={calls} members={members} today={today} />
     </div>
   );
 }

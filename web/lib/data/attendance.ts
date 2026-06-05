@@ -2,27 +2,24 @@ import 'server-only';
 import { getClient, getOwnerContext } from '@/lib/data/crm-shared';
 import { getSubtree } from '@/lib/data/genealogy';
 import {
-  ZOOM_CALLS,
-  ZOOM_CALL_LABELS,
+  weekdayOf,
   type AttendanceMember,
-  type ZoomCall,
+  type ZoomCallDef,
 } from '@/lib/data/attendance-shared';
 
 /**
- * Zoom attendance data access (server-only). Each viewer sees everyone from
- * themselves DOWN (their visible subtree) and can mark, per day, whether each
- * person attended each call AND whether their camera was on.
- *
- * Persisted in `zoom_attendance` (one row per marketer/day/call carrying present
- * + cam; RLS-scoped to the viewer's subtree). In pure demo mode (no env) a
- * deterministic default + in-memory override maps are used. Never throws.
+ * Zoom attendance data access (server-only). Calls are DYNAMIC (table
+ * `zoom_calls`): the viewer sees the calls scheduled on the chosen day that are
+ * visible to them (org-wide, or team calls of their upline co-admins — RLS
+ * enforced), and marks present + cam per person (their visible subtree) against
+ * each call id. Demo-safe: no env → the 3 historical calls + deterministic data.
  */
 
-export { ZOOM_CALLS, ZOOM_CALL_LABELS };
-export type { ZoomCall, AttendanceMember };
+export type { AttendanceMember, ZoomCallDef };
 
 export interface AttendanceResult {
   date: string;
+  calls: ZoomCallDef[];
   members: AttendanceMember[];
   demo: boolean;
 }
@@ -30,60 +27,100 @@ export interface AttendanceResult {
 /** In-memory edit stores (demo-only; reset on server restart). */
 const presentOverrides = new Map<string, boolean>();
 const camOverrides = new Map<string, boolean>();
+const keyOf = (id: string, date: string, callId: string) => `${id}|${date}|${callId}`;
 
-function keyOf(id: string, date: string, call: ZoomCall): string {
-  return `${id}|${date}|${call}`;
-}
-
-/** Small deterministic string hash (no Math.random — stable across renders). */
 function hash(s: string): number {
   let h = 0;
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
   return h;
 }
-
-/** Deterministic demo default: ~2 of 3 marked present, varies by person/day/call. */
-function defaultPresent(id: string, date: string, call: ZoomCall): boolean {
-  return hash(keyOf(id, date, call)) % 3 !== 0;
+function defaultPresent(id: string, date: string, callId: string): boolean {
+  return hash(keyOf(id, date, callId)) % 3 !== 0;
 }
 
+/** Demo calls (no env): the 3 historical fixed calls. */
+const DEMO_CALLS: ZoomCallDef[] = [
+  { id: 'wake_up', title: 'Wake Up Call', weekday: 1, start_time: null, scope: 'org', created_by: null, created_by_name: null },
+  { id: 'golden', title: 'Golden Call', weekday: 4, start_time: null, scope: 'org', created_by: null, created_by_name: null },
+  { id: 'join_the_dream', title: 'Join The Dream', weekday: 0, start_time: null, scope: 'org', created_by: null, created_by_name: null },
+];
+
+function mapCallRow(r: Record<string, unknown>): ZoomCallDef {
+  const cr = (r.creator ?? null) as { display_name?: string } | null;
+  return {
+    id: String(r.id),
+    title: String(r.title),
+    weekday: Number(r.weekday),
+    start_time: (r.start_time as string | null) ?? null,
+    scope: (r.scope as 'org' | 'team') ?? 'org',
+    created_by: (r.created_by as string | null) ?? null,
+    created_by_name: cr?.display_name ?? null,
+  };
+}
+
+const byTimeThenTitle = (a: ZoomCallDef, b: ZoomCallDef) =>
+  (a.start_time ?? '').localeCompare(b.start_time ?? '') ||
+  a.title.localeCompare(b.title, 'it');
+
 /** Attendance for the viewer's subtree on a given day (ISO `YYYY-MM-DD`). */
-export async function getZoomAttendance(
-  date: string,
-): Promise<AttendanceResult> {
+export async function getZoomAttendance(date: string): Promise<AttendanceResult> {
   const { marketerId, demo } = await getOwnerContext();
   const sub = await getSubtree(marketerId, 'GLOBAL');
   const supabase = getClient();
+  const wd = weekdayOf(date);
 
-  // Load persisted present + cam flags for the visible people on this day.
-  const present = new Map<string, boolean>(); // key: id|call
-  const camera = new Map<string, boolean>();
-  if (supabase) {
-    try {
-      const ids = sub.data.map((n) => n.id);
-      const { data } = await supabase
-        .from('zoom_attendance')
-        .select('marketer_id,call,present,cam')
-        .eq('call_date', date)
-        .in('marketer_id', ids);
-      for (const r of (data as { marketer_id: string; call: ZoomCall; present: boolean; cam: boolean }[] | null) ?? []) {
-        present.set(`${r.marketer_id}|${r.call}`, r.present);
-        camera.set(`${r.marketer_id}|${r.call}`, r.cam);
-      }
-    } catch {
-      /* fall through to defaults */
-    }
+  // Demo mode (no env): the 3 fixed calls + deterministic/in-memory attendance.
+  if (!supabase) {
+    const calls = DEMO_CALLS.filter((c) => c.weekday === wd);
+    const members = sub.data
+      .map((n) => ({
+        id: n.id,
+        display_name: n.display_name,
+        rank: n.rank,
+        status: n.status,
+        present: Object.fromEntries(
+          calls.map((c) => {
+            const k = keyOf(n.id, date, c.id);
+            return [c.id, presentOverrides.has(k) ? presentOverrides.get(k)! : defaultPresent(n.id, date, c.id)];
+          }),
+        ),
+        cam: Object.fromEntries(calls.map((c) => [c.id, camOverrides.get(keyOf(n.id, date, c.id)) ?? false])),
+      }))
+      .sort((a, b) => a.display_name.localeCompare(b.display_name, 'it'));
+    return { date, calls, members, demo: true };
   }
 
-  const resolvePresent = (id: string, call: ZoomCall): boolean => {
-    if (supabase) return present.get(`${id}|${call}`) ?? false;
-    const k = keyOf(id, date, call);
-    return presentOverrides.has(k) ? presentOverrides.get(k)! : defaultPresent(id, date, call);
-  };
-  const resolveCam = (id: string, call: ZoomCall): boolean => {
-    if (supabase) return camera.get(`${id}|${call}`) ?? false;
-    return camOverrides.get(keyOf(id, date, call)) ?? false;
-  };
+  // Visible calls scheduled on this weekday (RLS scopes org/team visibility).
+  let calls: ZoomCallDef[] = [];
+  try {
+    const { data } = await supabase
+      .from('zoom_calls')
+      .select('id,title,weekday,start_time,scope,created_by, creator:created_by(display_name)')
+      .eq('weekday', wd)
+      .eq('active', true);
+    calls = ((data as Record<string, unknown>[] | null) ?? []).map(mapCallRow).sort(byTimeThenTitle);
+  } catch {
+    calls = [];
+  }
+
+  // Persisted present + cam for the day, keyed by `${marketer_id}|${call_id}`.
+  const present = new Map<string, boolean>();
+  const camera = new Map<string, boolean>();
+  try {
+    const ids = sub.data.map((n) => n.id);
+    const { data } = await supabase
+      .from('zoom_attendance')
+      .select('marketer_id,call_id,present,cam')
+      .eq('call_date', date)
+      .in('marketer_id', ids);
+    for (const r of (data as { marketer_id: string; call_id: string | null; present: boolean; cam: boolean }[] | null) ?? []) {
+      if (!r.call_id) continue;
+      present.set(`${r.marketer_id}|${r.call_id}`, r.present);
+      camera.set(`${r.marketer_id}|${r.call_id}`, r.cam);
+    }
+  } catch {
+    /* leave defaults */
+  }
 
   const members: AttendanceMember[] = sub.data
     .map((n) => ({
@@ -91,46 +128,36 @@ export async function getZoomAttendance(
       display_name: n.display_name,
       rank: n.rank,
       status: n.status,
-      present: {
-        wake_up: resolvePresent(n.id, 'wake_up'),
-        golden: resolvePresent(n.id, 'golden'),
-        join_the_dream: resolvePresent(n.id, 'join_the_dream'),
-      },
-      cam: {
-        wake_up: resolveCam(n.id, 'wake_up'),
-        golden: resolveCam(n.id, 'golden'),
-        join_the_dream: resolveCam(n.id, 'join_the_dream'),
-      },
+      present: Object.fromEntries(calls.map((c) => [c.id, present.get(`${n.id}|${c.id}`) ?? false])),
+      cam: Object.fromEntries(calls.map((c) => [c.id, camera.get(`${n.id}|${c.id}`) ?? false])),
     }))
-    // Alphabetical by name (it-IT), not by tree/rank order.
     .sort((a, b) => a.display_name.localeCompare(b.display_name, 'it'));
 
-  return { date, members, demo: (demo || sub.demo) && !supabase };
+  return { date, calls, members, demo: false };
 }
 
 export interface SetAttendanceResult {
   ok: boolean;
-  /** true only when simulated (pure demo mode). */
   demo: boolean;
 }
 
-/** Mark a single (marketer, day, call) PRESENT flag (persisted; demo = in-memory). */
+/** Mark a single (marketer, day, call) PRESENT flag (persisted; demo = memory). */
 export async function setZoomAttendance(
   marketerId: string,
   date: string,
-  call: ZoomCall,
+  callId: string,
   present: boolean,
 ): Promise<SetAttendanceResult> {
   const { orgId, demo } = await getOwnerContext();
   const supabase = getClient();
   if (!supabase || demo) {
-    presentOverrides.set(keyOf(marketerId, date, call), present);
+    presentOverrides.set(keyOf(marketerId, date, callId), present);
     return { ok: true, demo: true };
   }
   try {
     const { error } = await supabase.from('zoom_attendance').upsert(
-      { org_id: orgId, marketer_id: marketerId, call_date: date, call, present },
-      { onConflict: 'org_id,marketer_id,call_date,call' },
+      { org_id: orgId, marketer_id: marketerId, call_date: date, call_id: callId, present },
+      { onConflict: 'org_id,marketer_id,call_date,call_id' },
     );
     return { ok: !error, demo: false };
   } catch {
@@ -138,23 +165,23 @@ export async function setZoomAttendance(
   }
 }
 
-/** Mark a single (marketer, day, call) CAMERA flag (persisted; demo = in-memory). */
+/** Mark a single (marketer, day, call) CAMERA flag (persisted; demo = memory). */
 export async function setZoomCam(
   marketerId: string,
   date: string,
-  call: ZoomCall,
+  callId: string,
   cam: boolean,
 ): Promise<SetAttendanceResult> {
   const { orgId, demo } = await getOwnerContext();
   const supabase = getClient();
   if (!supabase || demo) {
-    camOverrides.set(keyOf(marketerId, date, call), cam);
+    camOverrides.set(keyOf(marketerId, date, callId), cam);
     return { ok: true, demo: true };
   }
   try {
     const { error } = await supabase.from('zoom_attendance').upsert(
-      { org_id: orgId, marketer_id: marketerId, call_date: date, call, cam },
-      { onConflict: 'org_id,marketer_id,call_date,call' },
+      { org_id: orgId, marketer_id: marketerId, call_date: date, call_id: callId, cam },
+      { onConflict: 'org_id,marketer_id,call_date,call_id' },
     );
     return { ok: !error, demo: false };
   } catch {
