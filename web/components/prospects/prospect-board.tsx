@@ -53,6 +53,10 @@ export interface ProspectBoardProps {
 /** Flatten the board into a stage→prospects map for cheap immutable updates. */
 type StageMap = Record<ProspectStage, ProspectView[]>;
 
+// Kanban columns = every funnel stage EXCEPT iscrizione. Enrolling completes the
+// journey, so an enrolled person leaves the board (still counted in KPIs/podi).
+const BOARD_STAGES = STAGE_ORDER.filter((s) => s !== 'iscrizione');
+
 function toStageMap(board: BoardView): StageMap {
   const map = {} as StageMap;
   for (const stage of STAGE_ORDER) map[stage] = [];
@@ -293,7 +297,7 @@ export function ProspectBoard({
     setSheetOpen(true);
   }
 
-  const total = STAGE_ORDER.reduce(
+  const total = BOARD_STAGES.reduce(
     (acc, s) => acc + stageMap[s].length + lcByStage[s].length,
     0,
   );
@@ -327,7 +331,7 @@ export function ProspectBoard({
         }}
       >
         <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-3">
-          {STAGE_ORDER.map((stage) => {
+          {BOARD_STAGES.map((stage) => {
             const prospects = stageMap[stage];
             return (
               <BoardColumn
