@@ -94,28 +94,54 @@ export function navPreviewColor(accentHex: string): string {
   return `hsl(${navTriplet(accentHex)})`;
 }
 
-// Coherent base token sets (mirror globals.css) chosen by the background's
-// darkness, so cards/borders/text always read well over the chosen background.
-const BASE = {
-  dark: {
-    foreground: '210 20% 96%',
-    card: '222 22% 13%',
-    muted: '222 16% 19%',
-    mutedForeground: '217 12% 68%',
-    border: '222 16% 22%',
-  },
-  light: {
-    foreground: '222 22% 11%',
-    card: '0 0% 100%',
-    muted: '220 16% 96%',
-    mutedForeground: '220 9% 46%',
-    border: '220 14% 90%',
-  },
-} as const;
-
 /** Auto foreground triplet (white/near-black) for readability on a color. */
 function autoForegroundTriplet(hex: string): string {
   return isDark(hex) ? '0 0% 100%' : '222 47% 11%';
+}
+
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+
+function parseTriplet(t: string): { h: number; s: number; l: number } | null {
+  const m = t.match(/^(\d+) (\d+)% (\d+)%$/);
+  return m ? { h: Number(m[1]), s: Number(m[2]), l: Number(m[3]) } : null;
+}
+
+/**
+ * Harmonized surface tokens (card / muted / border / text) derived from the
+ * chosen BACKGROUND: SAME hue, with the lightness stepped for elevation — so
+ * panels feel part of the theme instead of a generic grey, while staying
+ * readable. Dark backgrounds → slightly lighter tinted cards + light text;
+ * light backgrounds → near-white tinted cards + dark text.
+ */
+function harmonizedSurfaces(bgHex: string) {
+  const t = hexToHslTriplet(bgHex);
+  const p = t ? parseTriplet(t) : null;
+  const h = p?.h ?? 222;
+  const s = p?.s ?? 16;
+  const l = p?.l ?? 100;
+  const tri = (hh: number, ss: number, ll: number) =>
+    `${Math.round(hh)} ${Math.round(clamp(ss, 0, 100))}% ${Math.round(clamp(ll, 0, 100))}%`;
+
+  if (isDark(bgHex)) {
+    const sS = Math.min(s, 18); // keep surfaces subtly tinted, never garish
+    return {
+      background: tri(h, s, l),
+      foreground: tri(h, Math.min(s, 14), 96),
+      card: tri(h, sS, clamp(l + 6, 10, 24)),
+      muted: tri(h, sS, clamp(l + 10, 14, 28)),
+      mutedForeground: tri(h, Math.min(s, 12), 66),
+      border: tri(h, sS, clamp(l + 14, 18, 34)),
+    };
+  }
+  const sS = Math.min(s, 22);
+  return {
+    background: tri(h, s, l),
+    foreground: tri(h, Math.min(s, 30), 13),
+    card: tri(h, Math.min(s, 14), clamp(l + 4, 96, 100)),
+    muted: tri(h, sS, clamp(l - 3, 86, 97)),
+    mutedForeground: tri(h, Math.min(s, 14), 42),
+    border: tri(h, sS, clamp(l - 8, 80, 92)),
+  };
 }
 
 /** Nudge the L of an "H S% L%" triplet by delta (clamped 0..100). */
@@ -137,20 +163,19 @@ export function themeCssVars(
   theme: OrgTheme | null,
 ): Record<string, string> | null {
   if (!theme) return null;
-  const bg = hexToHslTriplet(theme.background);
   const nav = hexToHslTriplet(theme.navbar);
-  if (!bg || !nav) return null;
-  const base = isDark(theme.background) ? BASE.dark : BASE.light;
+  if (!hexToHslTriplet(theme.background) || !nav) return null;
+  const sf = harmonizedSurfaces(theme.background);
   const navFg = autoForegroundTriplet(theme.navbar);
   return {
-    '--background': bg,
-    '--foreground': base.foreground,
-    '--card': base.card,
-    '--card-foreground': base.foreground,
-    '--muted': base.muted,
-    '--muted-foreground': base.mutedForeground,
-    '--border': base.border,
-    '--input': base.border,
+    '--background': sf.background,
+    '--foreground': sf.foreground,
+    '--card': sf.card,
+    '--card-foreground': sf.foreground,
+    '--muted': sf.muted,
+    '--muted-foreground': sf.mutedForeground,
+    '--border': sf.border,
+    '--input': sf.border,
     '--primary': nav,
     '--primary-foreground': navFg,
     '--primary-600': shiftL(nav, -6),
