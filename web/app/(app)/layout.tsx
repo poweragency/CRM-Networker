@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation';
 import { getCurrentClaims } from '@/lib/data/session';
 import { getNode } from '@/lib/data/genealogy';
 import { listNotifications } from '@/lib/data/notifications';
+import { getOrgTheme } from '@/lib/data/org-theme';
+import { themeCssVars } from '@/lib/theme';
 import { isSupabaseConfigured } from '@/lib/env';
 import { AppShell } from '@/components/shell/app-shell';
 import type { NavViewer } from '@/lib/nav';
@@ -61,12 +63,16 @@ export default async function AppLayout({
   // Live unread count from the notifications feed (includes team birthdays).
   const { unread: unreadCount } = await listNotifications();
 
+  // Org-wide theme (admin-chosen colors) → inline CSS-var overrides for everyone.
+  const themeVars = themeCssVars(await getOrgTheme());
+
   return (
     <AppShell
       viewer={viewer}
       user={user}
       orgName={orgName}
       unreadCount={unreadCount}
+      themeVars={themeVars}
     >
       {children}
     </AppShell>

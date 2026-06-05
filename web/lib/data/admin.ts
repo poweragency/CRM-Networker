@@ -359,12 +359,22 @@ export async function updateOrgSettings(
   if (!supabase) return { data: next, demo: true, ok: true };
   try {
     const { orgId } = await getOwnerContext();
+    // Merge into existing settings so we never clobber other keys (e.g. theme).
+    const { data: cur } = await supabase
+      .from('organizations')
+      .select('settings')
+      .eq('id', orgId)
+      .maybeSingle<Record<string, unknown>>();
+    const settings = {
+      ...((cur?.settings as Record<string, unknown>) ?? {}),
+      bottleneck: input.bottleneck,
+    };
     const { error } = await supabase
       .from('organizations')
       .update({
         name: input.name,
         timezone: input.timezone,
-        settings: { bottleneck: input.bottleneck },
+        settings,
       })
       .eq('id', orgId);
     return { data: next, demo: false, ok: !error };

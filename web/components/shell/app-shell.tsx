@@ -27,6 +27,8 @@ export interface AppShellProps {
   user: TopbarUser;
   orgName: string;
   unreadCount?: number;
+  /** Org-theme CSS-variable overrides (admin-chosen colors), or null. */
+  themeVars?: Record<string, string> | null;
   children: React.ReactNode;
 }
 
@@ -35,6 +37,7 @@ export function AppShell({
   user,
   orgName,
   unreadCount = 0,
+  themeVars,
   children,
 }: AppShellProps) {
   const [collapsed, setCollapsed] = React.useState(false);
@@ -66,9 +69,12 @@ export function AppShell({
   const openMobile = React.useCallback(() => setMobileOpen(true), []);
 
   return (
-    <React.Suspense fallback={<ShellFallback>{children}</ShellFallback>}>
+    <React.Suspense fallback={<ShellFallback themeVars={themeVars}>{children}</ShellFallback>}>
       <ScopeProvider>
-        <div className="flex min-h-screen bg-background">
+        <div
+          className="flex min-h-screen bg-background"
+          style={themeVars as React.CSSProperties | undefined}
+        >
           <Sidebar
             viewer={viewer}
             collapsed={collapsed}
@@ -97,9 +103,18 @@ export function AppShell({
 }
 
 /** Minimal fallback while the Suspense-bound scope provider resolves. */
-function ShellFallback({ children }: { children: React.ReactNode }) {
+function ShellFallback({
+  children,
+  themeVars,
+}: {
+  children: React.ReactNode;
+  themeVars?: Record<string, string> | null;
+}) {
   return (
-    <div className="flex min-h-screen bg-background">
+    <div
+      className="flex min-h-screen bg-background"
+      style={themeVars as React.CSSProperties | undefined}
+    >
       <div className="hidden w-side shrink-0 border-r bg-card md:block" />
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="h-14 border-b bg-card" />

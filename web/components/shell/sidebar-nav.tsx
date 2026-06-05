@@ -60,12 +60,12 @@ export function SidebarNav({ viewer, collapsed = false, onNavigate }: SidebarNav
         {sections.map((section) => (
           <div key={section.titleKey}>
             {!collapsed && (
-              <p className="px-2 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
+              <p className="px-2 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-primary-foreground/60">
                 {t(`section.${section.titleKey}`)}
               </p>
             )}
             {collapsed && (
-              <div className="mx-2 mb-2 h-px bg-border/70" aria-hidden />
+              <div className="mx-2 mb-2 h-px bg-primary-foreground/15" aria-hidden />
             )}
             <ul className="space-y-0.5">
               {section.items.map((item) => (
@@ -85,7 +85,7 @@ export function SidebarNav({ viewer, collapsed = false, onNavigate }: SidebarNav
         ))}
       </nav>
 
-      <div className={cn('border-t py-3', collapsed ? 'px-2' : 'px-3')}>
+      <div className={cn('border-t border-primary-foreground/15 py-3', collapsed ? 'px-2' : 'px-3')}>
         <ul className="space-y-0.5">
           {navFooterItems.map((item) => (
             <li
@@ -127,15 +127,15 @@ function NavLink({ href, label, Icon, active, collapsed, onNavigate }: NavLinkPr
         'group relative flex items-center rounded-lg text-sm font-medium outline-none transition-colors duration-base ease-standard focus-visible:ring-2 focus-visible:ring-ring',
         collapsed ? 'h-9 w-9 justify-center' : 'gap-2.5 px-2.5 py-2',
         active
-          ? 'bg-primary/[0.08] text-primary'
-          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+          ? 'bg-primary-foreground/15 text-primary-foreground'
+          : 'text-primary-foreground/75 hover:bg-primary-foreground/10 hover:text-primary-foreground',
       )}
     >
       {/* active rail accent — present in BOTH states (cross-collapse continuity) */}
       {active && (
         <span
           className={cn(
-            'absolute left-0 w-0.5 rounded-full bg-primary',
+            'absolute left-0 w-0.5 rounded-full bg-primary-foreground',
             collapsed ? 'inset-y-1.5' : 'inset-y-1',
           )}
           aria-hidden
@@ -144,7 +144,7 @@ function NavLink({ href, label, Icon, active, collapsed, onNavigate }: NavLinkPr
       <Icon
         className={cn(
           'h-[18px] w-[18px] shrink-0 transition-colors',
-          active ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground',
+          active ? 'text-primary-foreground' : 'text-primary-foreground/75 group-hover:text-primary-foreground',
         )}
         aria-hidden
       />

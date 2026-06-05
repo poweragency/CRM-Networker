@@ -8,6 +8,8 @@ import { getSevenWhysFor } from '@/lib/data/seven-whys';
 import { getMarketerProfile } from '@/lib/data/team';
 import { getWishlist } from '@/lib/data/wishlist';
 import { getFormazioneProgress } from '@/lib/data/formazione';
+import { getOrgTheme } from '@/lib/data/org-theme';
+import { ThemeSettings } from '@/components/team/theme-settings';
 import { ConfigNotice } from '@/components/config-notice';
 import { EmptyState } from '@/components/crm/empty-state';
 import { ProspectBoard } from '@/components/prospects/prospect-board';
@@ -55,6 +57,9 @@ export default async function ImpostazioniPage({
 
   const { claims, demo: claimsDemo, email } = await getCurrentClaims();
   const meId = claims.marketer_id;
+  const isAdmin = claims.role === 'admin' || claims.role === 'owner';
+  // Org theme (admin-only editor at the bottom of this page).
+  const orgTheme = isAdmin ? await getOrgTheme() : null;
 
   const [
     nodeRes,
@@ -175,6 +180,9 @@ export default async function ImpostazioniPage({
           <MarketerFormazione marketerId={meId} initialDone={formazioneRes.done} />
         }
       />
+
+      {/* Admin-only: org-wide theme (sfondo + navbar, testo auto-contrastato). */}
+      {isAdmin && <ThemeSettings initial={orgTheme} />}
     </div>
   );
 }
