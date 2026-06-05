@@ -48,7 +48,7 @@ export interface TopbarProps {
   onOpenMobileNav: () => void;
 }
 
-export function Topbar({ orgName, user, unreadCount = 0, onOpenMobileNav }: TopbarProps) {
+export function Topbar({ user, unreadCount = 0, onOpenMobileNav }: TopbarProps) {
   const t = useTranslations('topbar');
   const router = useRouter();
   const [signingOut, setSigningOut] = React.useState(false);
@@ -76,27 +76,6 @@ export function Topbar({ orgName, user, unreadCount = 0, onOpenMobileNav }: Topb
       >
         <Menu className="h-5 w-5" aria-hidden />
       </button>
-
-      {/* Workspace pill: brand mark + org name */}
-      <div className="flex min-w-0 items-center gap-2.5">
-        <span
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary text-[11px] font-bold text-primary-foreground shadow-sm"
-          aria-hidden
-        >
-          {orgInitials(orgName)}
-        </span>
-        <span className="min-w-0">
-          <span className="block text-[10px] font-medium uppercase tracking-wider text-nav-foreground/60">
-            {t('workspace')}
-          </span>
-          <span
-            className="block max-w-[12rem] truncate text-sm font-semibold leading-tight text-nav-foreground"
-            title={orgName}
-          >
-            {orgName}
-          </span>
-        </span>
-      </div>
 
       {/* Central slot: pages portal a contextual control here (e.g. search). */}
       <div
@@ -194,10 +173,3 @@ export function Topbar({ orgName, user, unreadCount = 0, onOpenMobileNav }: Topb
   );
 }
 
-/** Up-to-2-letter initials from the org name for the brand mark. */
-function orgInitials(name: string): string {
-  const parts = name.replace(/[·.]/g, ' ').trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return 'CN';
-  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
-  return (parts[0]![0]! + parts[1]![0]!).toUpperCase();
-}

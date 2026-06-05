@@ -72,7 +72,7 @@ export function AppShell({
     <React.Suspense fallback={<ShellFallback themeVars={themeVars}>{children}</ShellFallback>}>
       <ScopeProvider>
         <div
-          className="flex min-h-screen bg-background"
+          className="flex min-h-screen bg-background text-foreground"
           style={themeVars as React.CSSProperties | undefined}
         >
           <Sidebar
@@ -112,7 +112,7 @@ function ShellFallback({
 }) {
   return (
     <div
-      className="flex min-h-screen bg-background"
+      className="flex min-h-screen bg-background text-foreground"
       style={themeVars as React.CSSProperties | undefined}
     >
       <div className="hidden w-side shrink-0 border-r bg-card md:block" />

@@ -180,8 +180,8 @@ export default async function MarketerProfilePage({
       <MarketerSections
         production={
           <>
-            <MarketerKpis node={node} prospects={personalProspects} />
-            <div className="flex">
+            <MarketerKpis node={node} />
+            <div className="flex justify-center">
               <PerformanceModal prospects={personalProspects} />
             </div>
             <ListaContattiStoreProvider

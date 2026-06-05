@@ -3,25 +3,13 @@ import { PanelLeft, PanelRight, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CountUp } from '@/components/ui/count-up';
 import type { TreeNode } from '@/lib/types/db';
-import {
-  PersonalPerformance,
-  type PersonalProspect,
-} from '@/components/team/personal-performance';
 
 /**
- * MarketerKpis — the marketer's numbers, shown inside the "Produzione" section
- * (not the always-on masthead). Two parts: the team structure (team / left /
- * right — genealogy aggregates) and the marketer's OWN
- * {@link PersonalPerformance} (prospect / iscrizioni / conversione with a period
- * filter), which is personal and never rolled up from the downline.
+ * MarketerKpis — the marketer's team structure (team / left / right — genealogy
+ * aggregates) for the "Produzione" section. The personal funnel KPIs live in the
+ * dedicated "Performance" modal (see {@link PerformanceModal}), not inline.
  */
-export async function MarketerKpis({
-  node,
-  prospects = [],
-}: {
-  node: TreeNode;
-  prospects?: PersonalProspect[];
-}) {
+export async function MarketerKpis({ node }: { node: TreeNode }) {
   const tg = await getTranslations('genealogia');
 
   return (
@@ -42,9 +30,6 @@ export async function MarketerKpis({
           accent="text-branch-right"
         />
       </div>
-
-      {/* Personal performance — this marketer ONLY, with a period filter. */}
-      <PersonalPerformance prospects={prospects} />
     </div>
   );
 }

@@ -155,8 +155,8 @@ export default async function ImpostazioniPage({
       <MarketerSections
         production={
           <>
-            {node && <MarketerKpis node={node} prospects={personalProspects} />}
-            <div className="flex">
+            {node && <MarketerKpis node={node} />}
+            <div className="flex justify-center">
               <PerformanceModal prospects={personalProspects} />
             </div>
             <ListaContattiStoreProvider

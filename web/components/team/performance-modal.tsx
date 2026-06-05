@@ -74,7 +74,11 @@ export function PerformanceModal({
 
   return (
     <>
-      <Button variant="outline" onClick={() => setOpen(true)} className="gap-2">
+      <Button
+        size="lg"
+        onClick={() => setOpen(true)}
+        className="w-full gap-2 shadow-glow sm:w-auto sm:px-8"
+      >
         <LineChart className="h-4 w-4" aria-hidden />
         {t('performance_button')}
       </Button>
