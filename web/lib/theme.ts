@@ -182,6 +182,8 @@ export function themeCssVars(
     '--primary-700': shiftL(nav, -12),
     '--on-primary': navFg,
     '--ring': nav,
+    // Tree "global/root" identity follows the accent (instead of a fixed blue).
+    '--branch-global': nav,
     // Navbar surface: a deep slate tinted with the accent hue (not the raw color).
     '--nav': navTriplet(theme.navbar),
     '--nav-foreground': '0 0% 98%',
