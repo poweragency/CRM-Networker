@@ -3,7 +3,6 @@ import type { LucideIcon } from 'lucide-react';
 import { Crown } from 'lucide-react';
 import { Avatar } from '@/components/ui/avatar';
 import { RankBadge } from '@/components/ui/rank-badge';
-import { CountUp } from '@/components/ui/count-up';
 import { cn } from '@/lib/utils';
 import type { TopMarketerEntry } from '@/lib/data/mock/dashboard';
 
@@ -138,7 +137,7 @@ export function SpotlightCard({
 
       <div className="relative flex items-baseline gap-2">
         <span className="text-3xl font-semibold tabular-nums tracking-tight text-foreground">
-          <CountUp value={entry.value} format={formatValue} />
+          {formatValue(entry.value)}
         </span>
         {entry.cam_rate != null && (
           <span
@@ -247,7 +246,7 @@ export function LeaderboardCard({
                     </div>
                     <span className="flex shrink-0 flex-col items-end gap-0.5">
                       <span className="text-sm font-semibold tabular-nums text-foreground">
-                        <CountUp value={e.value} format={formatValue} />
+                        {formatValue(e.value)}
                       </span>
                       {e.cam_rate != null && (
                         <span
