@@ -120,6 +120,10 @@ export function ProspectBoard({
     if (listaStore) {
       for (const e of listaStore.entries) {
         if (e.stato === 'non_invitato') continue;
+        // No funnel phase done yet (percorso 0 = conoscitiva, che con la lista
+        // contatti si salta) → non compare nel kanban finché non parte la prima
+        // fase (business info). Vedi i contatti invitati nella tab Lista contatti.
+        if ((e.percorso ?? 0) < 1) continue;
         const card = listaContattiToCard(e, ownerName);
         map[card.current_stage].push(card);
       }
