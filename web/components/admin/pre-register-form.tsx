@@ -73,10 +73,11 @@ export function PreRegisterForm({ options }: { options: Option[] }) {
         setError(t('create_error'));
         return;
       }
+      // A new recruit is a real milestone → achievement (rains confetti).
       toast({
         title: t('created'),
         description: res.demo ? t('created_demo') : undefined,
-        variant: 'success',
+        variant: 'achievement',
       });
       router.push('/admin/marketer');
       router.refresh();

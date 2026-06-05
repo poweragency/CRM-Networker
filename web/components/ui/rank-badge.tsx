@@ -85,6 +85,12 @@ export function RankBadge({
 }: RankBadgeProps) {
   const tone = rankTone[rank];
   const text = label ?? RANK_LABELS[rank];
+  // Top ranks read as "high level": a subtle glowing ring in the rank's tone.
+  const prestige =
+    rank === 'vice_president' ||
+    rank === 'senior_vice_president' ||
+    rank === 'executive_vice_president' ||
+    rank === 'global_director';
 
   if (variant === 'dot') {
     return (
@@ -107,11 +113,15 @@ export function RankBadge({
         'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium',
         tone.bg,
         tone.text,
+        prestige && 'ring-1 ring-current/40',
         className,
       )}
       {...props}
     >
-      <span className={cn('h-1.5 w-1.5 rounded-full', tone.dot)} aria-hidden />
+      <span
+        className={cn('h-1.5 w-1.5 rounded-full', tone.dot, prestige && 'animate-glow-pulse')}
+        aria-hidden
+      />
       {text}
     </span>
   );

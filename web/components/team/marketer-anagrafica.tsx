@@ -137,15 +137,26 @@ export function MarketerAnagrafica({
       toast({ title: t('error'), variant: 'error' });
       return;
     }
+    // A promotion (rank moved UP) is a milestone → achievement (confetti).
+    const rankUp =
+      canEditIdentity && RANK_ORDER.indexOf(rank) > RANK_ORDER.indexOf(savedRank);
     setSaved(form);
     setSavedRank(rank);
     setSavedStatus(status);
     setEditing(false);
-    toast({
-      title: t('saved'),
-      description: res.demo ? t('saved_demo') : undefined,
-      variant: 'success',
-    });
+    if (rankUp) {
+      toast({
+        title: t('rank_up_title'),
+        description: t('rank_up_body', { rank: RANK_LABELS[rank] }),
+        variant: 'achievement',
+      });
+    } else {
+      toast({
+        title: t('saved'),
+        description: res.demo ? t('saved_demo') : undefined,
+        variant: 'success',
+      });
+    }
   }
 
   const v = saved;
