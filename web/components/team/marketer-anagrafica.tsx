@@ -18,7 +18,6 @@ import {
   RefreshCw,
   StickyNote,
   User,
-  Users,
   X,
   type LucideIcon,
 } from 'lucide-react';
@@ -201,7 +200,6 @@ export function MarketerAnagrafica({
         <Section icon={User} title={t('sec_identity')}>
           <Field icon={User} label={t('f_first_name')} value={profile.first_name} />
           <Field icon={User} label={t('f_last_name')} value={profile.last_name} />
-          <Field icon={Users} label={t('f_sponsor')} value={profile.sponsor_name} />
           <Field
             icon={CalendarPlus}
             label={t('f_registration')}

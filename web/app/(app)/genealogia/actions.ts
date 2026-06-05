@@ -16,6 +16,7 @@ import {
 import { isSupabaseConfigured } from '@/lib/env';
 import type {
   BranchScope,
+  MarketerRank,
   PlacementLeg,
   StartingPackage,
   TreeNode,
@@ -67,6 +68,8 @@ export interface AddMemberInput {
   leg: PlacementLeg;
   firstName: string;
   lastName: string;
+  /** Starting rank chosen at creation. */
+  rank: MarketerRank;
   /** Starting package (pacchetto) — anagrafica extra. */
   pack: StartingPackage | null;
   /** "click" — accesso alla piattaforma aziendale. */
@@ -106,7 +109,7 @@ export async function addMarketerAction(
       parentId: input.parentId,
       leg: input.leg,
       sponsorId: input.parentId,
-      rank: 'executive',
+      rank: input.rank,
       status: 'active',
     });
     if (!res.ok || !res.id) return { node: null, demo: false, ok: false };
@@ -124,7 +127,7 @@ export async function addMarketerAction(
       parent_id: input.parentId,
       leg: input.leg,
       sponsor_id: input.parentId,
-      rank: 'executive',
+      rank: input.rank,
       status: 'active',
       team_size: 0,
       left_count: 0,
@@ -148,7 +151,7 @@ export async function addMarketerAction(
     parent_id: input.parentId,
     leg: input.leg,
     sponsor_id: input.parentId,
-    rank: 'no_rank',
+    rank: input.rank,
     status: 'active',
     team_size: 0,
     left_count: 0,

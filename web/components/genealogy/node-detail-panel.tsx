@@ -244,9 +244,9 @@ export function NodeDetailPanel({
           </div>
         ) : null}
 
-        {/* Remove from the tree — hidden for the root; blocked when both legs
-            are occupied; otherwise a two-step confirm. */}
-        {node.parent_id && (
+        {/* Remove from the tree — only for Team Leader+ (canActivate); hidden for
+            the root; blocked when both legs are occupied; else a two-step confirm. */}
+        {canActivate && node.parent_id && (
           <div className="border-t pt-2">
             {node.has_left_child && node.has_right_child ? (
               <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">

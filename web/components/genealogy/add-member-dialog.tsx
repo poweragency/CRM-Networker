@@ -10,8 +10,11 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/crm/toaster';
 import { cn } from '@/lib/utils';
 import {
+  RANK_LABELS,
+  RANK_ORDER,
   STARTING_PACKAGE_LABELS,
   STARTING_PACKAGE_ORDER,
+  type MarketerRank,
   type PlacementLeg,
   type StartingPackage,
   type TreeNode,
@@ -53,6 +56,7 @@ export function AddMemberDialog({
   const [firstName, setFirstName] = React.useState('');
   const [lastName, setLastName] = React.useState('');
   const [pack, setPack] = React.useState<StartingPackage | ''>('');
+  const [rank, setRank] = React.useState<MarketerRank>('executive');
   const [click, setClick] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
@@ -63,6 +67,7 @@ export function AddMemberDialog({
       setFirstName('');
       setLastName('');
       setPack('');
+      setRank('executive');
       setClick(false);
       setError(null);
       setSaving(false);
@@ -86,6 +91,7 @@ export function AddMemberDialog({
       leg: target.leg,
       firstName: firstName.trim(),
       lastName: lastName.trim(),
+      rank,
       pack: pack || null,
       click,
     });
@@ -164,6 +170,24 @@ export function AddMemberDialog({
         </div>
 
         {error && <p className="text-xs text-danger">{error}</p>}
+
+        <div>
+          <Label htmlFor="am-rank" className="mb-1.5 block">
+            {t('add_rank')}
+          </Label>
+          <select
+            id="am-rank"
+            value={rank}
+            onChange={(e) => setRank(e.target.value as MarketerRank)}
+            className={cn(fieldCx, 'cursor-pointer')}
+          >
+            {RANK_ORDER.filter((r) => r !== 'cliente' && r !== 'no_rank').map((r) => (
+              <option key={r} value={r}>
+                {RANK_LABELS[r]}
+              </option>
+            ))}
+          </select>
+        </div>
 
         <div>
           <Label htmlFor="am-pack" className="mb-1.5 block">
