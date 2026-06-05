@@ -13,7 +13,7 @@ import {
 import { TopbarSlot } from '@/components/shell/topbar-slot';
 import { GenealogySearch } from './genealogy-search';
 import { NodeDetailPanel } from './node-detail-panel';
-import { canActivateCrm } from './permissions';
+import { canActivateCrm, canAddMember } from './permissions';
 import {
   AddMemberDialog,
   type AddMemberTarget,
@@ -67,12 +67,12 @@ export function GenealogyView({
   const selectedNode = selectedId ? tree.getNode(selectedId) ?? null : null;
   const canActivate = canActivateCrm(claims);
 
-  // Add-from-tree: the "+" slots are offered (to authorized viewers) on the
-  // selected node, or the layout root when nothing is selected (a fresh tree
-  // then shows its open slots, like the reference). Dialog target holds the
-  // chosen empty (parent, leg).
+  // Add-from-tree: the "+" slots are offered to EVERY person (not just admins) on
+  // the selected node, or the layout root when nothing is selected (a fresh tree
+  // then shows its open slots). RLS scopes the actual placement to the caller's
+  // own visible subtree. Dialog target holds the chosen empty (parent, leg).
   const [addTarget, setAddTarget] = React.useState<AddMemberTarget | null>(null);
-  const addSlotsForId = canActivate ? selectedId ?? layoutRootId : null;
+  const addSlotsForId = canAddMember() ? selectedId ?? layoutRootId : null;
 
   const handleSelect = React.useCallback((node: TreeNode) => {
     setSelectedId(node.id);

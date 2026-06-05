@@ -33,6 +33,15 @@ export function canActivateCrm(claims: Pick<SessionClaims, 'role' | 'rank'>): bo
 }
 
 /**
+ * Adding a member from the tree is open to EVERY logged-in person (not just
+ * admins). Placement is still scoped server-side by RLS to the caller's own
+ * visible subtree, so the "+" affordance can be shown for any selected node.
+ */
+export function canAddMember(): boolean {
+  return true;
+}
+
+/**
  * The TARGET profile is eligible for a CRM access only from `consultant` upward
  * (i.e. NOT executive, no_rank or cliente). CRM access is a marketer privilege,
  * not for plain customers / unranked / entry-level executives.
