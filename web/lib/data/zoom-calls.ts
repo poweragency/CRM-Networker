@@ -14,7 +14,7 @@ export async function listManageableCalls(): Promise<{ data: ZoomCallDef[]; demo
   try {
     const { data } = await supabase
       .from('zoom_calls')
-      .select('id,title,weekday,start_time,scope,created_by, creator:created_by(display_name)')
+      .select('id,title,weekday,start_time,scope,team_branch,created_by, creator:created_by(display_name)')
       .eq('active', true);
     const rows = ((data as Record<string, unknown>[] | null) ?? [])
       .map((r) => {
@@ -25,6 +25,7 @@ export async function listManageableCalls(): Promise<{ data: ZoomCallDef[]; demo
           weekday: Number(r.weekday),
           start_time: (r.start_time as string | null) ?? null,
           scope: (r.scope as 'org' | 'team') ?? 'org',
+          team_branch: (r.team_branch as 'left' | 'right' | 'all' | null) ?? null,
           created_by: (r.created_by as string | null) ?? null,
           created_by_name: cr?.display_name ?? null,
         } satisfies ZoomCallDef;
@@ -41,6 +42,8 @@ export interface CallInput {
   weekday: number;
   start_time: string | null;
   scope: 'org' | 'team';
+  /** Only for team scope: which branch of the downline ('all' | 'left' | 'right'). */
+  team_branch?: 'left' | 'right' | 'all' | null;
 }
 
 export interface CallResult {
@@ -55,12 +58,14 @@ export async function createZoomCall(input: CallInput): Promise<CallResult> {
   try {
     const { orgId, marketerId } = await getOwnerContext();
     const createdBy = input.scope === 'team' ? marketerId : null;
+    const teamBranch = input.scope === 'team' ? input.team_branch ?? 'all' : null;
     const { error } = await supabase.from('zoom_calls').insert({
       org_id: orgId,
       title: input.title,
       weekday: input.weekday,
       start_time: input.start_time,
       scope: input.scope,
+      team_branch: teamBranch,
       created_by: createdBy,
     });
     return { ok: !error, demo: false };

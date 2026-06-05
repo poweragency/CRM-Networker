@@ -1,6 +1,11 @@
 import 'server-only';
 import { getClient, getOwnerContext } from '@/lib/data/crm-shared';
-import type { MarketerRank, MembershipRole } from '@/lib/types/db';
+import { RANK_ORDER, type MarketerRank, type MembershipRole } from '@/lib/types/db';
+
+/** Co-admin requires Team Leader or higher. */
+export function canBeCoAdmin(rank: MarketerRank): boolean {
+  return RANK_ORDER.indexOf(rank) >= RANK_ORDER.indexOf('team_leader');
+}
 
 /**
  * Org role management (server-only). Lists the org's accounts with their app
@@ -66,6 +71,17 @@ export async function setMemberRole(
   if (!supabase) return { ok: true, demo: true };
   try {
     const { orgId } = await getOwnerContext();
+    // Co-admin can be granted only to Team Leader or higher.
+    if (role === 'co_admin') {
+      const { data: mk } = await supabase
+        .from('marketers')
+        .select('rank')
+        .eq('id', marketerId)
+        .maybeSingle<{ rank: MarketerRank }>();
+      if (!mk?.rank || !canBeCoAdmin(mk.rank)) {
+        return { ok: false, demo: false };
+      }
+    }
     const { error } = await supabase
       .from('memberships')
       .update({ role })

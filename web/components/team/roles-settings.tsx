@@ -10,7 +10,7 @@ import { RankBadge } from '@/components/ui/rank-badge';
 import { useToast } from '@/components/crm/toaster';
 import { EmptyState } from '@/components/crm/empty-state';
 import { cn } from '@/lib/utils';
-import { ROLE_LABELS, type MembershipRole } from '@/lib/types/db';
+import { RANK_ORDER, ROLE_LABELS, type MembershipRole } from '@/lib/types/db';
 import type { OrgRoleRow } from '@/lib/data/roles';
 import { setMemberRoleAction } from '@/app/(app)/impostazioni/actions';
 
@@ -74,6 +74,8 @@ export function RolesSettings({ initial }: { initial: OrgRoleRow[] }) {
             {rows.map((r) => {
               const locked = r.role === 'owner' || r.role === 'admin';
               const isCo = r.role === 'co_admin';
+              const eligible =
+                RANK_ORDER.indexOf(r.rank) >= RANK_ORDER.indexOf('team_leader');
               return (
                 <li key={r.marketer_id} className="flex items-center gap-3 py-2.5">
                   <Avatar name={r.display_name} size="sm" />
@@ -88,7 +90,7 @@ export function RolesSettings({ initial }: { initial: OrgRoleRow[] }) {
 
                   {locked ? (
                     <Badge variant="secondary">{ROLE_LABELS[r.role]}</Badge>
-                  ) : (
+                  ) : eligible ? (
                     <button
                       type="button"
                       role="switch"
@@ -118,6 +120,10 @@ export function RolesSettings({ initial }: { initial: OrgRoleRow[] }) {
                       </span>
                       {t('roles_co_admin')}
                     </button>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      {t('roles_min_rank')}
+                    </span>
                   )}
                 </li>
               );

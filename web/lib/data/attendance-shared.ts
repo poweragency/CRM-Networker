@@ -17,6 +17,8 @@ export interface ZoomCallDef {
   start_time: string | null;
   /** 'org' = whole organization; 'team' = creator's downline only. */
   scope: 'org' | 'team';
+  /** Team calls: which branch of the creator's downline ('all' | 'left' | 'right'). */
+  team_branch: 'left' | 'right' | 'all' | null;
   /** Marketer who created it (null = org default). */
   created_by: string | null;
   /** Display name of the creator (for the "da Nome" label). */

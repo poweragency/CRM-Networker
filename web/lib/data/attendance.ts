@@ -40,9 +40,9 @@ function defaultPresent(id: string, date: string, callId: string): boolean {
 
 /** Demo calls (no env): the 3 historical fixed calls. */
 const DEMO_CALLS: ZoomCallDef[] = [
-  { id: 'wake_up', title: 'Wake Up Call', weekday: 1, start_time: null, scope: 'org', created_by: null, created_by_name: null },
-  { id: 'golden', title: 'Golden Call', weekday: 4, start_time: null, scope: 'org', created_by: null, created_by_name: null },
-  { id: 'join_the_dream', title: 'Join The Dream', weekday: 0, start_time: null, scope: 'org', created_by: null, created_by_name: null },
+  { id: 'wake_up', title: 'Wake Up Call', weekday: 1, start_time: null, scope: 'org', team_branch: null, created_by: null, created_by_name: null },
+  { id: 'golden', title: 'Golden Call', weekday: 4, start_time: null, scope: 'org', team_branch: null, created_by: null, created_by_name: null },
+  { id: 'join_the_dream', title: 'Join The Dream', weekday: 0, start_time: null, scope: 'org', team_branch: null, created_by: null, created_by_name: null },
 ];
 
 function mapCallRow(r: Record<string, unknown>): ZoomCallDef {
@@ -53,6 +53,7 @@ function mapCallRow(r: Record<string, unknown>): ZoomCallDef {
     weekday: Number(r.weekday),
     start_time: (r.start_time as string | null) ?? null,
     scope: (r.scope as 'org' | 'team') ?? 'org',
+    team_branch: (r.team_branch as 'left' | 'right' | 'all' | null) ?? null,
     created_by: (r.created_by as string | null) ?? null,
     created_by_name: cr?.display_name ?? null,
   };
@@ -95,7 +96,7 @@ export async function getZoomAttendance(date: string): Promise<AttendanceResult>
   try {
     const { data } = await supabase
       .from('zoom_calls')
-      .select('id,title,weekday,start_time,scope,created_by, creator:created_by(display_name)')
+      .select('id,title,weekday,start_time,scope,team_branch,created_by, creator:created_by(display_name)')
       .eq('weekday', wd)
       .eq('active', true);
     calls = ((data as Record<string, unknown>[] | null) ?? []).map(mapCallRow).sort(byTimeThenTitle);

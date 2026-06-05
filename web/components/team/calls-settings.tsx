@@ -46,7 +46,7 @@ export function CallsSettings({
   const [title, setTitle] = React.useState('');
   const [weekday, setWeekday] = React.useState(1);
   const [time, setTime] = React.useState('');
-  const [scope, setScope] = React.useState<'org' | 'team'>(isAdmin ? 'org' : 'team');
+  const [teamBranch, setTeamBranch] = React.useState<'all' | 'left' | 'right'>('all');
   const [saving, setSaving] = React.useState(false);
   const [deleting, setDeleting] = React.useState<string | null>(null);
 
@@ -60,7 +60,8 @@ export function CallsSettings({
       title: title.trim(),
       weekday,
       start_time: time || null,
-      scope: isAdmin ? scope : 'team',
+      scope: isAdmin ? 'org' : 'team',
+      team_branch: isAdmin ? null : teamBranch,
     });
     setSaving(false);
     if (!res.ok) {
@@ -137,16 +138,17 @@ export function CallsSettings({
               onChange={(e) => setTime(e.target.value)}
             />
           </label>
-          {isAdmin && (
+          {!isAdmin && (
             <label className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">
-              {t('calls_scope')}
+              {t('calls_branch')}
               <select
                 className={selectCx}
-                value={scope}
-                onChange={(e) => setScope(e.target.value as 'org' | 'team')}
+                value={teamBranch}
+                onChange={(e) => setTeamBranch(e.target.value as 'all' | 'left' | 'right')}
               >
-                <option value="org">{t('calls_scope_org')}</option>
-                <option value="team">{t('calls_scope_team')}</option>
+                <option value="all">{t('calls_branch_all')}</option>
+                <option value="left">{t('calls_branch_left')}</option>
+                <option value="right">{t('calls_branch_right')}</option>
               </select>
             </label>
           )}
@@ -172,6 +174,9 @@ export function CallsSettings({
                   <p className="truncate text-xs text-muted-foreground">
                     {WEEKDAY_LABELS[c.weekday]}
                     {c.start_time ? ` · ${c.start_time}` : ''}
+                    {c.scope === 'team' && c.team_branch && c.team_branch !== 'all'
+                      ? ` · ${c.team_branch === 'left' ? t('calls_branch_left') : t('calls_branch_right')}`
+                      : ''}
                     {c.scope === 'team' && c.created_by_name
                       ? ` · ${t('call_by_short', { name: c.created_by_name })}`
                       : ''}
