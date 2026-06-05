@@ -32,7 +32,7 @@ export function Sidebar({ viewer, collapsed, onToggleCollapsed }: SidebarProps) 
     <aside
       className={cn(
         // Pinned to the viewport, same "glass plane" as the topbar.
-        'sticky top-0 hidden h-screen shrink-0 self-start border-r border-primary-foreground/15 bg-primary text-primary-foreground transition-[width] duration-base ease-standard md:flex md:flex-col',
+        'sticky top-0 hidden h-screen shrink-0 self-start border-r border-nav-foreground/10 bg-nav text-nav-foreground transition-[width] duration-base ease-standard md:flex md:flex-col',
         collapsed ? 'w-rail' : 'w-side',
       )}
       data-collapsed={collapsed}
@@ -40,7 +40,7 @@ export function Sidebar({ viewer, collapsed, onToggleCollapsed }: SidebarProps) 
       {/* Brand header */}
       <div
         className={cn(
-          'flex h-14 shrink-0 items-center border-b border-primary-foreground/15',
+          'flex h-14 shrink-0 items-center border-b border-nav-foreground/10',
           collapsed ? 'justify-center px-2' : 'justify-between px-4',
         )}
       >
@@ -65,7 +65,7 @@ export function Sidebar({ viewer, collapsed, onToggleCollapsed }: SidebarProps) 
                 alt={tc('appName')}
                 className="h-8 w-8 shrink-0 rounded-lg object-contain shadow-sm transition-transform hover:scale-105"
               />
-              <span className="truncate text-sm font-semibold tracking-tight text-primary-foreground">
+              <span className="truncate text-sm font-semibold tracking-tight text-nav-foreground">
                 {tc('appName')}
               </span>
             </Link>
@@ -100,7 +100,7 @@ function CollapseButton({
         type="button"
         onClick={onClick}
         aria-label={label}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-primary-foreground/70 outline-none transition-colors hover:bg-primary-foreground/10 hover:text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring"
+        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-nav-foreground/60 outline-none transition-colors hover:bg-nav-foreground/10 hover:text-nav-foreground focus-visible:ring-2 focus-visible:ring-ring"
       >
         <Icon className="h-[18px] w-[18px]" aria-hidden />
       </button>

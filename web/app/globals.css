@@ -22,6 +22,12 @@
     --primary-foreground: 0 0% 100%;
     --radius: 0.625rem;
 
+    /* Navbar surface — a deep, elegant slate (NOT the raw accent). The accent
+       (--primary) is reserved for buttons / active item / highlights. When an org
+       theme is set it gets tinted with the accent's hue (see lib/theme.ts). */
+    --nav: 222 22% 13%;
+    --nav-foreground: 0 0% 98%;
+
     /* status ramp */
     --success: 142 64% 38%;
     --warning: 38 92% 50%;
@@ -102,6 +108,9 @@
     --ring: 222 90% 66%;
     --primary: 222 90% 66%;
     --primary-foreground: 222 47% 11%;
+
+    --nav: 222 22% 13%;
+    --nav-foreground: 0 0% 98%;
 
     --success: 142 60% 45%;
     --warning: 38 92% 55%;

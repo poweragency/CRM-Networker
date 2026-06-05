@@ -65,13 +65,13 @@ export function Topbar({ orgName, user, unreadCount = 0, onOpenMobileNav }: Topb
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-primary-foreground/15 bg-primary px-3 text-primary-foreground sm:px-4">
+    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-nav-foreground/10 bg-nav px-3 text-nav-foreground sm:px-4">
       {/* Mobile hamburger */}
       <button
         type="button"
         onClick={onOpenMobileNav}
         aria-label={t('open_menu')}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-md text-primary-foreground/80 outline-none transition-colors hover:bg-primary-foreground/10 hover:text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-md text-nav-foreground/70 outline-none transition-colors hover:bg-nav-foreground/10 hover:text-nav-foreground focus-visible:ring-2 focus-visible:ring-ring md:hidden"
       >
         <Menu className="h-5 w-5" aria-hidden />
       </button>
@@ -79,17 +79,17 @@ export function Topbar({ orgName, user, unreadCount = 0, onOpenMobileNav }: Topb
       {/* Workspace pill: brand mark + org name */}
       <div className="flex min-w-0 items-center gap-2.5">
         <span
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary-foreground/15 text-[11px] font-bold text-primary-foreground shadow-sm"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary text-[11px] font-bold text-primary-foreground shadow-sm"
           aria-hidden
         >
           {orgInitials(orgName)}
         </span>
         <span className="min-w-0">
-          <span className="block text-[10px] font-medium uppercase tracking-wider text-primary-foreground/60">
+          <span className="block text-[10px] font-medium uppercase tracking-wider text-nav-foreground/60">
             {t('workspace')}
           </span>
           <span
-            className="block max-w-[12rem] truncate text-sm font-semibold leading-tight text-primary-foreground"
+            className="block max-w-[12rem] truncate text-sm font-semibold leading-tight text-nav-foreground"
             title={orgName}
           >
             {orgName}
@@ -107,7 +107,7 @@ export function Topbar({ orgName, user, unreadCount = 0, onOpenMobileNav }: Topb
       <div className="ml-auto flex items-center gap-2">
         <ScopeSwitcher className="hidden sm:inline-flex" />
 
-        <span className="hidden h-6 w-px bg-primary-foreground/20 sm:block" aria-hidden />
+        <span className="hidden h-6 w-px bg-nav-foreground/15 sm:block" aria-hidden />
 
         <div className="flex items-center gap-0.5">
         <ThemeToggle />
@@ -120,7 +120,7 @@ export function Topbar({ orgName, user, unreadCount = 0, onOpenMobileNav }: Topb
               ? `${t('notifications')} — ${t('notifications_unread', { count: unreadCount })}`
               : t('notifications')
           }
-          className="relative inline-flex h-9 w-9 items-center justify-center rounded-md text-primary-foreground/80 outline-none transition-colors hover:bg-primary-foreground/10 hover:text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          className="relative inline-flex h-9 w-9 items-center justify-center rounded-md text-nav-foreground/70 outline-none transition-colors hover:bg-nav-foreground/10 hover:text-nav-foreground focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Bell className="h-[18px] w-[18px]" aria-hidden />
           {unreadCount > 0 && (
@@ -139,14 +139,14 @@ export function Topbar({ orgName, user, unreadCount = 0, onOpenMobileNav }: Topb
             <button
               type="button"
               aria-label={t('user_menu')}
-              className="flex items-center gap-2 rounded-full p-0.5 outline-none transition-colors hover:bg-primary-foreground/10 focus-visible:ring-2 focus-visible:ring-ring sm:rounded-lg sm:py-1 sm:pl-1 sm:pr-2"
+              className="flex items-center gap-2 rounded-full p-0.5 outline-none transition-colors hover:bg-nav-foreground/10 focus-visible:ring-2 focus-visible:ring-ring sm:rounded-lg sm:py-1 sm:pl-1 sm:pr-2"
             >
               <Avatar name={user.displayName} src={user.avatarUrl} size="sm" />
               <span className="hidden min-w-0 flex-col items-start leading-tight sm:flex">
-                <span className="max-w-[10rem] truncate text-sm font-medium text-primary-foreground">
+                <span className="max-w-[10rem] truncate text-sm font-medium text-nav-foreground">
                   {user.displayName}
                 </span>
-                <span className="max-w-[10rem] truncate text-xs text-primary-foreground/70">
+                <span className="max-w-[10rem] truncate text-xs text-nav-foreground/70">
                   {ROLE_LABELS[user.role]}
                 </span>
               </span>

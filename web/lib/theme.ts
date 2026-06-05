@@ -77,6 +77,23 @@ export function hexToHslTriplet(hex: string): string | null {
   return `${Math.round(h)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 }
 
+/** Hue (0..360) of a hex color; neutral-blue fallback. */
+function hueOf(hex: string): number {
+  const t = hexToHslTriplet(hex);
+  if (!t) return 222;
+  return Number(t.split(' ')[0]) || 222;
+}
+
+/** Deep navbar-surface triplet, tinted with the accent's hue (always elegant). */
+export function navTriplet(accentHex: string): string {
+  return `${hueOf(accentHex)} 22% 13%`;
+}
+
+/** Navbar surface as an hsl() color string (for the settings live preview). */
+export function navPreviewColor(accentHex: string): string {
+  return `hsl(${navTriplet(accentHex)})`;
+}
+
 // Coherent base token sets (mirror globals.css) chosen by the background's
 // darkness, so cards/borders/text always read well over the chosen background.
 const BASE = {
@@ -140,5 +157,8 @@ export function themeCssVars(
     '--primary-700': shiftL(nav, -12),
     '--on-primary': navFg,
     '--ring': nav,
+    // Navbar surface: a deep slate tinted with the accent hue (not the raw color).
+    '--nav': navTriplet(theme.navbar),
+    '--nav-foreground': '0 0% 98%',
   };
 }

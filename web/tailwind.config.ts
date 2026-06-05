@@ -27,6 +27,10 @@ const config: Config = {
           600: 'hsl(var(--primary-600))',
           700: 'hsl(var(--primary-700))',
         },
+        nav: {
+          DEFAULT: 'hsl(var(--nav))',
+          foreground: 'hsl(var(--nav-foreground))',
+        },
         muted: {
           DEFAULT: 'hsl(var(--muted))',
           foreground: 'hsl(var(--muted-foreground))',

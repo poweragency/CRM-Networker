@@ -71,20 +71,20 @@ export function MobileNav({ viewer, open, onClose }: MobileNavProps) {
         aria-modal="true"
         aria-label={tc('appName')}
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex w-[17rem] max-w-[85vw] flex-col border-r border-primary-foreground/15 bg-primary text-primary-foreground shadow-xl transition-transform duration-200 ease-out',
+          'fixed inset-y-0 left-0 z-50 flex w-[17rem] max-w-[85vw] flex-col border-r border-nav-foreground/10 bg-nav text-nav-foreground shadow-xl transition-transform duration-200 ease-out',
           open ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        <div className="flex h-14 shrink-0 items-center justify-between border-b border-primary-foreground/15 px-4">
+        <div className="flex h-14 shrink-0 items-center justify-between border-b border-nav-foreground/10 px-4">
           <Link
             href="/dashboard"
             className="flex items-center gap-2 outline-none focus-visible:ring-2 focus-visible:ring-ring"
             onClick={onClose}
           >
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-foreground/15 text-primary-foreground shadow-sm">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
               <Network className="h-[18px] w-[18px]" aria-hidden />
             </span>
-            <span className="text-sm font-semibold tracking-tight text-primary-foreground">
+            <span className="text-sm font-semibold tracking-tight text-nav-foreground">
               {tc('appName')}
             </span>
           </Link>
@@ -92,7 +92,7 @@ export function MobileNav({ viewer, open, onClose }: MobileNavProps) {
             type="button"
             onClick={onClose}
             aria-label={t('close_menu')}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-primary-foreground/70 outline-none transition-colors hover:bg-primary-foreground/10 hover:text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-nav-foreground/60 outline-none transition-colors hover:bg-nav-foreground/10 hover:text-nav-foreground focus-visible:ring-2 focus-visible:ring-ring"
           >
             <X className="h-[18px] w-[18px]" aria-hidden />
           </button>

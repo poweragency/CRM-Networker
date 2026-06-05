@@ -6,7 +6,7 @@ import { Check, Loader2, Palette, RotateCcw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/crm/toaster';
-import { contrastText, type OrgTheme } from '@/lib/theme';
+import { contrastText, navPreviewColor, type OrgTheme } from '@/lib/theme';
 import { saveOrgThemeAction } from '@/app/(app)/impostazioni/actions';
 
 /**
@@ -50,6 +50,7 @@ export function ThemeSettings({ initial }: { initial: OrgTheme | null }) {
 
   const navText = contrastText(theme.navbar);
   const bgText = contrastText(theme.background);
+  const navSurface = navPreviewColor(theme.navbar);
 
   return (
     <Card>
@@ -71,14 +72,19 @@ export function ThemeSettings({ initial }: { initial: OrgTheme | null }) {
         >
           <div
             className="flex items-center justify-between px-4 py-2.5"
-            style={{ background: theme.navbar, color: navText }}
+            style={{ background: navSurface, color: '#ffffff' }}
           >
-            <span className="text-sm font-semibold tracking-tight">
+            <span className="flex items-center gap-2 text-sm font-semibold tracking-tight">
+              <span
+                className="h-5 w-5 rounded-md"
+                style={{ background: theme.navbar }}
+                aria-hidden
+              />
               {t('theme_preview_nav')}
             </span>
             <span
               className="rounded-md px-2.5 py-1 text-xs font-semibold"
-              style={{ background: navText, color: theme.navbar }}
+              style={{ background: theme.navbar, color: navText }}
             >
               {t('theme_preview_button')}
             </span>
