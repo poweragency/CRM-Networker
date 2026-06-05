@@ -52,6 +52,7 @@ export interface NavSection {
 /** Role hierarchy (low → high) for `minRole` comparisons. */
 export const ROLE_ORDER: readonly MembershipRole[] = [
   'member',
+  'co_admin',
   'manager',
   'admin',
   'owner',

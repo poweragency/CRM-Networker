@@ -37,6 +37,7 @@ const DEMO_CLAIMS: SessionClaims = {
 function asRole(value: unknown): MembershipRole {
   return value === 'owner' ||
     value === 'admin' ||
+    value === 'co_admin' ||
     value === 'manager' ||
     value === 'member'
     ? value

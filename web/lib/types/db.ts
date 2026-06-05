@@ -192,11 +192,17 @@ export const STATUS_LABELS: Record<MarketerStatus, string> = {
 };
 
 /** `membership_role` — the application role on a membership (NOT the DB role). */
-export type MembershipRole = 'owner' | 'admin' | 'manager' | 'member';
+export type MembershipRole =
+  | 'owner'
+  | 'admin'
+  | 'co_admin'
+  | 'manager'
+  | 'member';
 
 export const ROLE_LABELS: Record<MembershipRole, string> = {
   owner: 'Titolare',
   admin: 'Amministratore',
+  co_admin: 'Co-admin',
   manager: 'Manager',
   member: 'Membro',
 };
