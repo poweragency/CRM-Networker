@@ -31,6 +31,10 @@ const config: Config = {
           DEFAULT: 'hsl(var(--nav))',
           foreground: 'hsl(var(--nav-foreground))',
         },
+        treeNode: {
+          DEFAULT: 'hsl(var(--tree-node))',
+          foreground: 'hsl(var(--tree-node-foreground))',
+        },
         muted: {
           DEFAULT: 'hsl(var(--muted))',
           foreground: 'hsl(var(--muted-foreground))',

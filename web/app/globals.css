@@ -28,6 +28,11 @@
     --nav: 222 22% 13%;
     --nav-foreground: 0 0% 98%;
 
+    /* Tree node card — a fixed neutral near-black so the people cards stand out
+       from any themed (tinted) canvas background. Always light text. */
+    --tree-node: 222 22% 9%;
+    --tree-node-foreground: 210 20% 95%;
+
     /* status ramp */
     --success: 142 64% 38%;
     --warning: 38 92% 50%;
@@ -112,6 +117,11 @@
 
     --nav: 222 22% 13%;
     --nav-foreground: 0 0% 98%;
+
+    /* Tree node card — a fixed neutral near-black so the people cards stand out
+       from any themed (tinted) canvas background. Always light text. */
+    --tree-node: 222 22% 9%;
+    --tree-node-foreground: 210 20% 95%;
 
     --success: 142 60% 45%;
     --warning: 38 92% 55%;

@@ -60,11 +60,11 @@ function KpiCell({
     <div className="flex min-w-0 flex-col items-center gap-0.5 px-1">
       <span className="flex items-center gap-1">
         <Icon className={cn('h-3 w-3', accent)} aria-hidden />
-        <span className="text-sm font-semibold tabular-nums text-foreground">
+        <span className="text-sm font-semibold tabular-nums text-treeNode-foreground">
           {value}
         </span>
       </span>
-      <span className="truncate text-[10px] leading-none text-muted-foreground">
+      <span className="truncate text-[10px] leading-none text-treeNode-foreground/55">
         {label}
       </span>
     </div>
@@ -94,7 +94,7 @@ function MarketerNodeImpl({ data, selected: rfSelected }: NodeProps) {
         }
       }}
       className={cn(
-        'group relative flex cursor-pointer flex-col rounded-xl border border-l-[3px] bg-card text-card-foreground shadow-sm outline-none transition-all',
+        'group relative flex cursor-pointer flex-col rounded-xl border border-l-[3px] bg-treeNode text-treeNode-foreground shadow-sm outline-none transition-all',
         'hover:shadow-md hover:border-ring/50',
         accent,
         isSelected && 'ring-2 ring-ring shadow-md',
@@ -119,7 +119,7 @@ function MarketerNodeImpl({ data, selected: rfSelected }: NodeProps) {
         <Avatar name={node.display_name} size="md" />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <span className="truncate text-sm font-semibold leading-tight text-foreground">
+            <span className="truncate text-sm font-semibold leading-tight text-treeNode-foreground">
               {node.display_name}
             </span>
             {/* CRM access: verde = CRM attivo, grigio = profilo non attivo. */}
@@ -137,7 +137,7 @@ function MarketerNodeImpl({ data, selected: rfSelected }: NodeProps) {
           <div className="mt-1 flex items-center gap-1.5">
             <RankBadge rank={node.rank} className="px-1.5 py-0 text-[10px]" />
             {!node.crm_access && (
-              <span className="truncate text-[10px] font-medium text-muted-foreground">
+              <span className="truncate text-[10px] font-medium text-treeNode-foreground/55">
                 {t('crm_inactive')}
               </span>
             )}
@@ -146,23 +146,23 @@ function MarketerNodeImpl({ data, selected: rfSelected }: NodeProps) {
       </div>
 
       {/* Binary counts */}
-      <div className="flex items-center gap-1 px-3 text-[11px] text-muted-foreground">
-        <span className="inline-flex items-center gap-1 rounded bg-branch-left/10 px-1.5 py-0.5 font-medium text-branch-left-foreground">
+      <div className="flex items-center gap-1 px-3 text-[11px] text-treeNode-foreground/70">
+        <span className="inline-flex items-center gap-1 rounded bg-branch-left/20 px-1.5 py-0.5 font-medium text-branch-left">
           <PanelLeft className="h-3 w-3" aria-hidden />
           {formatNumber(node.left_count)}
         </span>
-        <span className="inline-flex items-center gap-1 rounded bg-branch-right/10 px-1.5 py-0.5 font-medium text-branch-right-foreground">
+        <span className="inline-flex items-center gap-1 rounded bg-branch-right/20 px-1.5 py-0.5 font-medium text-branch-right">
           <PanelRight className="h-3 w-3" aria-hidden />
           {formatNumber(node.right_count)}
         </span>
-        <span className="ml-auto inline-flex items-center gap-1 font-medium text-foreground">
-          <Users className="h-3 w-3 text-muted-foreground" aria-hidden />
+        <span className="ml-auto inline-flex items-center gap-1 font-medium text-treeNode-foreground">
+          <Users className="h-3 w-3 text-treeNode-foreground/55" aria-hidden />
           {formatNumber(node.team_size)}
         </span>
       </div>
 
       {/* KPI strip */}
-      <div className="mt-auto grid grid-cols-2 items-center gap-1 rounded-b-[inherit] border-t bg-muted/30 px-1 py-2">
+      <div className="mt-auto grid grid-cols-2 items-center gap-1 rounded-b-[inherit] border-t border-treeNode-foreground/10 bg-black/20 px-1 py-2">
         <KpiCell
           icon={Target}
           value={formatNumber(node.kpis.prospects)}
