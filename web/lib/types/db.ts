@@ -21,6 +21,7 @@ export type MarketerRank =
   | 'executive'
   | 'consultant'
   | 'team_leader'
+  | 'advanced_team_leader'
   | 'senior_team_leader'
   | 'executive_team_leader'
   | 'vice_president'
@@ -35,6 +36,7 @@ export const RANK_ORDER: readonly MarketerRank[] = [
   'executive',
   'consultant',
   'team_leader',
+  'advanced_team_leader',
   'senior_team_leader',
   'executive_team_leader',
   'vice_president',
@@ -50,6 +52,7 @@ export const RANK_LABELS: Record<MarketerRank, string> = {
   executive: 'Executive',
   consultant: 'Consultant',
   team_leader: 'Team Leader',
+  advanced_team_leader: 'Advanced Team Leader',
   senior_team_leader: 'Senior Team Leader',
   executive_team_leader: 'Executive Team Leader',
   vice_president: 'Vice President',

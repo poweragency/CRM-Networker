@@ -3,8 +3,6 @@
 import * as React from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import {
-  ChevronDown,
-  ChevronRight,
   PanelLeft,
   PanelRight,
   Target,
@@ -75,15 +73,8 @@ function KpiCell({
 
 function MarketerNodeImpl({ data, selected: rfSelected }: NodeProps) {
   const t = useTranslations('genealogia');
-  const {
-    node,
-    branchLeg,
-    selected,
-    expanded,
-    hasChildren,
-    onToggle,
-    onSelect,
-  } = data as unknown as MarketerNodeData;
+  const { node, branchLeg, selected, onSelect } =
+    data as unknown as MarketerNodeData;
 
   const isSelected = selected || rfSelected;
   const accent = legAccent[branchLeg ?? 'root'];
@@ -186,28 +177,6 @@ function MarketerNodeImpl({ data, selected: rfSelected }: NodeProps) {
         />
       </div>
 
-      {/* Expand / collapse toggle (does not select) */}
-      {hasChildren && (
-        <button
-          type="button"
-          aria-label={expanded ? t('collapse') : t('expand')}
-          title={expanded ? t('collapse') : t('expand')}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggle(node);
-          }}
-          className={cn(
-            'absolute -bottom-3 left-1/2 z-10 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full border bg-card text-muted-foreground shadow-sm transition-colors',
-            'hover:border-ring/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-          )}
-        >
-          {expanded ? (
-            <ChevronDown className="h-3.5 w-3.5" aria-hidden />
-          ) : (
-            <ChevronRight className="h-3.5 w-3.5" aria-hidden />
-          )}
-        </button>
-      )}
     </div>
   );
 }

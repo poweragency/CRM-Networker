@@ -35,6 +35,11 @@ const rankTone: Record<MarketerRank, { text: string; bg: string; dot: string }> 
     bg: 'bg-rank-teamLeader/12',
     dot: 'bg-rank-teamLeader',
   },
+  advanced_team_leader: {
+    text: 'text-rank-advancedTeamLeader',
+    bg: 'bg-rank-advancedTeamLeader/12',
+    dot: 'bg-rank-advancedTeamLeader',
+  },
   senior_team_leader: {
     text: 'text-rank-seniorTeamLeader',
     bg: 'bg-rank-seniorTeamLeader/12',

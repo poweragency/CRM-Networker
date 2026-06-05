@@ -73,6 +73,7 @@ const config: Config = {
           executive: 'hsl(var(--rank-executive))',
           consultant: 'hsl(var(--rank-consultant))',
           teamLeader: 'hsl(var(--rank-team-leader))',
+          advancedTeamLeader: 'hsl(var(--rank-advanced-team-leader))',
           seniorTeamLeader: 'hsl(var(--rank-senior-team-leader))',
           executiveTeamLeader: 'hsl(var(--rank-executive-team-leader))',
           vicePresident: 'hsl(var(--rank-vice-president))',

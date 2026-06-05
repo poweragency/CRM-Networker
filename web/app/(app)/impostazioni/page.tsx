@@ -8,12 +8,6 @@ import { getSevenWhysFor } from '@/lib/data/seven-whys';
 import { getMarketerProfile } from '@/lib/data/team';
 import { getWishlist } from '@/lib/data/wishlist';
 import { getFormazioneProgress } from '@/lib/data/formazione';
-import { getOrgTheme } from '@/lib/data/org-theme';
-import { listOrgRoles } from '@/lib/data/roles';
-import { listManageableCalls } from '@/lib/data/zoom-calls';
-import { ThemeSettings } from '@/components/team/theme-settings';
-import { RolesSettings } from '@/components/team/roles-settings';
-import { CallsSettings } from '@/components/team/calls-settings';
 import { ConfigNotice } from '@/components/config-notice';
 import { EmptyState } from '@/components/crm/empty-state';
 import { ProspectBoard } from '@/components/prospects/prospect-board';
@@ -61,13 +55,6 @@ export default async function ImpostazioniPage({
 
   const { claims, demo: claimsDemo, email } = await getCurrentClaims();
   const meId = claims.marketer_id;
-  const isAdmin = claims.role === 'admin' || claims.role === 'owner';
-  // Org theme + roles (admin-only editors at the bottom of this page).
-  const orgTheme = isAdmin ? await getOrgTheme() : null;
-  const orgRoles = isAdmin ? (await listOrgRoles()).data : [];
-  // Calls management: admin (org/team) + co-admin (team).
-  const canManageCalls = isAdmin || claims.role === 'co_admin';
-  const manageableCalls = canManageCalls ? (await listManageableCalls()).data : [];
 
   const [
     nodeRes,
@@ -189,16 +176,6 @@ export default async function ImpostazioniPage({
         }
       />
 
-      {/* Call (admin: org/team · co-admin: team) + ruoli + tema (admin). */}
-      {canManageCalls && (
-        <CallsSettings
-          initial={manageableCalls}
-          isAdmin={isAdmin}
-          selfMarketerId={meId}
-        />
-      )}
-      {isAdmin && <RolesSettings initial={orgRoles} />}
-      {isAdmin && <ThemeSettings initial={orgTheme} />}
     </div>
   );
 }

@@ -105,6 +105,7 @@
     "user_menu": "Account",
     "my_profile": "Il mio profilo",
     "account_settings": "Impostazioni account",
+    "org_settings": "Impostazioni org",
     "logout": "Esci",
     "scope_node": "Vista: {nome}",
     "reset_scope": "Torna a me",
@@ -979,6 +980,10 @@
     "saved": "Impostazioni salvate",
     "saved_demo": "Impostazioni salvate (simulato in modalità demo).",
     "name_required": "Il nome dell'organizzazione è obbligatorio."
+  },
+  "org_settings": {
+    "title": "Impostazioni organizzazione",
+    "subtitle": "Gestisci call, ruoli e tema dell'organizzazione."
   },
   "impostazioni": {
     "title": "Impostazioni",

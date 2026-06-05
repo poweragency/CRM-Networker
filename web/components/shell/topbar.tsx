@@ -4,7 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Bell, LogOut, Menu, Settings, UserRound } from 'lucide-react';
+import { Bell, LogOut, Menu, Settings } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { ScopeSwitcher } from '@/components/scope-switcher';
 import { Avatar } from '@/components/ui/avatar';
@@ -15,7 +15,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -53,6 +52,8 @@ export function Topbar({ orgName, user, unreadCount = 0, onOpenMobileNav }: Topb
   const t = useTranslations('topbar');
   const router = useRouter();
   const [signingOut, setSigningOut] = React.useState(false);
+  const isOrgManager =
+    user.role === 'owner' || user.role === 'admin' || user.role === 'co_admin';
 
   async function handleSignOut() {
     setSigningOut(true);
@@ -171,16 +172,12 @@ export function Topbar({ orgName, user, unreadCount = 0, onOpenMobileNav }: Topb
               <Badge variant="secondary">{ROLE_LABELS[user.role]}</Badge>
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuLabel>{t('user_menu')}</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => router.push('/impostazioni')}>
-              <UserRound className="h-4 w-4" aria-hidden />
-              {t('my_profile')}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => router.push('/impostazioni')}>
-              <Settings className="h-4 w-4" aria-hidden />
-              {t('account_settings')}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
+            {isOrgManager && (
+              <DropdownMenuItem onClick={() => router.push('/org')}>
+                <Settings className="h-4 w-4" aria-hidden />
+                {t('org_settings')}
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               destructive
               disabled={signingOut}

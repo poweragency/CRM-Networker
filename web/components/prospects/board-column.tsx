@@ -7,9 +7,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { cn } from '@/lib/utils';
-import { STAGE_DESCRIPTIONS, STAGE_LABELS, stageIndex } from '@/lib/types/db';
-import { Tooltip } from '@/components/ui/tooltip';
-import { Info } from 'lucide-react';
+import { STAGE_LABELS, stageIndex } from '@/lib/types/db';
 import { ProspectCard } from './prospect-card';
 import type { ProspectView, StageColumnView } from './types';
 
@@ -82,15 +80,6 @@ export function BoardColumn({
             <h2 className="truncate text-sm font-semibold text-foreground">
               {STAGE_LABELS[stage]}
             </h2>
-            <Tooltip content={STAGE_DESCRIPTIONS[stage]} side="top">
-              <button
-                type="button"
-                className="shrink-0 text-muted-foreground/60 transition-colors hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label={`Info ${STAGE_LABELS[stage]}`}
-              >
-                <Info className="h-3.5 w-3.5" aria-hidden />
-              </button>
-            </Tooltip>
           </div>
           <span className="shrink-0 rounded-full bg-background px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
             {count}
