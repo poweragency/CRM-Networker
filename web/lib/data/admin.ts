@@ -209,6 +209,32 @@ export async function createMarketer(
   }
 }
 
+export interface RemoveMarketerResult {
+  ok: boolean;
+  demo: boolean;
+}
+
+/**
+ * Remove a marketer from the binary tree (RPC `remove_marketer`): soft-deletes
+ * the node and reattaches its single downline to the parent in the vacated leg.
+ * The RPC refuses when both legs are occupied / it's the root / it's the caller,
+ * and is visibility-gated. Demo-safe.
+ */
+export async function removeMarketer(nodeId: string): Promise<RemoveMarketerResult> {
+  const supabase = getClient();
+  if (!supabase) return { ok: true, demo: true };
+  try {
+    const { marketerId } = await getOwnerContext();
+    const { error } = await supabase.rpc('remove_marketer', {
+      p_node: nodeId,
+      p_actor: marketerId,
+    });
+    return { ok: !error, demo: false };
+  } catch {
+    return { ok: false, demo: false };
+  }
+}
+
 /** Count of profiles per rank (for the distribution chart). */
 export async function getRankDistribution(): Promise<
   AdminResult<{ rank: MarketerRank; count: number }[]>

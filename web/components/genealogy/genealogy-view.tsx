@@ -14,6 +14,9 @@ import { TopbarSlot } from '@/components/shell/topbar-slot';
 import { GenealogySearch } from './genealogy-search';
 import { NodeDetailPanel } from './node-detail-panel';
 import { canActivateCrm, canAddMember } from './permissions';
+import { useToast } from '@/components/crm/toaster';
+import { useTranslations } from 'next-intl';
+import { removeMarketerAction } from '@/app/(app)/genealogia/actions';
 import {
   AddMemberDialog,
   type AddMemberTarget,
@@ -52,6 +55,8 @@ export function GenealogyView({
   claims,
 }: GenealogyViewProps) {
   const { scope } = useScope();
+  const { toast } = useToast();
+  const t = useTranslations('genealogia');
   const tree = useGenealogyTree({ initialNodes, rootId, initialDemo });
   const canvasRef = React.useRef<GenealogyCanvasHandle>(null);
 
@@ -131,6 +136,26 @@ export function GenealogyView({
     setCrmTarget(null);
   }, []);
 
+  // Remove a node from the tree (reattaches its single downline). The server RPC
+  // enforces the rules (no removal with two legs / root / self); the client cache
+  // mirrors the reattach optimistically.
+  const [removingId, setRemovingId] = React.useState<string | null>(null);
+  const handleRemove = React.useCallback(
+    async (node: TreeNode) => {
+      setRemovingId(node.id);
+      const res = await removeMarketerAction(node.id);
+      setRemovingId(null);
+      if (!res.ok) {
+        toast({ title: t('remove_error'), variant: 'error' });
+        return;
+      }
+      tree.removeNode(node.id);
+      setSelectedId(null);
+      toast({ title: t('remove_done'), variant: 'success' });
+    },
+    [t, toast, tree],
+  );
+
   return (
     <div className="space-y-3">
       {/* Marketer search lives in the top navbar (only while this screen is up). */}
@@ -172,6 +197,8 @@ export function GenealogyView({
               onActivate={handleActivate}
               onClose={() => setSelectedId(null)}
               onLocate={handleLocate}
+              onRemove={handleRemove}
+              removing={removingId === selectedNode.id}
             />
           </div>
         )}

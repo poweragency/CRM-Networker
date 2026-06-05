@@ -6,7 +6,7 @@ import {
   searchMarketers,
 } from '@/lib/data/genealogy';
 import { updateMarketerExtra } from '@/lib/data/team';
-import { createMarketer } from '@/lib/data/admin';
+import { createMarketer, removeMarketer } from '@/lib/data/admin';
 import { activateCrmAccess } from '@/lib/data/account';
 import {
   addRuntimeNode,
@@ -165,6 +165,20 @@ export async function addMarketerAction(
     platform_click: input.click,
   });
   return { node, demo: true, ok: true };
+}
+
+export interface RemoveMemberResult {
+  ok: boolean;
+  demo: boolean;
+}
+
+/**
+ * Remove a member from the tree, reattaching its single downline to the parent.
+ * Refuses (server-side) when the node has people on BOTH legs, is the root, or is
+ * the caller. Visibility-gated by RLS (anyone can prune within their subtree).
+ */
+export async function removeMarketerAction(nodeId: string): Promise<RemoveMemberResult> {
+  return removeMarketer(nodeId);
 }
 
 /** Credentials captured by the "Attiva accesso CRM" dialog. */

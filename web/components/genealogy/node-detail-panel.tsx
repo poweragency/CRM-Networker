@@ -3,13 +3,16 @@
 import * as React from 'react';
 import Link from 'next/link';
 import {
+  AlertTriangle,
   FolderOpen,
   KeyRound,
+  Loader2,
   Locate,
   PanelLeft,
   PanelRight,
   Phone,
   Target,
+  Trash2,
   TrendingUp,
   UserPlus,
   Users,
@@ -48,6 +51,10 @@ export interface NodeDetailPanelProps {
   onClose: () => void;
   /** Re-root / locate the node in the canvas. */
   onLocate: (node: TreeNode) => void;
+  /** Remove the node from the tree (reattaches its single downline). */
+  onRemove: (node: TreeNode) => void;
+  /** A removal is in flight. */
+  removing: boolean;
   className?: string;
 }
 
@@ -83,10 +90,14 @@ export function NodeDetailPanel({
   onActivate,
   onClose,
   onLocate,
+  onRemove,
+  removing,
   className,
 }: NodeDetailPanelProps) {
   const t = useTranslations('genealogia');
   const tc = useTranslations('common');
+  const [confirming, setConfirming] = React.useState(false);
+  React.useEffect(() => setConfirming(false), [node?.id]);
 
   if (!node) return null;
 
@@ -232,6 +243,57 @@ export function NodeDetailPanel({
             </p>
           </div>
         ) : null}
+
+        {/* Remove from the tree — hidden for the root; blocked when both legs
+            are occupied; otherwise a two-step confirm. */}
+        {node.parent_id && (
+          <div className="border-t pt-2">
+            {node.has_left_child && node.has_right_child ? (
+              <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                <span>{t('remove_two_lines')}</span>
+              </div>
+            ) : confirming ? (
+              <div className="space-y-1.5">
+                <p className="text-center text-[11px] text-muted-foreground">
+                  {t('remove_confirm')}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    className="flex-1"
+                    onClick={() => setConfirming(false)}
+                    disabled={removing}
+                  >
+                    {t('remove_cancel')}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    className="flex-1"
+                    onClick={() => onRemove(node)}
+                    disabled={removing}
+                  >
+                    {removing ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                    ) : (
+                      <Trash2 aria-hidden />
+                    )}
+                    {t('remove')}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Button
+                variant="ghost"
+                className="w-full text-danger hover:bg-danger/10 hover:text-danger"
+                onClick={() => setConfirming(true)}
+              >
+                <Trash2 aria-hidden />
+                {t('remove')}
+              </Button>
+            )}
+          </div>
+        )}
       </div>
     </aside>
   );

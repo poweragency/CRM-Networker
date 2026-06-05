@@ -51,6 +51,8 @@ export interface UseGenealogyTree {
   search: (q: string) => Promise<TreeNode[]>;
   /** Insert a freshly created child under a parent leg (add-from-tree). */
   addChild: (parentId: string, leg: PlacementLeg, node: TreeNode) => void;
+  /** Remove a node, reattaching its single child into its slot under the parent. */
+  removeNode: (id: string) => void;
 }
 
 function indexById(nodes: Iterable<TreeNode>): Map<string, TreeNode> {
@@ -261,6 +263,45 @@ export function useGenealogyTree({
     [],
   );
 
+  // Optimistically remove a node and reattach its single child into the vacated
+  // (parent, leg) slot — mirrors the server `remove_marketer` RPC. Counts on the
+  // immediate parent are decremented by one (the removed node).
+  const removeNode = React.useCallback((nodeId: string) => {
+    setCache((prev) => {
+      const x = prev.get(nodeId);
+      if (!x || !x.parent_id) return prev;
+      const next = new Map(prev);
+      let child: TreeNode | undefined;
+      for (const n of next.values()) {
+        if (n.parent_id === nodeId) {
+          child = n;
+          break;
+        }
+      }
+      if (child) {
+        next.set(child.id, { ...child, parent_id: x.parent_id, leg: x.leg });
+      }
+      const parent = next.get(x.parent_id);
+      if (parent) {
+        next.set(x.parent_id, {
+          ...parent,
+          has_left_child: x.leg === 'LEFT' ? Boolean(child) : parent.has_left_child,
+          has_right_child: x.leg === 'RIGHT' ? Boolean(child) : parent.has_right_child,
+          team_size: Math.max(0, parent.team_size - 1),
+          left_count: x.leg === 'LEFT' ? Math.max(0, parent.left_count - 1) : parent.left_count,
+          right_count: x.leg === 'RIGHT' ? Math.max(0, parent.right_count - 1) : parent.right_count,
+        });
+      }
+      next.delete(nodeId);
+      return next;
+    });
+    setExpanded((prev) => {
+      const n = new Set(prev);
+      n.delete(nodeId);
+      return n;
+    });
+  }, []);
+
   // Resolve the layout root + the visible window for the current (handled by the
   // consumer via scope). Here we expose the GLOBAL window; branch trimming is done
   // by the canvas using `layoutRootForScope`.
@@ -284,6 +325,7 @@ export function useGenealogyTree({
     getNode,
     search,
     addChild,
+    removeNode,
   };
 }
 
