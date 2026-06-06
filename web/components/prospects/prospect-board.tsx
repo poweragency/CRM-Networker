@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import {
   DndContext,
   DragOverlay,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   KeyboardSensor,
   useSensor,
   useSensors,
@@ -167,8 +168,12 @@ export function ProspectBoard({
   }, [board]);
 
   const sensors = useSensors(
-    // A small activation distance lets clicks/links work without starting a drag.
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    // Desktop (mouse): a small drag distance so clicks/links work without dragging.
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    // Mobile (touch): require a ~1s long-press to start a drag, so scrolling or
+    // tapping to view never moves a card by accident. `tolerance` cancels the
+    // press (→ treated as a scroll) if the finger moves before the delay elapses.
+    useSensor(TouchSensor, { activationConstraint: { delay: 1000, tolerance: 8 } }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),

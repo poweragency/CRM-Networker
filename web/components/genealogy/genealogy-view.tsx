@@ -147,7 +147,7 @@ export function GenealogyView({
 
       {/* Full-bleed canvas; the detail panel floats over it as an overlay so the
           tree always uses the whole width (no reserved empty column). */}
-      <Card className="relative h-[calc(100vh-8rem)] min-h-[520px] overflow-hidden p-0 shadow-card ring-1 ring-black/5">
+      <Card className="relative h-[calc(100dvh-8rem)] min-h-[360px] sm:min-h-[520px] overflow-hidden p-0 shadow-card ring-1 ring-black/5">
         <GenealogyCanvas
           ref={canvasRef}
           nodes={tree.visibleNodes}
@@ -162,10 +162,11 @@ export function GenealogyView({
           onAddSlot={handleAddSlot}
         />
 
-        {/* Detail panel: floating overlay (desktop) / bottom-anchored (mobile). */}
+        {/* Detail panel: bottom sheet on mobile (full width, capped height), right-
+            side overlay on desktop. The inner panel is h-full + scrolls. */}
         {selectedNode && (
           <div
-            className="glass absolute inset-y-0 right-0 z-20 w-[min(22rem,92vw)] border-l border-border/70 shadow-xl ring-1 ring-black/5 animate-slide-in-right"
+            className="glass absolute z-20 shadow-xl ring-1 ring-black/5 animate-fade-in inset-x-0 bottom-0 h-[72dvh] rounded-t-2xl border-t border-border/70 sm:inset-y-0 sm:bottom-auto sm:left-auto sm:right-0 sm:h-auto sm:w-[min(22rem,92vw)] sm:rounded-none sm:border-l sm:border-t-0 sm:animate-slide-in-right"
             role="dialog"
             aria-modal="false"
           >

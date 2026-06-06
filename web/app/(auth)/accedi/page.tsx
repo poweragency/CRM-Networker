@@ -62,6 +62,10 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [serverError, setServerError] = useState<string | null>(null);
+  // Keeps the button in its loading state from a successful sign-in until the
+  // navigation actually completes (the component unmounts), instead of letting
+  // react-hook-form's isSubmitting flip back to false and flash "Accedi".
+  const [redirecting, setRedirecting] = useState(false);
 
   const {
     register,
@@ -105,6 +109,8 @@ function LoginForm() {
       rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')
         ? rawRedirect
         : '/dashboard';
+    // Stay in the loading state through the navigation (no flicker back to "Accedi").
+    setRedirecting(true);
     router.replace(redirectTo);
     router.refresh();
   }
@@ -155,11 +161,11 @@ function LoginForm() {
 
         <Button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || redirecting}
           className="w-full"
         >
           <LogIn aria-hidden />
-          {isSubmitting ? t('submitting') : t('submit')}
+          {isSubmitting || redirecting ? t('submitting') : t('submit')}
         </Button>
       </form>
 

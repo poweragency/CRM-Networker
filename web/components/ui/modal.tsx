@@ -72,7 +72,7 @@ export function Modal({
         aria-labelledby={titleId}
         aria-describedby={description ? descId : undefined}
         className={cn(
-          'relative my-auto flex max-h-[calc(100vh-3rem)] w-full flex-col rounded-xl border bg-card text-card-foreground shadow-2xl animate-scale-in',
+          'relative my-auto flex max-h-[calc(100dvh-2rem)] w-full flex-col rounded-xl border bg-card text-card-foreground shadow-2xl animate-scale-in',
           SIZE_CLASS[size],
           className,
         )}
