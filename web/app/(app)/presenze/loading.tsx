@@ -1,8 +1,8 @@
 import { Skeleton } from '@/components/ui/skeleton';
 
 /**
- * Presenze preview: page header + frosted day navigator, the overview hero row
- * (aggregate gauge + leaderboard) and per-call challenge cards with member cells.
+ * Presenze preview: page header + frosted day navigator, the full-width overview
+ * gauge and per-call challenge cards with member cells.
  */
 export default function Loading() {
   return (
@@ -24,24 +24,13 @@ export default function Loading() {
         <Skeleton className="ml-auto h-9 w-40 rounded-md" />
       </div>
 
-      {/* overview hero row */}
-      <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr]">
-        <div className="flex items-center gap-5 rounded-xl border p-5">
-          <Skeleton className="h-[104px] w-[104px] rounded-full" />
-          <div className="flex-1 space-y-3">
-            <Skeleton className="h-8 w-24" />
-            <div className="grid grid-cols-3 gap-2">
-              <Skeleton className="h-10 rounded-lg" />
-              <Skeleton className="h-10 rounded-lg" />
-              <Skeleton className="h-10 rounded-lg" />
-            </div>
-          </div>
-        </div>
-        <div className="space-y-2 rounded-xl border p-4">
-          <Skeleton className="h-6 w-20" />
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-10 w-full rounded-lg" />
-          ))}
+      {/* full-width overview gauge */}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-4 rounded-xl border p-5">
+        <Skeleton className="h-[104px] w-[104px] rounded-full" />
+        <Skeleton className="h-8 w-24" />
+        <div className="flex flex-1 flex-wrap items-center gap-2">
+          <Skeleton className="h-12 w-36 rounded-lg" />
+          <Skeleton className="h-12 w-36 rounded-lg" />
         </div>
       </div>
 

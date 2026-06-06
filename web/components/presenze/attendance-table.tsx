@@ -10,12 +10,10 @@ import {
   ChevronRight,
   Video,
   VideoOff,
+  UserCheck,
   Check,
   X,
   Radio,
-  Flame,
-  Trophy,
-  Crown,
   Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -59,13 +57,6 @@ type Flags = Record<string, Record<string, boolean>>; // memberId → callId →
 function seed(members: AttendanceMember[], pick: (m: AttendanceMember) => Record<string, boolean>): Flags {
   return Object.fromEntries(members.map((m) => [m.id, { ...pick(m) }]));
 }
-
-/** Podium tone per rank position: gold / silver / bronze, then muted. */
-const MEDAL: Record<number, string> = {
-  1: 'bg-warning/15 text-warning ring-1 ring-warning/30',
-  2: 'bg-muted text-foreground ring-1 ring-border',
-  3: 'bg-package-starter/15 text-package-starter ring-1 ring-package-starter/30',
-};
 
 export function AttendanceTable({
   date,
@@ -134,28 +125,17 @@ export function AttendanceTable({
 
   const isToday = date === today;
 
-  // ── Day-wide aggregates (derived only from the live `present` flags). ──────
+  // ── Day-wide aggregates (derived only from the live present/cam flags). ────
   const totalSlots = members.length * calls.length;
   const filledSlots = members.reduce(
     (acc, m) => acc + calls.filter((c) => present[m.id]?.[c.id]).length,
     0,
   );
+  const filledCams = members.reduce(
+    (acc, m) => acc + calls.filter((c) => cam[m.id]?.[c.id]).length,
+    0,
+  );
   const dayPct = totalSlots ? Math.round((filledSlots / totalSlots) * 100) : 0;
-
-  // Per-member presence across today's calls → the competitive leaderboard.
-  const leaderboard = React.useMemo(() => {
-    return members
-      .map((m) => ({
-        member: m,
-        score: calls.filter((c) => present[m.id]?.[c.id]).length,
-      }))
-      .sort((a, b) => b.score - a.score || a.member.display_name.localeCompare(b.member.display_name))
-      .slice(0, 5);
-  }, [members, calls, present]);
-
-  const perfectAttendees = members.filter(
-    (m) => calls.length > 0 && calls.every((c) => present[m.id]?.[c.id]),
-  ).length;
 
   const showOverview = members.length > 0 && calls.length > 0;
 
@@ -211,22 +191,14 @@ export function AttendanceTable({
         />
       ) : (
         <>
-          {/* ── Overview hero: aggregate gauge + day leaderboard ──────────── */}
+          {/* ── Overview hero: full-width aggregate gauge ─────────────────── */}
           {showOverview && (
-            <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr]">
-              <DayPulse
-                dayPct={dayPct}
-                filledSlots={filledSlots}
-                totalSlots={totalSlots}
-                memberCount={members.length}
-                callCount={calls.length}
-                perfectAttendees={perfectAttendees}
-              />
-              <DayLeaderboard
-                leaderboard={leaderboard}
-                callCount={calls.length}
-              />
-            </div>
+            <DayPulse
+              dayPct={dayPct}
+              filledSlots={filledSlots}
+              totalSlots={totalSlots}
+              cams={filledCams}
+            />
           )}
 
           {/* ── Per-call challenge cards ──────────────────────────────────── */}
@@ -420,21 +392,17 @@ function ToggleChip({
   );
 }
 
-/** Aggregate day gauge — the "are we winning today?" panel. */
+/** Aggregate day gauge — the full-width "are we winning today?" panel. */
 function DayPulse({
   dayPct,
   filledSlots,
   totalSlots,
-  memberCount,
-  callCount,
-  perfectAttendees,
+  cams,
 }: {
   dayPct: number;
   filledSlots: number;
   totalSlots: number;
-  memberCount: number;
-  callCount: number;
-  perfectAttendees: number;
+  cams: number;
 }) {
   return (
     <div className="surface-grid relative overflow-hidden rounded-xl border bg-card p-5 shadow-card">
@@ -443,24 +411,16 @@ function DayPulse({
         className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-primary/10 blur-3xl animate-aurora"
         aria-hidden
       />
-      <div className="relative flex items-center gap-5">
+      <div className="relative flex flex-wrap items-center gap-x-6 gap-y-4">
         <CompletionRing present={filledSlots} total={totalSlots} size={104} stroke={9} />
-        <div className="min-w-0 flex-1 space-y-3">
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold tabular-nums tracking-tight text-foreground">
-              <CountUp value={dayPct} />
-              <span className="text-lg font-semibold text-muted-foreground">%</span>
-            </span>
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            <MiniStat icon={CalendarDays} value={callCount} />
-            <MiniStat icon={Radio} value={memberCount} />
-            <MiniStat icon={Crown} value={perfectAttendees} accent="text-warning" />
-          </div>
-          <p className="text-[11px] text-muted-foreground">
-            <span className="font-semibold tabular-nums text-foreground">{filledSlots}</span>
-            <span className="text-muted-foreground"> / {totalSlots}</span>
-          </p>
+        <span className="text-3xl font-bold tabular-nums tracking-tight text-foreground">
+          <CountUp value={dayPct} />
+          <span className="text-lg font-semibold text-muted-foreground">%</span>
+        </span>
+        {/* Presenze + cam attive — the two figures that matter for the day. */}
+        <div className="flex flex-1 flex-wrap items-center gap-2">
+          <MiniStat icon={UserCheck} value={filledSlots} label="Presenze" accent="text-success" />
+          <MiniStat icon={Video} value={cams} label="Cam attive" accent="text-info" />
         </div>
       </div>
     </div>
@@ -470,93 +430,31 @@ function DayPulse({
 function MiniStat({
   icon: Icon,
   value,
+  label,
   accent,
 }: {
   icon: typeof CalendarDays;
   value: number;
+  label: string;
   accent?: string;
 }) {
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-background/60 px-2.5 py-2">
-      <Icon className={cn('h-4 w-4 shrink-0', accent ?? 'text-muted-foreground')} aria-hidden />
-      <span className="text-base font-bold tabular-nums tracking-tight text-foreground">
-        <CountUp value={value} />
+    <div className="flex min-w-[8.5rem] items-center gap-3 rounded-lg border border-border/60 bg-background/60 px-3 py-2">
+      <span
+        className={cn(
+          'flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted',
+          accent ?? 'text-muted-foreground',
+        )}
+        aria-hidden
+      >
+        <Icon className="h-4 w-4" />
       </span>
-    </div>
-  );
-}
-
-/** Competitive ranking of members by presence across the day's calls. */
-function DayLeaderboard({
-  leaderboard,
-  callCount,
-}: {
-  leaderboard: { member: AttendanceMember; score: number }[];
-  callCount: number;
-}) {
-  const max = callCount || 1;
-  return (
-    <div className="flex flex-col rounded-xl border bg-card shadow-card">
-      <div className="flex items-center gap-2.5 border-b border-border/70 px-5 py-3.5">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-warning/15 text-warning shadow-glow-warning">
-          <Trophy className="h-4 w-4" aria-hidden />
-        </span>
-        <span className="inline-flex items-center gap-1.5 text-xs font-semibold tabular-nums text-muted-foreground">
-          <Crown className="h-3.5 w-3.5 text-warning" aria-hidden />
-          {leaderboard.length}
-        </span>
+      <div className="leading-tight">
+        <p className="text-base font-bold tabular-nums tracking-tight text-foreground">
+          <CountUp value={value} />
+        </p>
+        <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
       </div>
-      <ol className="space-y-0.5 p-3">
-        {leaderboard.map(({ member, score }, i) => {
-          const pos = i + 1;
-          const pct = max > 0 ? Math.max(8, Math.round((score / max) * 100)) : 0;
-          const perfect = score === callCount && callCount > 0;
-          return (
-            <li
-              key={member.id}
-              className="animate-rank-in"
-              style={{ animationDelay: `${i * 60}ms` }}
-            >
-              <Link
-                href={`/team/${member.id}`}
-                className="flex items-center gap-3 rounded-lg px-2 py-1.5 outline-none transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <span
-                  className={cn(
-                    'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums',
-                    MEDAL[pos] ?? 'text-muted-foreground',
-                    pos === 1 && perfect && 'shadow-glow-warning',
-                  )}
-                >
-                  {pos}
-                </span>
-                <Avatar name={member.display_name} size="sm" />
-                <div className="min-w-0 flex-1">
-                  <p className="flex items-center gap-1.5 truncate text-sm font-medium text-foreground">
-                    <span className="truncate">{member.display_name}</span>
-                    {perfect && (
-                      <Flame className="h-3.5 w-3.5 shrink-0 text-warning" aria-hidden />
-                    )}
-                  </p>
-                  <span className="mt-1 block h-1 w-full overflow-hidden rounded-full bg-muted">
-                    <span
-                      className={cn(
-                        'block h-full rounded-full transition-[width] duration-700 ease-emphasized',
-                        perfect ? 'bg-warning' : 'bg-primary',
-                      )}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </span>
-                </div>
-                <span className="shrink-0 text-sm font-bold tabular-nums text-foreground">
-                  {score}
-                  <span className="text-xs font-medium text-muted-foreground">/{callCount}</span>
-                </span>
-              </Link>
-            </li>
-          );
-        })}
-      </ol>
     </div>
   );
 }

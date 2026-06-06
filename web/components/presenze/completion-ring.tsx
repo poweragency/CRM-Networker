@@ -4,8 +4,8 @@ import { cn } from '@/lib/utils';
 /**
  * CompletionRing — a premium SVG donut that reads the attendance rate of a single
  * Zoom call as a "challenge gauge". The arc fills with completion and its tone
- * ramps cold → primary → gold → success, so a fully-attended call literally
- * glows. The center stacks the live `present/total` count over the percentage.
+ * ramps cold → primary → success → GOLD, so a fully-attended (100%) call turns
+ * gold and glows. The center stacks the live `present/total` count over the percentage.
  *
  * Server-safe (no hooks); token-only strokes so it tracks light & dark.
  */
@@ -21,10 +21,10 @@ export interface CompletionRingProps {
   className?: string;
 }
 
-/** Tone ramp mirroring the gamified palette: cold → accent → gold → success. */
+/** Tone ramp mirroring the gamified palette: cold → accent → success → GOLD (100%). */
 function toneFor(ratio: number): { arc: string; text: string } {
-  if (ratio >= 1) return { arc: 'text-success', text: 'text-success' };
-  if (ratio >= 0.75) return { arc: 'text-warning', text: 'text-warning' };
+  if (ratio >= 1) return { arc: 'text-warning', text: 'text-warning' };
+  if (ratio >= 0.75) return { arc: 'text-success', text: 'text-success' };
   if (ratio >= 0.4) return { arc: 'text-primary', text: 'text-foreground' };
   if (ratio > 0) return { arc: 'text-info', text: 'text-foreground' };
   return { arc: 'text-muted-foreground/40', text: 'text-muted-foreground' };
@@ -56,7 +56,7 @@ export function CompletionRing({
       {/* Soft completion halo when the whole team shows up. */}
       {full && (
         <span
-          className="absolute inset-0 rounded-full bg-success/15 blur-md animate-glow-pulse"
+          className="absolute inset-0 rounded-full bg-warning/15 blur-md animate-glow-pulse"
           aria-hidden
         />
       )}
