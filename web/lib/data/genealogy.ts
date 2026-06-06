@@ -111,13 +111,14 @@ export async function getRootMarketer(): Promise<GenealogyResult<TreeNode>> {
     if (rootData) return { data: toTreeNode(rootData), demo: false };
 
     // Fallback: root the tree at the caller's OWN marketer (top of their subtree).
+    // NO deleted_at filter here — even if the caller's own marketer was soft-removed
+    // from the tree, we still show THEIR real node (never fake mock data).
     const { claims } = await getCurrentClaims();
     if (claims.marketer_id) {
       const { data: selfData } = await supabase
         .from('marketers')
         .select(cols)
         .eq('id', claims.marketer_id)
-        .is('deleted_at', null)
         .maybeSingle<MarketerRow>();
       if (selfData) return { data: toTreeNode(selfData), demo: false };
     }
@@ -148,10 +149,10 @@ export async function getChildren(
       .is('deleted_at', null)
       .order('leg', { ascending: true });
 
-    if (error || !data) return { data: mockChildren(parentId), demo: true };
+    if (error || !data) return { data: [], demo: false };
     return { data: (data as MarketerRow[]).map(toTreeNode), demo: false };
   } catch {
-    return { data: mockChildren(parentId), demo: true };
+    return { data: [], demo: false };
   }
 }
 
@@ -178,7 +179,9 @@ export async function getSubtree(
     });
 
     if (error || !Array.isArray(data) || data.length === 0) {
-      return { data: mockSubtree(rootId, scope), demo: true };
+      // Env IS configured → an empty/failed subtree is the REAL state (the node
+      // has no visible downline). Return empty, never the fake mock tree.
+      return { data: [], demo: false };
     }
 
     const rows = data as MarketerRow[];
@@ -189,7 +192,7 @@ export async function getSubtree(
 
     return { data: filtered.map(toTreeNode), demo: false };
   } catch {
-    return { data: mockSubtree(rootId, scope), demo: true };
+    return { data: [], demo: false };
   }
 }
 
@@ -213,10 +216,10 @@ export async function getNode(
       .is('deleted_at', null)
       .maybeSingle<MarketerRow>();
 
-    if (error || !data) return { data: mockNode(id), demo: true };
+    if (error || !data) return { data: null, demo: false };
     return { data: toTreeNode(data), demo: false };
   } catch {
-    return { data: mockNode(id), demo: true };
+    return { data: null, demo: false };
   }
 }
 
@@ -243,10 +246,10 @@ export async function searchMarketers(
       .ilike('display_name', `%${needle}%`)
       .limit(20);
 
-    if (error || !data) return { data: mockSearch(needle), demo: true };
+    if (error || !data) return { data: [], demo: false };
     return { data: (data as MarketerRow[]).map(toTreeNode), demo: false };
   } catch {
-    return { data: mockSearch(needle), demo: true };
+    return { data: [], demo: false };
   }
 }
 

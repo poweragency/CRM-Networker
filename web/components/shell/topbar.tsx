@@ -127,9 +127,11 @@ export function Topbar({ user, unreadCount = 0, onOpenMobileNav }: TopbarProps) 
                 <span className="max-w-[10rem] truncate text-sm font-medium text-nav-foreground">
                   {user.displayName}
                 </span>
-                <span className="max-w-[10rem] truncate text-xs text-nav-foreground/70">
-                  {ROLE_LABELS[user.role]}
-                </span>
+                {isOrgManager && (
+                  <span className="max-w-[10rem] truncate text-xs text-nav-foreground/70">
+                    {ROLE_LABELS[user.role]}
+                  </span>
+                )}
               </span>
             </button>
           </DropdownMenuTrigger>
@@ -149,7 +151,9 @@ export function Topbar({ user, unreadCount = 0, onOpenMobileNav }: TopbarProps) 
             </div>
             <div className="flex flex-wrap items-center gap-1.5 px-2 pb-2">
               <RankBadge rank={user.rank} />
-              <Badge variant="secondary">{ROLE_LABELS[user.role]}</Badge>
+              {isOrgManager && (
+                <Badge variant="secondary">{ROLE_LABELS[user.role]}</Badge>
+              )}
             </div>
             <DropdownMenuSeparator />
             {isOrgManager && (
