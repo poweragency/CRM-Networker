@@ -3,6 +3,7 @@
 import { createCall, type CallInput } from '@/lib/data/calls';
 import type { Call } from '@/lib/types/db';
 import { callInputSchema, isValid } from '@/lib/validation';
+import { allowAction } from '@/lib/data/rate-guard';
 
 /**
  * Server Actions backing the /chiamate log. A single `createCallAction`
@@ -27,6 +28,9 @@ export async function createCallAction(
   input: CallInput,
 ): Promise<CallActionResult> {
   if (!isValid(callInputSchema, input, 'createCall')) {
+    return { call: null, demo: false, ok: false };
+  }
+  if (!(await allowAction('createCall'))) {
     return { call: null, demo: false, ok: false };
   }
   const { data, demo, ok } = await createCall(input);

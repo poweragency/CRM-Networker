@@ -16,6 +16,7 @@ import {
   isValid,
   tagListSchema,
 } from '@/lib/validation';
+import { allowAction } from '@/lib/data/rate-guard';
 
 /**
  * Server Actions backing the /contatti manager (create / edit / delete + the
@@ -47,6 +48,9 @@ export async function createContactAction(
   input: ContactInput,
 ): Promise<ContactActionResult> {
   if (!isValid(contactCreateSchema, input, 'createContact')) {
+    return { contact: null, demo: false, ok: false };
+  }
+  if (!(await allowAction('createContact'))) {
     return { contact: null, demo: false, ok: false };
   }
   const { data, demo, ok } = await createContact(input);
@@ -81,6 +85,7 @@ export async function bulkTagContactsAction(
   if (!isValid(idListSchema, ids, 'bulkTag.ids') || !isValid(tagListSchema, tags, 'bulkTag.tags')) {
     return { count: 0, demo: false, ok: false };
   }
+  if (!(await allowAction('bulkTag', 30))) return { count: 0, demo: false, ok: false };
   const { data, demo, ok } = await bulkTagContacts(ids, tags);
   return { count: data.count, demo, ok };
 }
@@ -96,6 +101,7 @@ export async function bulkSetStatusAction(
   ) {
     return { count: 0, demo: false, ok: false };
   }
+  if (!(await allowAction('bulkSetStatus', 30))) return { count: 0, demo: false, ok: false };
   let demo = false;
   let ok = true;
   for (const id of ids) {
@@ -113,6 +119,7 @@ export async function bulkDeleteContactsAction(
   if (!isValid(idListSchema, ids, 'bulkDelete.ids')) {
     return { count: 0, demo: false, ok: false };
   }
+  if (!(await allowAction('bulkDelete', 30))) return { count: 0, demo: false, ok: false };
   const { data, demo, ok } = await bulkDeleteContacts(ids);
   return { count: data.count, demo, ok };
 }

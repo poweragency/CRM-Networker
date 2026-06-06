@@ -1,6 +1,7 @@
 import 'server-only';
 import { getClient } from '@/lib/data/crm-shared';
 import { logError } from '@/lib/log';
+import { allowAction } from '@/lib/data/rate-guard';
 import type {
   AccountInvitation,
   InvitationStatus,
@@ -72,6 +73,9 @@ export interface CreateInvitationResult {
   invitation: AccountInvitation;
   demo: boolean;
   ok: boolean;
+  /** The single-use activation link (raw token) — show it so the admin can copy
+   *  it even when email delivery isn't configured. Null in demo / on failure. */
+  inviteUrl?: string | null;
 }
 
 /**
@@ -99,6 +103,11 @@ export async function createInvitation(
   const supabase = getClient();
   if (!supabase) return { invitation: base, demo: true, ok: true };
 
+  // Throttle invite issuance (sends emails / mints tokens) — best-effort guard.
+  if (!(await allowAction('createInvitation', 15))) {
+    return { invitation: base, demo: false, ok: false };
+  }
+
   try {
     const { data, error } = await supabase.functions.invoke('create-invitation', {
       body: {
@@ -117,7 +126,13 @@ export async function createInvitation(
       });
       return { invitation: base, demo: false, ok: false };
     }
-    return { invitation: { ...base, id: String(invitationId) }, demo: false, ok: true };
+    const inviteUrl = (data as { invite_url?: string } | null)?.invite_url ?? null;
+    return {
+      invitation: { ...base, id: String(invitationId) },
+      demo: false,
+      ok: true,
+      inviteUrl,
+    };
   } catch (e) {
     logError('createInvitation', e, { marketerId: input.marketerId });
     return { invitation: base, demo: false, ok: false };

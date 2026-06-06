@@ -9,6 +9,7 @@ import {
 } from '@/lib/data/lista-contatti';
 import type { ListaContattiEntry } from '@/lib/types/db';
 import { isValid, listaCreateSchema, listaPatchSchema } from '@/lib/validation';
+import { allowAction } from '@/lib/data/rate-guard';
 
 /**
  * Server Actions backing the /lista-contatti manager (create / edit / status toggle /
@@ -41,6 +42,9 @@ export async function createListaContattiAction(
   input: ListaContattiInput,
 ): Promise<ListaContattiActionResult> {
   if (!isValid(listaCreateSchema, input, 'createListaContatti')) {
+    return { entry: null, demo: false, ok: false };
+  }
+  if (!(await allowAction('createListaContatti'))) {
     return { entry: null, demo: false, ok: false };
   }
   const { data, demo, ok } = await createListaContatti(input);

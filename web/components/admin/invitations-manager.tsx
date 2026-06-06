@@ -59,6 +59,20 @@ export function InvitationsManager({
   const [crmAccess, setCrmAccess] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [pending, setPending] = React.useState(false);
+  // The most recent invite link to surface for manual copy (when email delivery
+  // isn't configured the admin can still hand the invitee this link).
+  const [createdLink, setCreatedLink] = React.useState<{ email: string; url: string } | null>(
+    null,
+  );
+
+  async function copyLink(url: string) {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({ title: t('link_copied'), variant: 'success' });
+    } catch {
+      /* clipboard unavailable — the link is visible in the field to copy manually */
+    }
+  }
 
   function reset() {
     setMarketerId('');
@@ -97,6 +111,7 @@ export function InvitationsManager({
         return;
       }
       setItems((prev) => [res.invitation, ...prev]);
+      if (res.inviteUrl) setCreatedLink({ email: email.trim(), url: res.inviteUrl });
       toast({
         title: t('created'),
         description: res.demo || initialDemo ? t('created_demo') : undefined,
@@ -129,6 +144,33 @@ export function InvitationsManager({
           {t('new')}
         </Button>
       </div>
+
+      {createdLink && (
+        <div className="rounded-xl border border-success/30 bg-success/[0.06] p-4">
+          <div className="mb-2 flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground">{t('link_ready')}</p>
+              <p className="text-xs text-muted-foreground">
+                {t('link_hint', { email: createdLink.email })}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setCreatedLink(null)}
+              aria-label={t('link_dismiss')}
+              className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <X className="h-4 w-4" aria-hidden />
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Input readOnly value={createdLink.url} onFocus={(e) => e.currentTarget.select()} />
+            <Button type="button" variant="outline" onClick={() => copyLink(createdLink.url)}>
+              {t('copy_link')}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {open && (
         <form
