@@ -58,28 +58,25 @@ export async function saveWishlist(
   marketerId: string,
   items: WishlistItem[],
 ): Promise<SaveWishlistResult> {
-  const { orgId, demo } = await getOwnerContext();
+  const { demo } = await getOwnerContext();
   const supabase = getClient();
   if (!supabase || demo) {
     overrides.set(marketerId, items);
     return { ok: true, demo: true };
   }
   try {
-    // Replace semantics: clear the marketer's list, then insert the new ordering.
-    await supabase.from('wishlist_items').delete().eq('owner_marketer_id', marketerId);
-    if (items.length) {
-      const { error } = await supabase.from('wishlist_items').insert(
-        items.map((it, i) => ({
-          org_id: orgId,
-          owner_marketer_id: marketerId,
-          title: it.title,
-          horizon: it.horizon,
-          done: it.done,
-          position: i + 1,
-        })),
-      );
-      if (error) return { ok: false, demo: false };
-    }
+    // Atomic replace via the replace_wishlist RPC (delete + insert in ONE
+    // transaction; see migration 0051). Removes the data-loss window of the old
+    // separate delete-then-insert. Ordering is the array order (RPC uses ORDINALITY).
+    const { error } = await supabase.rpc('replace_wishlist', {
+      p_owner: marketerId,
+      p_items: items.map((it) => ({
+        title: it.title,
+        horizon: it.horizon,
+        done: it.done,
+      })),
+    });
+    if (error) return { ok: false, demo: false };
     return { ok: true, demo: false };
   } catch {
     return { ok: false, demo: false };
