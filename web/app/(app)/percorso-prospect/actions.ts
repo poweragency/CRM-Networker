@@ -15,6 +15,7 @@ import {
 } from '@/lib/data/prospect-extras';
 import type { MutationResult } from '@/lib/data/crm-shared';
 import type { Prospect, ProspectStage } from '@/lib/types/db';
+import { isValid, prospectInputSchema } from '@/lib/validation';
 
 /**
  * Server actions for /percorso-prospect. Thin wrappers over the server-only data
@@ -43,6 +44,9 @@ export async function changeStageAction(
 export async function createProspectAction(
   input: ProspectInput,
 ): Promise<MutationResult<Prospect>> {
+  if (!isValid(prospectInputSchema, input, 'createProspect')) {
+    return { data: undefined as unknown as Prospect, demo: false, ok: false };
+  }
   const res = await createProspect(input);
   if (res.ok && !res.demo) {
     revalidatePath('/percorso-prospect');

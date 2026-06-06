@@ -2,6 +2,7 @@
 
 import { createCall, type CallInput } from '@/lib/data/calls';
 import type { Call } from '@/lib/types/db';
+import { callInputSchema, isValid } from '@/lib/validation';
 
 /**
  * Server Actions backing the /chiamate log. A single `createCallAction`
@@ -25,6 +26,9 @@ export interface CallActionResult {
 export async function createCallAction(
   input: CallInput,
 ): Promise<CallActionResult> {
+  if (!isValid(callInputSchema, input, 'createCall')) {
+    return { call: null, demo: false, ok: false };
+  }
   const { data, demo, ok } = await createCall(input);
   return { call: data, demo, ok };
 }

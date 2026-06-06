@@ -8,7 +8,14 @@ import {
   updateContact,
   type ContactInput,
 } from '@/lib/data/contacts';
-import type { Contact, ContactStatus } from '@/lib/types/db';
+import { CONTACT_STATUS_ORDER, type Contact, type ContactStatus } from '@/lib/types/db';
+import {
+  contactCreateSchema,
+  contactPatchSchema,
+  idListSchema,
+  isValid,
+  tagListSchema,
+} from '@/lib/validation';
 
 /**
  * Server Actions backing the /contatti manager (create / edit / delete + the
@@ -39,6 +46,9 @@ export interface BulkActionResult {
 export async function createContactAction(
   input: ContactInput,
 ): Promise<ContactActionResult> {
+  if (!isValid(contactCreateSchema, input, 'createContact')) {
+    return { contact: null, demo: false, ok: false };
+  }
   const { data, demo, ok } = await createContact(input);
   return { contact: data, demo, ok };
 }
@@ -48,6 +58,9 @@ export async function updateContactAction(
   id: string,
   patch: Partial<ContactInput>,
 ): Promise<ContactActionResult> {
+  if (!isValid(contactPatchSchema, patch, 'updateContact')) {
+    return { contact: null, demo: false, ok: false };
+  }
   const { data, demo, ok } = await updateContact(id, patch);
   return { contact: data, demo, ok };
 }
@@ -65,6 +78,9 @@ export async function bulkTagContactsAction(
   ids: string[],
   tags: string[],
 ): Promise<BulkActionResult> {
+  if (!isValid(idListSchema, ids, 'bulkTag.ids') || !isValid(tagListSchema, tags, 'bulkTag.tags')) {
+    return { count: 0, demo: false, ok: false };
+  }
   const { data, demo, ok } = await bulkTagContacts(ids, tags);
   return { count: data.count, demo, ok };
 }
@@ -74,6 +90,12 @@ export async function bulkSetStatusAction(
   ids: string[],
   status: ContactStatus,
 ): Promise<BulkActionResult> {
+  if (
+    !isValid(idListSchema, ids, 'bulkSetStatus.ids') ||
+    !CONTACT_STATUS_ORDER.includes(status)
+  ) {
+    return { count: 0, demo: false, ok: false };
+  }
   let demo = false;
   let ok = true;
   for (const id of ids) {
@@ -88,6 +110,9 @@ export async function bulkSetStatusAction(
 export async function bulkDeleteContactsAction(
   ids: string[],
 ): Promise<BulkActionResult> {
+  if (!isValid(idListSchema, ids, 'bulkDelete.ids')) {
+    return { count: 0, demo: false, ok: false };
+  }
   const { data, demo, ok } = await bulkDeleteContacts(ids);
   return { count: data.count, demo, ok };
 }

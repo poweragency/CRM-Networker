@@ -8,6 +8,7 @@ import {
   type ListaContattiInput,
 } from '@/lib/data/lista-contatti';
 import type { ListaContattiEntry } from '@/lib/types/db';
+import { isValid, listaCreateSchema, listaPatchSchema } from '@/lib/validation';
 
 /**
  * Server Actions backing the /lista-contatti manager (create / edit / status toggle /
@@ -39,6 +40,9 @@ export interface PromoteActionResult {
 export async function createListaContattiAction(
   input: ListaContattiInput,
 ): Promise<ListaContattiActionResult> {
+  if (!isValid(listaCreateSchema, input, 'createListaContatti')) {
+    return { entry: null, demo: false, ok: false };
+  }
   const { data, demo, ok } = await createListaContatti(input);
   return { entry: data, demo, ok };
 }
@@ -48,6 +52,9 @@ export async function updateListaContattiAction(
   id: string,
   patch: Partial<ListaContattiInput>,
 ): Promise<ListaContattiActionResult> {
+  if (!isValid(listaPatchSchema, patch, 'updateListaContatti')) {
+    return { entry: null, demo: false, ok: false };
+  }
   const { data, demo, ok } = await updateListaContatti(id, patch);
   return { entry: data ?? null, demo, ok };
 }
