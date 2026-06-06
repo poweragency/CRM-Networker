@@ -20,7 +20,7 @@
     --ring: 222 80% 56%;
     --primary: 222 80% 56%;
     --primary-foreground: 0 0% 100%;
-    --radius: 0.625rem;
+    --radius: 0.75rem;
 
     /* Navbar surface — a deep, elegant slate (NOT the raw accent). The accent
        (--primary) is reserved for buttons / active item / highlights. When an org
@@ -186,6 +186,33 @@
     color: hsl(var(--foreground));
     font-feature-settings: 'rlig' 1, 'calt' 1;
     text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  /* Premium text selection (accent tint). */
+  ::selection {
+    background-color: hsl(var(--primary) / 0.25);
+  }
+  /* Thin, elegant scrollbars app-wide. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.5);
   }
   /* tabular numerals for all metric/ID displays */
   .tabular-nums {
@@ -201,5 +228,27 @@
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
     }
+  }
+}
+
+@layer components {
+  /* Frosted-glass surface for floating chrome (topbar, popovers, hero cards). */
+  .glass {
+    background-color: hsl(var(--card) / 0.72);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+  }
+  /* Subtle technical grid backdrop for heroes / empty states. */
+  .surface-grid {
+    background-image:
+      linear-gradient(hsl(var(--border) / 0.35) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / 0.35) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  /* Accent hairline ring used on premium cards / hero panels. */
+  .ring-accent {
+    box-shadow:
+      inset 0 1px 0 0 hsl(var(--foreground) / 0.04),
+      0 0 0 1px hsl(var(--primary) / 0.18);
   }
 }

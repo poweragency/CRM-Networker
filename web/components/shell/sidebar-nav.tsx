@@ -124,19 +124,19 @@ function NavLink({ href, label, Icon, active, collapsed, onNavigate }: NavLinkPr
       onClick={onNavigate}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'group relative flex items-center rounded-lg text-sm font-medium outline-none transition-colors duration-base ease-standard focus-visible:ring-2 focus-visible:ring-ring',
+        'group relative flex items-center rounded-lg text-sm font-medium outline-none transition-all duration-base ease-standard focus-visible:ring-2 focus-visible:ring-ring',
         collapsed ? 'h-9 w-9 justify-center' : 'gap-2.5 px-2.5 py-2',
         active
-          ? 'bg-primary text-primary-foreground shadow-sm'
-          : 'text-nav-foreground/70 hover:bg-nav-foreground/10 hover:text-nav-foreground',
+          ? 'bg-primary/15 text-nav-foreground'
+          : 'text-nav-foreground/70 hover:bg-nav-foreground/[0.07] hover:text-nav-foreground',
       )}
     >
-      {/* active rail accent — present in BOTH states (cross-collapse continuity) */}
+      {/* active rail accent — a glowing capsule (present in BOTH states for continuity) */}
       {active && (
         <span
           className={cn(
-            'absolute left-0 w-0.5 rounded-full bg-primary-foreground',
-            collapsed ? 'inset-y-1.5' : 'inset-y-1',
+            'absolute left-0 w-[3px] rounded-r-full bg-primary shadow-[0_0_10px_hsl(var(--primary)/0.7)]',
+            collapsed ? 'inset-y-1.5' : 'inset-y-1.5',
           )}
           aria-hidden
         />
@@ -144,7 +144,7 @@ function NavLink({ href, label, Icon, active, collapsed, onNavigate }: NavLinkPr
       <Icon
         className={cn(
           'h-[18px] w-[18px] shrink-0 transition-colors',
-          active ? 'text-primary-foreground' : 'text-nav-foreground/60 group-hover:text-nav-foreground',
+          active ? 'text-primary' : 'text-nav-foreground/60 group-hover:text-nav-foreground',
         )}
         aria-hidden
       />

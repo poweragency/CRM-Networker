@@ -13,7 +13,7 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          'bg-primary text-primary-foreground shadow-sm hover:bg-primary-600 hover:shadow-glow active:bg-primary-700',
+          'bg-primary bg-gradient-to-b from-white/[0.12] to-transparent text-primary-foreground shadow-sm hover:bg-primary-600 hover:shadow-glow active:bg-primary-700',
         secondary:
           'bg-muted text-foreground shadow-sm hover:bg-muted/70',
         outline:

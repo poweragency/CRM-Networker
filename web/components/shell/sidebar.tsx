@@ -32,7 +32,7 @@ export function Sidebar({ viewer, collapsed, onToggleCollapsed }: SidebarProps) 
     <aside
       className={cn(
         // Pinned to the viewport, same "glass plane" as the topbar.
-        'sticky top-0 hidden h-screen shrink-0 self-start border-r border-nav-foreground/10 bg-nav text-nav-foreground transition-[width] duration-base ease-standard md:flex md:flex-col',
+        'sticky top-0 z-10 hidden h-screen shrink-0 self-start border-r border-nav-foreground/10 bg-nav text-nav-foreground transition-[width] duration-base ease-standard md:flex md:flex-col',
         collapsed ? 'w-rail' : 'w-side',
       )}
       data-collapsed={collapsed}

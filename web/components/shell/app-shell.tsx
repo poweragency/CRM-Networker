@@ -72,9 +72,16 @@ export function AppShell({
     <React.Suspense fallback={<ShellFallback themeVars={themeVars}>{children}</ShellFallback>}>
       <ScopeProvider>
         <div
-          className="flex min-h-screen bg-background text-foreground"
+          className="relative isolate flex min-h-screen bg-background text-foreground"
           style={themeVars as React.CSSProperties | undefined}
         >
+          {/* Ambient depth — a faint accent aurora behind the workspace (theme-aware,
+              sits below the opaque sidebar/topbar; only shows through empty canvas). */}
+          <div
+            aria-hidden
+            className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(55rem_40rem_at_85%_-10%,hsl(var(--primary)/0.10),transparent_60%),radial-gradient(48rem_36rem_at_-10%_115%,hsl(var(--primary)/0.06),transparent_55%)]"
+          />
+
           <Sidebar
             viewer={viewer}
             collapsed={collapsed}
@@ -83,7 +90,7 @@ export function AppShell({
 
           <MobileNav viewer={viewer} open={mobileOpen} onClose={closeMobile} />
 
-          <div className="flex min-w-0 flex-1 flex-col">
+          <div className="relative z-10 flex min-w-0 flex-1 flex-col">
             <Topbar
               orgName={orgName}
               user={user}
@@ -115,9 +122,9 @@ function ShellFallback({
       className="flex min-h-screen bg-background text-foreground"
       style={themeVars as React.CSSProperties | undefined}
     >
-      <div className="hidden w-side shrink-0 border-r bg-card md:block" />
+      <div className="hidden w-side shrink-0 border-r border-nav-foreground/10 bg-nav md:block" />
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="h-14 border-b bg-card" />
+        <div className="h-14 border-b border-nav-foreground/10 bg-nav" />
         <main className="flex-1 overflow-x-hidden">
           <div className="mx-auto w-full max-w-[88rem] px-4 py-6 sm:px-6 lg:px-8">
             {children}

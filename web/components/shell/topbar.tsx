@@ -65,7 +65,7 @@ export function Topbar({ user, unreadCount = 0, onOpenMobileNav }: TopbarProps) 
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-nav-foreground/10 bg-nav px-3 text-nav-foreground sm:px-4">
+    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-nav-foreground/10 bg-nav/80 px-3 text-nav-foreground shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-nav/65 sm:px-4">
       {/* Mobile hamburger */}
       <button
         type="button"

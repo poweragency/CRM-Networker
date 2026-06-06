@@ -105,11 +105,15 @@ const config: Config = {
         xl: 'calc(var(--radius) + 0.25rem)',
       },
       boxShadow: {
-        // Low-chrome elevation ramp (premium SaaS). Dark relies on borders.
-        xs: '0 1px 2px rgba(16, 24, 40, 0.04)',
-        sm: '0 1px 3px rgba(16, 24, 40, 0.06)',
-        md: '0 4px 12px rgba(16, 24, 40, 0.08)',
-        lg: '0 12px 32px rgba(16, 24, 40, 0.12)',
+        // Layered elevation ramp — soft, premium depth (single dark shadow hue).
+        xs: '0 1px 2px 0 hsl(222 24% 8% / 0.05)',
+        sm: '0 1px 2px 0 hsl(222 24% 8% / 0.06), 0 1px 3px 0 hsl(222 24% 8% / 0.04)',
+        md: '0 4px 12px -2px hsl(222 24% 8% / 0.10), 0 2px 6px -2px hsl(222 24% 8% / 0.06)',
+        lg: '0 16px 40px -8px hsl(222 24% 8% / 0.16), 0 6px 16px -6px hsl(222 24% 8% / 0.10)',
+        xl: '0 28px 64px -12px hsl(222 24% 8% / 0.22), 0 12px 28px -10px hsl(222 24% 8% / 0.14)',
+        // Card surfaces — soft hairline + lift on hover.
+        card: '0 1px 2px 0 hsl(222 24% 8% / 0.05), 0 6px 18px -10px hsl(222 24% 8% / 0.12)',
+        'card-hover': '0 2px 6px 0 hsl(222 24% 8% / 0.07), 0 18px 44px -14px hsl(222 24% 8% / 0.20)',
         // Gamified accent glows (achievement / leaderboard / primary actions).
         glow: '0 0 0 1px hsl(var(--primary) / 0.25), 0 10px 30px -8px hsl(var(--primary) / 0.5)',
         'glow-warning': '0 0 0 1px hsl(var(--warning) / 0.3), 0 12px 32px -8px hsl(var(--warning) / 0.55)',
@@ -171,6 +175,11 @@ const config: Config = {
           from: { opacity: '0', transform: 'translateY(6px) scale(0.98)' },
           to: { opacity: '1', transform: 'translateY(0) scale(1)' },
         },
+        // Slow drifting accent aurora behind hero panels.
+        aurora: {
+          '0%, 100%': { transform: 'translate3d(0,0,0) scale(1)', opacity: '0.55' },
+          '50%': { transform: 'translate3d(2%, -3%, 0) scale(1.08)', opacity: '0.8' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 150ms ease-out',
@@ -181,6 +190,7 @@ const config: Config = {
         'glow-pulse': 'glow-pulse 2.4s ease-in-out infinite',
         float: 'float 3s ease-in-out infinite',
         'rank-in': 'rank-in 360ms cubic-bezier(0.16, 1, 0.3, 1) both',
+        aurora: 'aurora 14s ease-in-out infinite',
       },
     },
   },
