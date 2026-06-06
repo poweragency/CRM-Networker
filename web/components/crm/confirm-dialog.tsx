@@ -4,6 +4,7 @@ import * as React from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useFocusTrap } from '@/lib/use-focus-trap';
 
 /**
  * ConfirmDialog — a focused, accessible confirmation modal (no Radix). Used for
@@ -35,6 +36,7 @@ export function ConfirmDialog({
   onConfirm,
 }: ConfirmDialogProps) {
   const [busy, setBusy] = React.useState(false);
+  const dialogRef = useFocusTrap<HTMLDivElement>(open);
   const confirmRef = React.useRef<HTMLButtonElement>(null);
   const titleId = React.useId();
   const descId = React.useId();
@@ -74,6 +76,7 @@ export function ConfirmDialog({
         aria-hidden
       />
       <div
+        ref={dialogRef}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby={titleId}

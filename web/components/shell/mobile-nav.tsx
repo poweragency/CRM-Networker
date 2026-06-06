@@ -8,6 +8,7 @@ import { X } from 'lucide-react';
 import type { NavViewer } from '@/lib/nav';
 import { SidebarNav } from '@/components/shell/sidebar-nav';
 import { cn } from '@/lib/utils';
+import { useFocusTrap } from '@/lib/use-focus-trap';
 
 /**
  * Mobile navigation drawer (< md). A slide-in panel + scrim, controlled by the
@@ -27,6 +28,7 @@ export interface MobileNavProps {
 export function MobileNav({ viewer, orgName, orgLogoUrl, open, onClose }: MobileNavProps) {
   const t = useTranslations('topbar');
   const pathname = usePathname();
+  const panelRef = useFocusTrap<HTMLDivElement>(open);
 
   // Close when the route changes (link inside the drawer was followed).
   const lastPath = React.useRef(pathname);
@@ -68,6 +70,7 @@ export function MobileNav({ viewer, orgName, orgLogoUrl, open, onClose }: Mobile
 
       {/* Panel */}
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label={orgName}

@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useFocusTrap } from '@/lib/use-focus-trap';
 
 /**
  * FormSheet — a right-side slide-over container for create/edit forms (contacts,
@@ -40,7 +41,7 @@ export function FormSheet({
   size = 'md',
   className,
 }: FormSheetProps) {
-  const panelRef = React.useRef<HTMLDivElement>(null);
+  const panelRef = useFocusTrap<HTMLDivElement>(open);
   const titleId = React.useId();
   const descId = React.useId();
 
@@ -52,11 +53,6 @@ export function FormSheet({
     document.addEventListener('keydown', onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    // Move focus into the panel for screen-reader / keyboard users.
-    const firstFocusable = panelRef.current?.querySelector<HTMLElement>(
-      'input,select,textarea,button,[tabindex]:not([tabindex="-1"])',
-    );
-    firstFocusable?.focus();
     return () => {
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = prev;

@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useFocusTrap } from '@/lib/use-focus-trap';
 
 /**
  * Modal — a centered, accessible dialog "window" (no Radix). Used to open a
@@ -39,6 +40,7 @@ export function Modal({
 }: ModalProps) {
   const titleId = React.useId();
   const descId = React.useId();
+  const trapRef = useFocusTrap<HTMLDivElement>(open);
 
   React.useEffect(() => {
     if (!open) return;
@@ -64,6 +66,7 @@ export function Modal({
         aria-hidden
       />
       <div
+        ref={trapRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

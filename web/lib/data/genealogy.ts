@@ -1,4 +1,5 @@
 import 'server-only';
+import { cache } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
 import { getCurrentClaims } from '@/lib/data/session';
@@ -256,8 +257,10 @@ export async function getSubtree(
   }
 }
 
-/** Single node by id (KPI/card refresh). */
-export async function getNode(
+/** Single node by id (KPI/card refresh). Request-memoized via React cache() so
+ *  the 3-4 calls per /team/[id] render (metadata + page + profile + sponsor)
+ *  collapse to one query per distinct id (audit M38). */
+export const getNode = cache(async function getNode(
   id: string,
 ): Promise<GenealogyResult<TreeNode | null>> {
   if (!isSupabaseConfigured) {
@@ -283,7 +286,7 @@ export async function getNode(
   } catch {
     return { data: null, demo: false };
   }
-}
+});
 
 /** Trigram name search within the caller's visible subtree (doc 14 §5.5). */
 export async function searchMarketers(

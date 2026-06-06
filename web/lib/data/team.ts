@@ -11,6 +11,7 @@ import type {
 import { getNode } from '@/lib/data/genealogy';
 import { listMarketers } from '@/lib/data/admin';
 import { getClient, getOwnerContext } from '@/lib/data/crm-shared';
+import { logError } from '@/lib/log';
 import { setMarketerIdentity } from '@/lib/data/mock/runtime';
 import { mockExtra } from '@/lib/data/mock/team';
 
@@ -266,9 +267,19 @@ export async function updateMarketerExtra(
   }
   if (Object.keys(update).length === 0) return { ok: true, demo: false };
   try {
-    const { error } = await supabase.from('marketers').update(update).eq('id', id);
-    return { ok: !error, demo: false };
-  } catch {
+    const { data: rows, error } = await supabase
+      .from('marketers')
+      .update(update)
+      .eq('id', id)
+      .select('id');
+    if (error) {
+      logError('updateMarketerExtra', error, { id });
+      return { ok: false, demo: false };
+    }
+    // 0 rows + no error = RLS-denied (not visible/out of subtree): honest failure.
+    return { ok: (rows?.length ?? 0) > 0, demo: false };
+  } catch (e) {
+    logError('updateMarketerExtra', e, { id });
     return { ok: false, demo: false };
   }
 }
@@ -297,9 +308,18 @@ export async function updateMarketerIdentity(
   if (patch.status !== undefined) update.status = patch.status;
   if (Object.keys(update).length === 0) return { ok: true, demo: false };
   try {
-    const { error } = await supabase.from('marketers').update(update).eq('id', id);
-    return { ok: !error, demo: false };
-  } catch {
+    const { data: rows, error } = await supabase
+      .from('marketers')
+      .update(update)
+      .eq('id', id)
+      .select('id');
+    if (error) {
+      logError('updateMarketerIdentity', error, { id });
+      return { ok: false, demo: false };
+    }
+    return { ok: (rows?.length ?? 0) > 0, demo: false };
+  } catch (e) {
+    logError('updateMarketerIdentity', e, { id });
     return { ok: false, demo: false };
   }
 }
