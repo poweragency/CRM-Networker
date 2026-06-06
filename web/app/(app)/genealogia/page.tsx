@@ -22,12 +22,13 @@ export const dynamic = 'force-dynamic';
 export default async function GenealogiaPage() {
   const { claims, demo: claimsDemo } = await getCurrentClaims();
 
-  // Seed the client with the root + a bounded subtree window. Both calls are
-  // demo-safe; if either degrades we flag demo mode for the inline notice.
+  // Seed the client with the root + the FULL subtree (no 4-level cap) so the whole
+  // tree is visible without manual expansion. Both calls are demo-safe; if either
+  // degrades we flag demo mode for the inline notice.
   const rootRes = await getRootMarketer();
   const root = rootRes.data;
 
-  const subtreeRes = await getSubtree(root.id, 'GLOBAL', 4);
+  const subtreeRes = await getSubtree(root.id, 'GLOBAL');
 
   // De-dupe (the subtree already includes the root) into a stable pre-order list.
   const byId = new Map<string, TreeNode>();

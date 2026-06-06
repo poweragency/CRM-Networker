@@ -273,14 +273,23 @@ export async function getChildren(
 }
 
 /**
- * Bounded subtree for a scope. Uses the `get_subtree` read-RPC (doc 09 §3.10),
- * then filters by `branch_leg` for LEFT/RIGHT views (doc 14 §4). The root row is
- * always included; for branch scopes only the chosen-leg descendants are kept.
+ * Default subtree depth — effectively UNLIMITED (any realistic binary org is far
+ * shallower than this). The real cost is the descendant COUNT, not this number, so
+ * a large value just means "load the whole visible subtree". The genealogy viewer
+ * (and attendance / seven-whys, which need the full team) rely on this.
+ */
+export const TREE_LOAD_DEPTH = 1000;
+
+/**
+ * Subtree for a scope. Uses the `get_subtree` read-RPC (doc 09 §3.10), then filters
+ * by `branch_leg` for LEFT/RIGHT views (doc 14 §4). The root row is always
+ * included; for branch scopes only the chosen-leg descendants are kept. By default
+ * loads the FULL subtree (no artificial 4-level cap).
  */
 export async function getSubtree(
   rootId: string,
   scope: BranchScope,
-  maxDepth = 4,
+  maxDepth = TREE_LOAD_DEPTH,
 ): Promise<GenealogyResult<TreeNode[]>> {
   if (!isSupabaseConfigured) {
     return { data: mockSubtree(rootId, scope), demo: true };

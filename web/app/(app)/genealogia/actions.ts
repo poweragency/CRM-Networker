@@ -4,6 +4,7 @@ import {
   getChildren,
   getSubtree,
   searchMarketers,
+  TREE_LOAD_DEPTH,
 } from '@/lib/data/genealogy';
 import { updateMarketerExtra } from '@/lib/data/team';
 import { createMarketer, removeMarketer } from '@/lib/data/admin';
@@ -47,7 +48,7 @@ export async function loadChildrenAction(parentId: string): Promise<ActionResult
 export async function loadSubtreeAction(
   rootId: string,
   scope: BranchScope,
-  maxDepth = 4,
+  maxDepth = TREE_LOAD_DEPTH,
 ): Promise<ActionResult> {
   const { data, demo } = await getSubtree(rootId, scope, maxDepth);
   return { nodes: data, demo };

@@ -165,7 +165,7 @@ export function useGenealogyTree({
 
   const expandAll = React.useCallback(() => {
     setLoading(true);
-    void loadSubtreeAction(rootId, 'GLOBAL', 4)
+    void loadSubtreeAction(rootId, 'GLOBAL')
       .then((res) => {
         mergeNodes(res.nodes);
         if (res.demo) setDemo(true);
@@ -192,7 +192,7 @@ export function useGenealogyTree({
       try {
         let working = cache;
         if (!working.has(target.id) || !legAncestorsLoaded(working, target, rootId)) {
-          const res = await loadSubtreeAction(rootId, 'GLOBAL', 4);
+          const res = await loadSubtreeAction(rootId, 'GLOBAL');
           if (res.demo) setDemo(true);
           working = indexById([...cache.values(), ...res.nodes]);
           mergeNodes(res.nodes);
