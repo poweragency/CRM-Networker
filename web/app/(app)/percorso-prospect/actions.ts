@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import {
   changeStage,
   createProspect,
+  deleteProspect,
   type ChangeStageResult,
   type ProspectInput,
 } from '@/lib/data/prospects';
@@ -47,6 +48,13 @@ export async function createProspectAction(
     revalidatePath('/percorso-prospect');
   }
   return res;
+}
+
+/** Soft-delete a prospect (removed from the board; demo-safe, RLS-enforced). */
+export async function deleteProspectAction(
+  prospectId: string,
+): Promise<MutationResult<{ id: string }>> {
+  return deleteProspect(prospectId);
 }
 
 /** Save the prospect's extra fields (profilazione, pacchetto, note). */

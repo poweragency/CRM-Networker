@@ -33,6 +33,8 @@ export interface BoardColumnProps {
   extraCards?: ProspectView[];
   /** Profile URL to return to — threaded into each card's detail link. */
   backHref?: string;
+  /** Confirm + delete a (real) prospect. */
+  onRequestDelete?: (prospect: ProspectView) => void;
 }
 
 export function BoardColumn({
@@ -41,6 +43,7 @@ export function BoardColumn({
   busy,
   extraCards = [],
   backHref,
+  onRequestDelete,
 }: BoardColumnProps) {
   const { stage, prospects } = column;
   const { setNodeRef, isOver } = useDroppable({
@@ -132,7 +135,13 @@ export function BoardColumn({
           strategy={verticalListSortingStrategy}
         >
           {cards.map((c) => (
-            <ProspectCard key={c.id} prospect={c} disabled={busy} backHref={backHref} />
+            <ProspectCard
+              key={c.id}
+              prospect={c}
+              disabled={busy}
+              backHref={backHref}
+              onRequestDelete={onRequestDelete}
+            />
           ))}
         </SortableContext>
 

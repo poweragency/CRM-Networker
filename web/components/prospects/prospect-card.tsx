@@ -4,7 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ArrowUpRight, GripVertical } from 'lucide-react';
+import { ArrowUpRight, GripVertical, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar } from '@/components/ui/avatar';
 import { StatusPill } from '@/components/crm/status-pill';
@@ -36,9 +36,11 @@ export const ProspectCardBody = React.forwardRef<
     link?: React.ReactNode;
     /** Detail route — renders an explicit, easy-to-hit "open profile" button. */
     detailHref?: string;
+    /** Delete handler — renders a trash button (omitted on the overlay / list cards). */
+    onDelete?: () => void;
   } & React.HTMLAttributes<HTMLDivElement>
 >(function ProspectCardBody(
-  { prospect, overlay, dragging, handle, link, detailHref, className, ...props },
+  { prospect, overlay, dragging, handle, link, detailHref, onDelete, className, ...props },
   ref,
 ) {
   const fromList = Boolean(prospect.listaContattiId);
@@ -90,16 +92,35 @@ export const ProspectCardBody = React.forwardRef<
             <span className="shrink-0 rounded-full bg-info/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-info">
               Lista
             </span>
-          ) : detailHref && !overlay ? (
-            <Link
-              href={detailHref}
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => e.stopPropagation()}
-              aria-label={`Apri ${prospect.full_name}`}
-              className="relative z-20 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted/70 text-muted-foreground transition-colors hover:bg-primary/15 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <ArrowUpRight className="h-4 w-4" aria-hidden />
-            </Link>
+          ) : !overlay ? (
+            <div className="relative z-20 flex shrink-0 items-center gap-1">
+              {detailHref && (
+                <Link
+                  href={detailHref}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                  aria-label={`Apri ${prospect.full_name}`}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-muted/70 text-muted-foreground transition-colors hover:bg-primary/15 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <ArrowUpRight className="h-4 w-4" aria-hidden />
+                </Link>
+              )}
+              {onDelete && (
+                <button
+                  type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    onDelete();
+                  }}
+                  aria-label={`Elimina ${prospect.full_name}`}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-muted/70 text-muted-foreground transition-colors hover:bg-danger/15 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden />
+                </button>
+              )}
+            </div>
           ) : (
             <ArrowUpRight
               className="relative z-10 h-3.5 w-3.5 shrink-0 text-muted-foreground/40 opacity-0 transition-all duration-base group-hover/card:translate-x-0.5 group-hover/card:opacity-100 group-hover/card:text-foreground"
@@ -141,10 +162,12 @@ export interface ProspectCardProps {
   disabled?: boolean;
   /** Profile URL to return to — threaded into the detail link as `?from=`. */
   backHref?: string;
+  /** Ask the board to confirm + delete this prospect (real prospects only). */
+  onRequestDelete?: (prospect: ProspectView) => void;
 }
 
 /** Sortable + draggable instance placed inside a column. */
-export function ProspectCard({ prospect, disabled, backHref }: ProspectCardProps) {
+export function ProspectCard({ prospect, disabled, backHref, onRequestDelete }: ProspectCardProps) {
   const {
     attributes,
     listeners,
@@ -176,6 +199,11 @@ export function ProspectCard({ prospect, disabled, backHref }: ProspectCardProps
       prospect={prospect}
       dragging={isDragging}
       detailHref={detailHref}
+      onDelete={
+        onRequestDelete && !prospect.listaContattiId
+          ? () => onRequestDelete(prospect)
+          : undefined
+      }
       style={style}
       // Drag from anywhere on the card.
       {...attributes}

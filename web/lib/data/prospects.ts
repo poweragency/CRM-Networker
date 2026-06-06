@@ -266,7 +266,7 @@ export async function changeStage(
   try {
     const { error } = await supabase.rpc('change_prospect_stage', {
       p_prospect_id: prospectId,
-      p_to_stage: toStage,
+      p_new_stage: toStage,
       p_notes: notes ?? null,
     });
     if (error) {
@@ -292,6 +292,26 @@ export async function changeStage(
       demo: false,
       ok: false,
     };
+  }
+}
+
+/**
+ * Soft-delete a prospect (sets `deleted_at`; the board filters it out). RLS
+ * (`prospects_update` / visibility) allows the owner's upline + admins. Demo-safe.
+ */
+export async function deleteProspect(
+  id: string,
+): Promise<MutationResult<{ id: string }>> {
+  const supabase = getClient();
+  if (!supabase) return { data: { id }, demo: true, ok: true };
+  try {
+    const { error } = await supabase
+      .from('prospects')
+      .update({ deleted_at: nowIso() })
+      .eq('id', id);
+    return { data: { id }, demo: false, ok: !error };
+  } catch {
+    return { data: { id }, demo: false, ok: false };
   }
 }
 

@@ -58,6 +58,26 @@ function seed(members: AttendanceMember[], pick: (m: AttendanceMember) => Record
   return Object.fromEntries(members.map((m) => [m.id, { ...pick(m) }]));
 }
 
+/**
+ * Per-call tone ramp — mirrors CompletionRing so the bar/icon/count match the
+ * gauge at every level: cold (info) → accent (primary) → success → GOLD (100%).
+ */
+function callTone(ratio: number): {
+  bar: string;
+  chipBg: string;
+  text: string;
+  ring: string;
+  wash: string;
+} {
+  if (ratio >= 1)
+    return { bar: 'from-warning to-warning', chipBg: 'bg-warning/15', text: 'text-warning', ring: 'ring-warning/30', wash: 'from-warning/[0.10]' };
+  if (ratio >= 0.75)
+    return { bar: 'from-success to-success', chipBg: 'bg-success/12', text: 'text-success', ring: 'ring-success/25', wash: 'from-success/[0.06]' };
+  if (ratio >= 0.4)
+    return { bar: 'from-primary to-primary', chipBg: 'bg-primary/12', text: 'text-primary', ring: 'ring-primary/25', wash: 'from-primary/[0.06]' };
+  return { bar: 'from-info to-info', chipBg: 'bg-info/12', text: 'text-info', ring: 'ring-info/25', wash: 'from-info/[0.06]' };
+}
+
 export function AttendanceTable({
   date,
   calls,
@@ -205,8 +225,10 @@ export function AttendanceTable({
           <div className="space-y-5">
             {calls.map((c) => {
               const presentCount = members.filter((m) => present[m.id]?.[c.id]).length;
-              const pct = members.length ? Math.round((presentCount / members.length) * 100) : 0;
+              const ratio = members.length ? presentCount / members.length : 0;
+              const pct = Math.round(ratio * 100);
               const full = members.length > 0 && presentCount === members.length;
+              const tone = callTone(ratio);
               return (
                 <section
                   key={c.id}
@@ -221,16 +243,16 @@ export function AttendanceTable({
                     <div
                       className={cn(
                         'pointer-events-none absolute inset-0 bg-gradient-to-br to-transparent',
-                        full ? 'from-warning/[0.10]' : 'from-success/[0.05]',
+                        tone.wash,
                       )}
                       aria-hidden
                     />
                     <span
                       className={cn(
                         'relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1',
-                        full
-                          ? 'bg-warning/15 text-warning ring-warning/30'
-                          : 'bg-success/12 text-success ring-success/25',
+                        tone.chipBg,
+                        tone.text,
+                        tone.ring,
                       )}
                       aria-hidden
                     >
@@ -260,12 +282,12 @@ export function AttendanceTable({
                       <div className="mt-2 flex items-center gap-3">
                         <ProgressMeter
                           value={pct}
-                          gradient={full ? 'from-warning to-warning' : 'from-success to-success'}
+                          gradient={tone.bar}
                           heightClass="h-2"
                           className="max-w-md flex-1"
                         />
                         <span className="shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">
-                          <span className={cn(full ? 'text-warning' : 'text-foreground')}>
+                          <span className={tone.text}>
                             {presentCount}
                           </span>
                           /{members.length}
@@ -291,7 +313,9 @@ export function AttendanceTable({
                           className={cn(
                             'group/cell flex flex-col gap-2 rounded-lg border p-2.5 transition-[box-shadow,transform,border-color] duration-base ease-standard hover:-translate-y-px hover:shadow-sm',
                             isPresent
-                              ? 'border-success/30 bg-success/[0.04]'
+                              ? full
+                                ? 'border-warning/40 bg-warning/[0.06]'
+                                : 'border-success/30 bg-success/[0.04]'
                               : 'border-border bg-background hover:border-border',
                           )}
                         >
@@ -301,7 +325,7 @@ export function AttendanceTable({
                               size="sm"
                               className={cn(
                                 'ring-1 transition-shadow',
-                                isPresent ? 'ring-success/30' : 'ring-border',
+                                isPresent ? (full ? 'ring-warning/30' : 'ring-success/30') : 'ring-border',
                               )}
                             />
                             <div className="min-w-0 flex-1">
@@ -322,6 +346,7 @@ export function AttendanceTable({
                           <div className="flex items-center gap-1.5">
                             <ToggleChip
                               checked={isPresent}
+                              checkedTone={full ? 'warning' : 'success'}
                               onClick={() => togglePresent(m, c.id)}
                               ariaLabel={`${m.display_name} — ${c.title} — ${isPresent ? t('present') : t('absent')}`}
                               onIcon={Check}
@@ -331,6 +356,7 @@ export function AttendanceTable({
                             />
                             <ToggleChip
                               checked={camOn}
+                              checkedTone={full ? 'warning' : 'success'}
                               onClick={() => toggleCam(m, c.id)}
                               ariaLabel={`${m.display_name} — ${camOn ? t('cam_on') : t('cam_off')}`}
                               onIcon={Video}
@@ -362,6 +388,7 @@ function ToggleChip({
   offIcon: OffIcon,
   onLabel,
   offLabel,
+  checkedTone = 'success',
 }: {
   checked: boolean;
   onClick: () => void;
@@ -370,6 +397,8 @@ function ToggleChip({
   offIcon: typeof X;
   onLabel: string;
   offLabel: string;
+  /** Tone of the "on" state — gold when the whole call is at 100%. */
+  checkedTone?: 'success' | 'warning';
 }) {
   const Icon = checked ? OnIcon : OffIcon;
   return (
@@ -382,7 +411,9 @@ function ToggleChip({
       className={cn(
         'inline-flex h-7 flex-1 items-center justify-center gap-1 rounded-full px-2 text-[11px] font-semibold ring-1 ring-inset transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         checked
-          ? 'bg-success/15 text-success ring-success/25 hover:bg-success/25'
+          ? checkedTone === 'warning'
+            ? 'bg-warning/15 text-warning ring-warning/25 hover:bg-warning/25'
+            : 'bg-success/15 text-success ring-success/25 hover:bg-success/25'
           : 'bg-danger/10 text-danger ring-danger/20 hover:bg-danger/20',
       )}
     >

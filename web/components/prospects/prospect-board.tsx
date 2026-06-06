@@ -26,7 +26,11 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/crm/toaster';
 import { ConfigNotice } from '@/components/config-notice';
 import { useListaContattiStoreOptional } from '@/components/team/lista-contatti-store';
-import { changeStageAction } from '@/app/(app)/percorso-prospect/actions';
+import {
+  changeStageAction,
+  deleteProspectAction,
+} from '@/app/(app)/percorso-prospect/actions';
+import { ConfirmDialog } from '@/components/crm/confirm-dialog';
 import { BoardColumn } from './board-column';
 import { ProspectCardBody } from './prospect-card';
 import { NewProspectSheet, type ContactOption } from './new-prospect-sheet';
@@ -154,6 +158,7 @@ export function ProspectBoard({
   const [sheetOpen, setSheetOpen] = React.useState(false);
   const [sheetStage, setSheetStage] =
     React.useState<ProspectStage>('conoscitiva');
+  const [deleteTarget, setDeleteTarget] = React.useState<ProspectView | null>(null);
 
   // Re-sync when the server sends fresh data (e.g. after router.refresh()).
   React.useEffect(() => {
@@ -302,6 +307,24 @@ export function ProspectBoard({
     }));
   }
 
+  async function handleDelete() {
+    const target = deleteTarget;
+    if (!target) return;
+    const res = await deleteProspectAction(target.id);
+    if (!res.ok) {
+      toast({ title: 'Operazione non riuscita. Riprova.', variant: 'error' });
+      return;
+    }
+    setStageMap((prev) => {
+      const next = {} as StageMap;
+      for (const stage of STAGE_ORDER) {
+        next[stage] = prev[stage].filter((p) => p.id !== target.id);
+      }
+      return next;
+    });
+    toast({ title: 'Prospect eliminato', variant: 'success' });
+  }
+
   function openSheet(stage: ProspectStage = 'conoscitiva') {
     setSheetStage(stage);
     setSheetOpen(true);
@@ -364,6 +387,7 @@ export function ProspectBoard({
                 busy={busyId !== null}
                 extraCards={lcByStage[stage]}
                 backHref={backHref}
+                onRequestDelete={setDeleteTarget}
               />
             );
           })}
@@ -386,6 +410,21 @@ export function ProspectBoard({
         ownerMarketerId={ownerMarketerId}
         defaultStage={sheetStage}
         onCreated={onCreated}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(o) => {
+          if (!o) setDeleteTarget(null);
+        }}
+        title="Elimina prospect"
+        description={
+          deleteTarget
+            ? `Vuoi eliminare “${deleteTarget.full_name}” dal percorso? L'azione non è reversibile.`
+            : undefined
+        }
+        confirmLabel="Elimina"
+        onConfirm={handleDelete}
       />
     </div>
   );
