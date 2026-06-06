@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { saveOrgTheme, type SaveThemeResult } from '@/lib/data/org-theme';
 import { setMemberRole, type SetRoleResult } from '@/lib/data/roles';
+import { currentIsOrgAdmin } from '@/lib/data/authz';
 import {
   createZoomCall,
   deleteZoomCall,
@@ -34,6 +35,10 @@ export async function setMemberRoleAction(
   marketerId: string,
   role: MembershipRole,
 ): Promise<SetRoleResult> {
+  // Role changes are admin-only. Re-check server-side: this action lives in the
+  // /impostazioni module that limited members can open, so middleware won't block
+  // a direct POST.
+  if (!(await currentIsOrgAdmin())) return { ok: false, demo: false };
   const res = await setMemberRole(marketerId, role);
   if (res.ok && !res.demo) revalidatePath('/impostazioni');
   return res;

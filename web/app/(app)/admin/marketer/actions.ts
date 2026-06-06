@@ -5,6 +5,7 @@ import {
   type CreateMarketerInput,
   type CreateMarketerResult,
 } from '@/lib/data/admin';
+import { currentIsOrgAdmin } from '@/lib/data/authz';
 
 /**
  * Server Action backing /admin/marketer/nuovo. Delegates to the server-only data
@@ -15,5 +16,8 @@ import {
 export async function createMarketerAction(
   input: CreateMarketerInput,
 ): Promise<CreateMarketerResult> {
+  // Defense-in-depth: this action is POST-dispatchable to any route, so re-check
+  // admin authority server-side (not just middleware/RLS).
+  if (!(await currentIsOrgAdmin())) return { id: null, demo: false, ok: false };
   return createMarketer(input);
 }

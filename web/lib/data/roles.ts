@@ -1,5 +1,6 @@
 import 'server-only';
 import { getClient, getOwnerContext } from '@/lib/data/crm-shared';
+import { logError } from '@/lib/log';
 import { RANK_ORDER, type MarketerRank, type MembershipRole } from '@/lib/types/db';
 
 /** Co-admin requires Team Leader or higher. */
@@ -82,13 +83,21 @@ export async function setMemberRole(
         return { ok: false, demo: false };
       }
     }
-    const { error } = await supabase
+    // .select() so an RLS-denied UPDATE (0 rows, NO error) is reported as a real
+    // failure instead of a silent false success.
+    const { data: updated, error } = await supabase
       .from('memberships')
       .update({ role })
       .eq('org_id', orgId)
-      .eq('marketer_id', marketerId);
-    return { ok: !error, demo: false };
-  } catch {
+      .eq('marketer_id', marketerId)
+      .select('marketer_id');
+    if (error) {
+      logError('setMemberRole', error, { marketerId, role });
+      return { ok: false, demo: false };
+    }
+    return { ok: (updated?.length ?? 0) > 0, demo: false };
+  } catch (e) {
+    logError('setMemberRole', e, { marketerId, role });
     return { ok: false, demo: false };
   }
 }
