@@ -67,17 +67,12 @@ export function StageChanger({ prospectId, currentStage }: StageChangerProps) {
     }
 
     const enrolled = target === 'iscrizione';
-    const win = enrolled || target === 'closing';
     toast({
-      title: enrolled
-        ? 'Prospect iscritto! 🎉'
-        : target === 'closing'
-          ? 'Sei in Closing! 🔥'
-          : 'Fase aggiornata',
+      title: enrolled ? 'Prospect iscritto! 🎉' : 'Fase aggiornata',
       description: res.demo
         ? `Spostato in “${STAGE_LABELS[target]}” (simulato in modalità demo).`
         : `Spostato in “${STAGE_LABELS[target]}”.`,
-      variant: win ? 'achievement' : 'success',
+      variant: enrolled ? 'achievement' : 'success',
     });
     setTarget(null);
     router.refresh();

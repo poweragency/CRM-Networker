@@ -284,17 +284,12 @@ export function ProspectBoard({
     });
 
     const enrolled = destStage === 'iscrizione';
-    const win = enrolled || destStage === 'closing';
     toast({
-      title: enrolled
-        ? 'Prospect iscritto! 🎉'
-        : destStage === 'closing'
-          ? 'Sei in Closing! 🔥'
-          : 'Fase aggiornata',
+      title: enrolled ? 'Prospect iscritto! 🎉' : 'Fase aggiornata',
       description: res.demo
         ? `Spostato in “${STAGE_LABELS[destStage]}” (simulato in modalità demo).`
         : `Spostato in “${STAGE_LABELS[destStage]}”.`,
-      variant: win ? 'achievement' : 'success',
+      variant: enrolled ? 'achievement' : 'success',
     });
 
     if (!res.demo) router.refresh();
