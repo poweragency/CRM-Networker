@@ -932,6 +932,7 @@
     "created_demo": "Invito simulato in modalità demo.",
     "marketer_required": "Seleziona un marketer.",
     "email_invalid": "Inserisci un'email valida.",
+    "create_error": "Invito non riuscito. Riprova o verifica la configurazione.",
     "revoke": "Revoca",
     "revoke_confirm_title": "Revocare l'invito?",
     "revoke_confirm_body": "L'invito non sarà più utilizzabile. Potrai crearne uno nuovo.",

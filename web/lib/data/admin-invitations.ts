@@ -1,5 +1,6 @@
 import 'server-only';
 import { getClient } from '@/lib/data/crm-shared';
+import { logError } from '@/lib/log';
 import type {
   AccountInvitation,
   InvitationStatus,
@@ -109,12 +110,17 @@ export async function createInvitation(
     });
     const invitationId = (data as { invitation_id?: string } | null)?.invitation_id;
     if (error || !invitationId) {
-      // Edge Function not deployed / call failed → simulate so the UI flows.
-      return { invitation: base, demo: true, ok: true };
+      // Configured env: a failed invoke / missing id is a REAL failure — surface it
+      // (ok:false) instead of faking success, so the admin knows nothing was sent.
+      logError('createInvitation', error ?? new Error('no invitation_id'), {
+        marketerId: input.marketerId,
+      });
+      return { invitation: base, demo: false, ok: false };
     }
     return { invitation: { ...base, id: String(invitationId) }, demo: false, ok: true };
-  } catch {
-    return { invitation: base, demo: true, ok: true };
+  } catch (e) {
+    logError('createInvitation', e, { marketerId: input.marketerId });
+    return { invitation: base, demo: false, ok: false };
   }
 }
 

@@ -90,6 +90,12 @@ export function InvitationsManager({
         role,
         crmAccess,
       });
+      // A configured write that fails now returns ok:false — show a real error and
+      // do NOT add a fake row.
+      if (!res.ok) {
+        setError(t('create_error'));
+        return;
+      }
       setItems((prev) => [res.invitation, ...prev]);
       toast({
         title: t('created'),
