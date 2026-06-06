@@ -13,8 +13,27 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'CRM Networker',
+  metadataBase: new URL('https://crm-networker.vercel.app'),
+  // Fixed browser-tab title: the `template` has NO `%s`, so every page (whatever
+  // its own metadata title) renders as exactly "PowerNetwork" — the tab never
+  // changes when navigating.
+  title: {
+    default: 'PowerNetwork',
+    template: 'PowerNetwork',
+  },
+  applicationName: 'PowerNetwork',
   description: 'CRM + Business Intelligence per il network marketing.',
+  openGraph: {
+    title: 'PowerNetwork',
+    description: 'CRM + Business Intelligence per il network marketing.',
+    siteName: 'PowerNetwork',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'PowerNetwork',
+    description: 'CRM + Business Intelligence per il network marketing.',
+  },
 };
 
 /**
