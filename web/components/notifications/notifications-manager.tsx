@@ -101,8 +101,9 @@ export function NotificationsManager({
   async function markAll() {
     if (unread === 0) return;
     const now = new Date().toISOString();
+    const unreadKeys = items.filter((n) => !n.read_at).map((n) => n.id);
     setItems((prev) => prev.map((n) => (n.read_at ? n : { ...n, read_at: now })));
-    const res = await markAllReadAction();
+    const res = await markAllReadAction(unreadKeys);
     notifyDemo(t('all_marked_read'), res.demo);
   }
 

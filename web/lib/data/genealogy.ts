@@ -3,11 +3,13 @@ import { cache } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
 import { getCurrentClaims } from '@/lib/data/session';
+import { kpisFromStages } from '@/lib/prospect-kpis';
 import type {
   BranchScope,
   MarketerRank,
   MarketerStatus,
   PlacementLeg,
+  ProspectStage,
   TreeNode,
 } from '@/lib/types/db';
 import {
@@ -138,6 +140,55 @@ function withCounts(
   });
 }
 
+/**
+ * Per-marketer prospect KPIs for the genealogy node cards (audit: prospects /
+ * conversion were hardcoded to 0). `prospects` = the owner's non-deleted pipeline
+ * size; `conversion` = iscritti / business-info-reached (kpisFromStages — same
+ * definition as the personal performance widget). One query for the whole visible
+ * set; RLS scopes prospects to what the caller can see.
+ */
+async function fetchProspectKpis(
+  supabase: SupabaseServerClient,
+  ids: string[],
+): Promise<Map<string, { prospects: number; conversion: number }>> {
+  const out = new Map<string, { prospects: number; conversion: number }>();
+  for (const id of ids) out.set(id, { prospects: 0, conversion: 0 });
+  if (ids.length === 0) return out;
+  try {
+    const { data } = await supabase
+      .from('prospects')
+      .select('owner_marketer_id, current_stage')
+      .in('owner_marketer_id', ids)
+      .is('deleted_at', null);
+    const stagesByOwner = new Map<string, ProspectStage[]>();
+    for (const r of (data ?? []) as { owner_marketer_id: string; current_stage: ProspectStage }[]) {
+      const arr = stagesByOwner.get(r.owner_marketer_id) ?? [];
+      arr.push(r.current_stage);
+      stagesByOwner.set(r.owner_marketer_id, arr);
+    }
+    for (const [owner, stages] of stagesByOwner) {
+      const k = kpisFromStages(stages);
+      out.set(owner, { prospects: k.prospects, conversion: k.conversionRate });
+    }
+  } catch {
+    /* best-effort: leave zeros so the node still renders */
+  }
+  return out;
+}
+
+/** Stamp prospect KPIs (prospects + conversion_rate) onto already-built TreeNodes. */
+function withProspectKpis(
+  nodes: TreeNode[],
+  kpis: Map<string, { prospects: number; conversion: number }>,
+): TreeNode[] {
+  return nodes.map((n) => {
+    const k = kpis.get(n.id);
+    return k
+      ? { ...n, kpis: { ...n.kpis, prospects: k.prospects, conversion_rate: k.conversion } }
+      : n;
+  });
+}
+
 /** The caller's visible root: own marketer (members) or org root (admins). */
 export async function getRootMarketer(): Promise<GenealogyResult<TreeNode>> {
   if (!isSupabaseConfigured) {
@@ -162,7 +213,8 @@ export async function getRootMarketer(): Promise<GenealogyResult<TreeNode>> {
     if (rootData) {
       const node = toTreeNode(rootData);
       const counts = await fetchTeamCounts(supabase, [node.id]);
-      return { data: withCounts([node], counts)[0], demo: false };
+      const pk = await fetchProspectKpis(supabase, [node.id]);
+      return { data: withProspectKpis(withCounts([node], counts), pk)[0], demo: false };
     }
 
     // Fallback: root the tree at the caller's OWN marketer (top of their subtree).
@@ -178,7 +230,8 @@ export async function getRootMarketer(): Promise<GenealogyResult<TreeNode>> {
       if (selfData) {
         const node = toTreeNode(selfData);
         const counts = await fetchTeamCounts(supabase, [node.id]);
-        return { data: withCounts([node], counts)[0], demo: false };
+        const pk = await fetchProspectKpis(supabase, [node.id]);
+        return { data: withProspectKpis(withCounts([node], counts), pk)[0], demo: false };
       }
     }
 
@@ -210,8 +263,10 @@ export async function getChildren(
 
     if (error || !data) return { data: [], demo: false };
     const nodes = (data as MarketerRow[]).map(toTreeNode);
-    const counts = await fetchTeamCounts(supabase, nodes.map((n) => n.id));
-    return { data: withCounts(nodes, counts), demo: false };
+    const ids = nodes.map((n) => n.id);
+    const counts = await fetchTeamCounts(supabase, ids);
+    const pk = await fetchProspectKpis(supabase, ids);
+    return { data: withProspectKpis(withCounts(nodes, counts), pk), demo: false };
   } catch {
     return { data: [], demo: false };
   }
@@ -251,7 +306,11 @@ export async function getSubtree(
         ? rows
         : rows.filter((r) => r.id === rootId || r.branch_leg === scope);
 
-    return { data: filtered.map(toTreeNode), demo: false };
+    // get_subtree already returns team sizes; enrich with per-node prospect KPIs
+    // (prospects + conversion) which the RPC doesn't compute.
+    const nodes = filtered.map(toTreeNode);
+    const pk = await fetchProspectKpis(supabase, nodes.map((n) => n.id));
+    return { data: withProspectKpis(nodes, pk), demo: false };
   } catch {
     return { data: [], demo: false };
   }

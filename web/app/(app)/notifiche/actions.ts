@@ -21,8 +21,10 @@ export async function markReadAction(
   return markNotificationRead(id);
 }
 
-export async function markAllReadAction(): Promise<NotificationMutationResult> {
-  return markAllNotificationsRead();
+export async function markAllReadAction(
+  keys: string[] = [],
+): Promise<NotificationMutationResult> {
+  return markAllNotificationsRead(keys);
 }
 
 export async function dismissAction(

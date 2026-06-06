@@ -1,19 +1,21 @@
 import 'server-only';
-import { getClient } from '@/lib/data/crm-shared';
-import { getOwnerContext } from '@/lib/data/crm-shared';
+import { getClient, getOwnerContext } from '@/lib/data/crm-shared';
+import { logError } from '@/lib/log';
 import type { AppNotification, NotificationType } from '@/lib/types/db';
 import { listUpcomingBirthdays } from '@/lib/data/team';
 
 /**
- * Notifications data access (server-only). The inbox is intentionally reduced to
- * just TWO event kinds, both DERIVED at request time (never stored), so they're
- * always fresh and impossible to spam:
+ * Notifications data access (server-only). The inbox is reduced to TWO event kinds,
+ * both DERIVED at request time (no stored row):
  *   1. `new_member` — someone was recently added to the caller's team;
  *   2. `birthday`   — a team member's birthday is TODAY.
- * Both are scoped to the caller's STRICT downline via the closure table: the
- * caller is, by definition, an upline of everyone in it — so crossline and
- * downline never receive these, and the rule holds even for org admins (whose
- * RLS visibility would otherwise span the whole org). Never throws.
+ * Both are scoped to the caller's STRICT downline via the closure table (the caller
+ * is an upline of everyone in it), so crossline/downline never receive them, even
+ * for org admins.
+ *
+ * Because they're derived, their read/dismiss state is persisted by STABLE KEY in
+ * `notification_state` (per recipient) so the inbox is actually clearable across
+ * reloads. Never throws.
  */
 
 export interface NotificationsResult {
@@ -34,11 +36,16 @@ function activeUnread(rows: AppNotification[]): number {
 /** Surface a newly-added team member for this many days after they joined. */
 const NEW_MEMBER_WINDOW_DAYS = 7;
 
+/** Local YYYY-MM-DD (stable per day) — used to key today's birthday occurrence. */
+function localDateKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+    d.getDate(),
+  ).padStart(2, '0')}`;
+}
+
 /**
- * The caller's STRICT descendant marketer ids (closure depth >= 1) — i.e. the
- * people the caller is an upline of. Closure rows only exist for real
- * ancestor→descendant pairs, so this excludes self, crossline and uplines for
- * everyone, admins included. Empty in pure demo mode (no env).
+ * The caller's STRICT descendant marketer ids (closure depth >= 1) — the people the
+ * caller is an upline of. Empty in pure demo mode (no env).
  */
 async function descendantIds(): Promise<Set<string>> {
   const ids = new Set<string>();
@@ -70,10 +77,12 @@ async function birthdayNotifications(
   try {
     const { data } = await listUpcomingBirthdays(0, now); // 0 days = today only
     const createdAt = now.toISOString();
+    const dk = localDateKey(now);
     return data
       .filter((b) => b.daysUntil === 0 && team.has(b.id))
       .map((b) => ({
-        id: `bday-${b.id}`,
+        // Per-day key so dismissing today's birthday doesn't suppress next year's.
+        id: `bday-${b.id}-${dk}`,
         type: 'birthday' as NotificationType,
         title_it: `🎂 Oggi è il compleanno di ${b.display_name}!`,
         body_it: 'Un membro del tuo team compie gli anni oggi. Fagli gli auguri!',
@@ -125,88 +134,104 @@ async function newMemberNotifications(
   }
 }
 
-/** The caller's active notifications (new member + today's birthdays), newest first. */
+/** The caller's active notifications, with persisted read/dismiss state applied. */
 export async function listNotifications(
   limit = 50,
 ): Promise<NotificationsResult> {
-  const now = new Date();
   const supabase = getClient();
+  if (!supabase) return { data: [], unread: 0, demo: true };
+
+  const now = new Date();
   const team = await descendantIds();
   const [birthdays, newMembers] = await Promise.all([
     birthdayNotifications(now, team),
     newMemberNotifications(now, team),
   ]);
-  const data = [...newMembers, ...birthdays]
-    .sort((a, b) =>
-      a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0,
-    )
+  let data = [...newMembers, ...birthdays];
+
+  // Apply persisted state: drop dismissed, stamp read_at from notification_state.
+  try {
+    if (data.length > 0) {
+      const { marketerId } = await getOwnerContext();
+      if (marketerId) {
+        const { data: states } = await supabase
+          .from('notification_state')
+          .select('notif_key, read_at, dismissed_at')
+          .eq('recipient_marketer_id', marketerId)
+          .in('notif_key', data.map((n) => n.id));
+        const byKey = new Map<string, { read_at: string | null; dismissed_at: string | null }>();
+        for (const s of (states ?? []) as Record<string, unknown>[]) {
+          byKey.set(String(s.notif_key), {
+            read_at: (s.read_at as string | null) ?? null,
+            dismissed_at: (s.dismissed_at as string | null) ?? null,
+          });
+        }
+        data = data
+          .filter((n) => !byKey.get(n.id)?.dismissed_at)
+          .map((n) => {
+            const st = byKey.get(n.id);
+            return st?.read_at ? { ...n, read_at: st.read_at } : n;
+          });
+      }
+    }
+  } catch (e) {
+    logError('listNotifications.state', e);
+  }
+
+  data = data
+    .sort((a, b) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0))
     .slice(0, limit);
-  return { data, unread: activeUnread(data), demo: !supabase };
+  return { data, unread: activeUnread(data), demo: false };
 }
 
-/**
- * Both notification kinds are DERIVED at request time with synthetic ids
- * (`bday-…` / `newmember-…`), not rows in the uuid-keyed table. A DB write keyed
- * on such an id throws 22P02 (invalid uuid) that the catch would mask as success.
- * Treat them as honest client-only no-ops.
- */
-function isSyntheticId(id: string): boolean {
-  return id.startsWith('bday-') || id.startsWith('newmember-');
+/** Upsert read/dismiss state for the caller on the given notification keys. */
+async function upsertState(
+  patch: { read_at?: string; dismissed_at?: string },
+  keys: string[],
+): Promise<NotificationMutationResult> {
+  const supabase = getClient();
+  if (!supabase) return { demo: true, ok: true };
+  if (keys.length === 0) return { demo: false, ok: true };
+  try {
+    const { orgId, marketerId } = await getOwnerContext();
+    if (!orgId || !marketerId) return { demo: false, ok: false };
+    const rows = keys.map((k) => ({
+      org_id: orgId,
+      recipient_marketer_id: marketerId,
+      notif_key: k,
+      ...patch,
+    }));
+    const { error } = await supabase
+      .from('notification_state')
+      .upsert(rows, { onConflict: 'recipient_marketer_id,notif_key' });
+    if (error) {
+      logError('notificationState.upsert', error);
+      return { demo: false, ok: false };
+    }
+    return { demo: false, ok: true };
+  } catch (e) {
+    logError('notificationState.upsert', e);
+    return { demo: false, ok: false };
+  }
 }
 
-/** Mark a single notification read. */
+/** Mark a single notification read (persisted by key). */
 export async function markNotificationRead(
   id: string,
 ): Promise<NotificationMutationResult> {
-  if (isSyntheticId(id)) return { demo: true, ok: true };
-  const supabase = getClient();
-  if (!supabase) return { demo: true, ok: true };
-  try {
-    const { error } = await supabase
-      .from('notifications')
-      .update({ read_at: new Date().toISOString() })
-      .eq('id', id)
-      .is('read_at', null);
-    return { demo: false, ok: !error };
-  } catch {
-    return { demo: true, ok: true };
-  }
+  return upsertState({ read_at: new Date().toISOString() }, [id]);
 }
 
-/** Mark all of the caller's unread notifications read. */
-export async function markAllNotificationsRead(): Promise<NotificationMutationResult> {
-  const supabase = getClient();
-  if (!supabase) return { demo: true, ok: true };
-  try {
-    const { orgId, marketerId } = await getOwnerContext();
-    const { error } = await supabase
-      .from('notifications')
-      .update({ read_at: new Date().toISOString() })
-      .eq('org_id', orgId)
-      // Always scope to the CALLER. The UPDATE policy widens for admins, so without
-      // this an admin would mark the whole org's notifications read.
-      .eq('recipient_marketer_id', marketerId)
-      .is('read_at', null);
-    return { demo: false, ok: !error };
-  } catch {
-    return { demo: true, ok: true };
-  }
+/** Mark the given notifications read (the caller's current set). */
+export async function markAllNotificationsRead(
+  keys: string[] = [],
+): Promise<NotificationMutationResult> {
+  return upsertState({ read_at: new Date().toISOString() }, keys);
 }
 
-/** Dismiss (soft-delete) a notification. */
+/** Dismiss (hide) a notification for the caller (persisted by key). */
 export async function dismissNotification(
   id: string,
 ): Promise<NotificationMutationResult> {
-  if (isSyntheticId(id)) return { demo: true, ok: true };
-  const supabase = getClient();
-  if (!supabase) return { demo: true, ok: true };
-  try {
-    const { error } = await supabase
-      .from('notifications')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', id);
-    return { demo: false, ok: !error };
-  } catch {
-    return { demo: true, ok: true };
-  }
+  return upsertState({ dismissed_at: new Date().toISOString() }, [id]);
 }
