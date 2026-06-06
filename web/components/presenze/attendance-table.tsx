@@ -270,11 +270,6 @@ export function AttendanceTable({
                     <div className="relative min-w-0 flex-1">
                       <h2 className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm font-semibold tracking-tight text-foreground">
                         <span className="truncate">{c.title}</span>
-                        {c.scope === 'team' && c.created_by_name && (
-                          <span className="text-[11px] font-normal text-muted-foreground">
-                            {t('call_by', { name: c.created_by_name })}
-                          </span>
-                        )}
                         {c.start_time && (
                           <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-muted-foreground">
                             {c.start_time}

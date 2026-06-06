@@ -11,6 +11,7 @@ import { useToast } from '@/components/crm/toaster';
 import { WHY_KEYS, type SevenWhys, type WhyKey } from '@/lib/types/db';
 import type { SevenWhysInput } from '@/lib/data/seven-whys';
 import { saveSevenWhysAction } from '@/app/(app)/sette-perche/actions';
+import { UnsavedBar } from '@/components/crm/unsaved-bar';
 import { SevenWhysStepper } from './seven-whys-stepper';
 import { WhyProgress } from './why-progress';
 
@@ -250,6 +251,10 @@ export const SevenWhysEditor = React.forwardRef<
             {busy ? tc('saving') : t('save')}
           </Button>
         </div>
+      )}
+
+      {!readOnly && !embedded && (
+        <UnsavedBar dirty={dirty} saving={busy} onSave={save} />
       )}
     </div>
   );

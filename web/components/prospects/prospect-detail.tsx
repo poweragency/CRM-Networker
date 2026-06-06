@@ -26,6 +26,7 @@ import {
   changeStageAction,
   saveProspectExtraAction,
 } from '@/app/(app)/percorso-prospect/actions';
+import { UnsavedBar } from '@/components/crm/unsaved-bar';
 import { stageTokens } from './stage-tokens';
 
 /**
@@ -110,6 +111,12 @@ export function ProspectDetail({ prospect, extra }: ProspectDetailProps) {
       description: res.demo ? tc('saved_demo') : undefined,
       variant: 'success',
     });
+  }
+
+  // Save whatever is pending (stage and/or details) from the unsaved-changes bar.
+  async function saveAll() {
+    if (stageDirty) await saveStage();
+    if (extraDirty) await saveExtra();
   }
 
   return (
@@ -275,6 +282,12 @@ export function ProspectDetail({ prospect, extra }: ProspectDetailProps) {
           </div>
         </CardContent>
       </Card>
+
+      <UnsavedBar
+        dirty={stageDirty || extraDirty}
+        saving={savingStage || savingExtra}
+        onSave={saveAll}
+      />
     </div>
   );
 }

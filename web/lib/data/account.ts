@@ -12,6 +12,63 @@ import { getCurrentClaims } from '@/lib/data/session';
  * Never throws.
  */
 
+export interface RevokeResult {
+  ok: boolean;
+}
+
+/**
+ * Revoke the login of a marketer that has just been removed from the tree: delete
+ * the membership AND the auth user, so the removed person can no longer sign in.
+ *
+ * Authorization is enforced UPSTREAM by `remove_marketer` (RLS, Team Leader+);
+ * the caller invokes this only after that RLS-gated removal succeeded. Uses the
+ * service-role admin client (bypasses RLS). Best-effort — each step is isolated so
+ * a failure on one doesn't block the other; never throws.
+ */
+export async function revokeAccountForMarketer(
+  marketerId: string,
+): Promise<RevokeResult> {
+  const { claims } = await getCurrentClaims();
+  const orgId = claims.org_id;
+  const admin = getAdminClient();
+  if (!admin || !orgId) return { ok: false };
+
+  let userId: string | null = null;
+  try {
+    const { data } = await admin
+      .from('memberships')
+      .select('user_id')
+      .eq('org_id', orgId)
+      .eq('marketer_id', marketerId)
+      .maybeSingle();
+    userId = (data as { user_id: string | null } | null)?.user_id ?? null;
+  } catch {
+    /* ignore — proceed to best-effort cleanup */
+  }
+
+  // Remove the membership row (login link) first.
+  try {
+    await admin
+      .from('memberships')
+      .delete()
+      .eq('org_id', orgId)
+      .eq('marketer_id', marketerId);
+  } catch {
+    /* ignore */
+  }
+
+  // Delete the auth user → the account can no longer authenticate.
+  if (userId) {
+    try {
+      await admin.auth.admin.deleteUser(userId);
+    } catch {
+      return { ok: false };
+    }
+  }
+
+  return { ok: true };
+}
+
 export type ActivateError = 'forbidden' | 'service_missing' | 'email_taken' | 'failed';
 
 export interface ActivateResult {

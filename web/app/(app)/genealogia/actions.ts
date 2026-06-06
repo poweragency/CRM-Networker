@@ -7,7 +7,7 @@ import {
 } from '@/lib/data/genealogy';
 import { updateMarketerExtra } from '@/lib/data/team';
 import { createMarketer, removeMarketer } from '@/lib/data/admin';
-import { activateCrmAccess } from '@/lib/data/account';
+import { activateCrmAccess, revokeAccountForMarketer } from '@/lib/data/account';
 import {
   addRuntimeNode,
   nextRuntimeId,
@@ -181,7 +181,13 @@ export interface RemoveMemberResult {
  * the caller. Visibility-gated by RLS (anyone can prune within their subtree).
  */
 export async function removeMarketerAction(nodeId: string): Promise<RemoveMemberResult> {
-  return removeMarketer(nodeId);
+  const res = await removeMarketer(nodeId);
+  // On a real (configured) removal, also revoke the removed person's login so a
+  // deleted member can no longer access the app (best-effort, service-role).
+  if (res.ok && !res.demo) {
+    await revokeAccountForMarketer(nodeId);
+  }
+  return res;
 }
 
 /** Credentials captured by the "Attiva accesso CRM" dialog. */

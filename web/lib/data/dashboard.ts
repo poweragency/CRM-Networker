@@ -98,7 +98,11 @@ function rankZoom(rows: PresentRow[], limit: number, selfId: string): TopMarkete
     }));
 }
 
-/** Non-deleted prospects entered THIS month, RLS-scoped to the subtree. */
+/**
+ * Prospects entered THIS month, RLS-scoped to the subtree. Deleted prospects are
+ * INCLUDED on purpose: a "percorso fatto" stays counted in the leaderboard even
+ * after the card is removed from the kanban (deleting it shouldn't erase the work).
+ */
 async function fetchMonthProspects(): Promise<{ owner: string; stageIdx: number }[]> {
   const supabase = getClient();
   if (!supabase) return [];
@@ -109,7 +113,6 @@ async function fetchMonthProspects(): Promise<{ owner: string; stageIdx: number 
     const { data, error } = await supabase
       .from('prospects')
       .select('owner_marketer_id, current_stage')
-      .is('deleted_at', null)
       .gte('entered_funnel_at', from)
       .lt('entered_funnel_at', toExclusive);
     if (error || !data) return [];
