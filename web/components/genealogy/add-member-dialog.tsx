@@ -117,7 +117,9 @@ export function AddMemberDialog({
           ? t('add_email_taken')
           : res.error === 'service_missing'
             ? t('add_service_missing')
-            : t('add_error'),
+            : res.error === 'weak_password'
+              ? t('add_password_weak')
+              : t('add_error'),
       );
       return;
     }

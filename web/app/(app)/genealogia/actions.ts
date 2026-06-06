@@ -82,7 +82,7 @@ export interface AddMemberResult {
   demo: boolean;
   ok: boolean;
   /** Why account creation failed (so the dialog can show the right message). */
-  error?: 'email_taken' | 'service_missing' | 'failed';
+  error?: 'email_taken' | 'service_missing' | 'weak_password' | 'failed';
 }
 
 /**
@@ -143,7 +143,9 @@ export async function addMarketerAction(
             ? 'email_taken'
             : acc.error === 'service_missing'
               ? 'service_missing'
-              : 'failed',
+              : acc.error === 'weak_password'
+                ? 'weak_password'
+                : 'failed',
       };
     }
 

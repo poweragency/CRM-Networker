@@ -104,7 +104,18 @@ export default function ResetPasswordPage() {
     });
 
     if (error) {
-      setServerError(t('resetError'));
+      // "Leaked password protection" rejects weak/breached passwords with a
+      // weak_password code — show an actionable message instead of the generic one.
+      const code = ((error as { code?: string }).code ?? '').toLowerCase();
+      const msg = (error.message ?? '').toLowerCase();
+      const weak =
+        code === 'weak_password' ||
+        msg.includes('weak') ||
+        msg.includes('leaked') ||
+        msg.includes('pwned') ||
+        msg.includes('breach') ||
+        msg.includes('compromis');
+      setServerError(weak ? t('resetWeakPassword') : t('resetError'));
       return;
     }
 

@@ -86,7 +86,42 @@ export async function revokeAccountForMarketer(
   return { ok: true };
 }
 
-export type ActivateError = 'forbidden' | 'service_missing' | 'email_taken' | 'failed';
+export type ActivateError =
+  | 'forbidden'
+  | 'service_missing'
+  | 'email_taken'
+  | 'weak_password'
+  | 'failed';
+
+/**
+ * Classify a Supabase Auth createUser error so the UI can show the RIGHT message.
+ * With "leaked password protection" on, a weak/breached password is rejected with
+ * a `weak_password` code — distinct from an email already in use.
+ */
+function classifyAuthError(err: { code?: string; message?: string } | null): ActivateError {
+  const code = (err?.code ?? '').toLowerCase();
+  const msg = (err?.message ?? '').toLowerCase();
+  if (
+    code === 'weak_password' ||
+    msg.includes('weak') ||
+    msg.includes('leaked') ||
+    msg.includes('pwned') ||
+    msg.includes('breach') ||
+    msg.includes('compromis')
+  ) {
+    return 'weak_password';
+  }
+  if (
+    code === 'email_exists' ||
+    code === 'user_already_exists' ||
+    msg.includes('already') ||
+    msg.includes('registered') ||
+    msg.includes('exists')
+  ) {
+    return 'email_taken';
+  }
+  return 'failed';
+}
 
 export interface ActivateResult {
   ok: boolean;
@@ -150,7 +185,12 @@ export async function activateCrmAccess(
   const userId = created?.user?.id;
   if (createErr || !userId) {
     if (createErr) logError('activateCrmAccess.createUser', createErr);
-    return { ok: false, error: 'email_taken' };
+    // Distinguish weak/leaked password from email-already-in-use so the UI can
+    // tell the admin exactly what to change (audit: was always 'email_taken').
+    return {
+      ok: false,
+      error: createErr ? classifyAuthError(createErr) : 'failed',
+    };
   }
 
   // Activate the membership (insert, or adopt a pre-existing placeholder row).
