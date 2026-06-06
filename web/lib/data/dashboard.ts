@@ -2,7 +2,7 @@ import 'server-only';
 import { isSupabaseConfigured } from '@/lib/env';
 import { getClient, getOwnerContext } from '@/lib/data/crm-shared';
 import { mockTopMarketers, type TopMarketerEntry } from '@/lib/data/mock/dashboard';
-import type { MarketerRank } from '@/lib/types/db';
+import { stageIndex, type MarketerRank, type ProspectStage } from '@/lib/types/db';
 
 /**
  * Dashboard data access (server-only) for the "migliori marketer del mese"
@@ -10,7 +10,9 @@ import type { MarketerRank } from '@/lib/types/db';
  * records) for the current month, scoped (by RLS) to the caller's subtree. Each
  * Zoom entry also carries `cam_rate`: the share of THIS MONTH's presences where
  * the camera was on (present&cam / present), shown next to the Zoom count.
- * "Percorsi" and "conversione" have no wired source yet → empty when connected.
+ * "Percorsi" = prospects entered the funnel this month, per marketer. "Conversione"
+ * = share of those that reached Closing among those that reached Business Info.
+ * Both are RLS-scoped to the caller's subtree (same as Zoom).
  * In pure demo mode (no env) the demo dataset populates all categories.
  */
 
@@ -96,6 +98,54 @@ function rankZoom(rows: PresentRow[], limit: number, selfId: string): TopMarkete
     }));
 }
 
+/** Non-deleted prospects entered THIS month, RLS-scoped to the subtree. */
+async function fetchMonthProspects(): Promise<{ owner: string; stageIdx: number }[]> {
+  const supabase = getClient();
+  if (!supabase) return [];
+  const now = new Date();
+  const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const toExclusive = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+  try {
+    const { data, error } = await supabase
+      .from('prospects')
+      .select('owner_marketer_id, current_stage')
+      .is('deleted_at', null)
+      .gte('entered_funnel_at', from)
+      .lt('entered_funnel_at', toExclusive);
+    if (error || !data) return [];
+    return (data as Record<string, unknown>[]).map((r) => ({
+      owner: String(r.owner_marketer_id),
+      stageIdx: stageIndex(r.current_stage as ProspectStage),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+/** Resolve display name + rank for a set of marketer ids (RLS-scoped). */
+async function resolveMarketers(
+  ids: string[],
+): Promise<Map<string, { name: string; rank: MarketerRank }>> {
+  const out = new Map<string, { name: string; rank: MarketerRank }>();
+  const supabase = getClient();
+  if (!supabase || ids.length === 0) return out;
+  try {
+    const { data } = await supabase
+      .from('marketers')
+      .select('id, display_name, rank')
+      .in('id', ids);
+    for (const r of (data as Record<string, unknown>[] | null) ?? []) {
+      out.set(String(r.id), {
+        name: (r.display_name as string) ?? '—',
+        rank: (r.rank as MarketerRank) ?? 'executive',
+      });
+    }
+  } catch {
+    /* ignore — names degrade to a dash */
+  }
+  return out;
+}
+
 export async function getMonthlyTopMarketers(
   limit = 5,
 ): Promise<MonthlyTopResult> {
@@ -114,6 +164,50 @@ export async function getMonthlyTopMarketers(
   const { marketerId: selfId } = await getOwnerContext();
   const rows = await fetchPresentRows();
   const zoom = rankZoom(rows, limit, selfId);
-  // "percorsi" and "conversione" have no wired source yet → empty (no fake data).
-  return { data: { zoom, percorsi: [], conversion: [] }, demo: false };
+
+  // Percorsi + conversione — derived from this month's prospects per marketer.
+  const prospectRows = await fetchMonthProspects();
+  const biIdx = stageIndex('business_info');
+  const closingIdx = stageIndex('closing');
+  const byOwner = new Map<string, { count: number; bi: number; closing: number }>();
+  for (const p of prospectRows) {
+    const cur = byOwner.get(p.owner) ?? { count: 0, bi: 0, closing: 0 };
+    cur.count += 1;
+    if (p.stageIdx >= biIdx) cur.bi += 1;
+    if (p.stageIdx >= closingIdx) cur.closing += 1;
+    byOwner.set(p.owner, cur);
+  }
+  const names = await resolveMarketers([...byOwner.keys()]);
+  const nameOf = (id: string) => names.get(id)?.name ?? '—';
+  const rankOf = (id: string) => names.get(id)?.rank ?? 'executive';
+
+  const percorsi: TopMarketerEntry[] = [...byOwner.entries()]
+    .sort((a, b) => b[1].count - a[1].count || nameOf(a[0]).localeCompare(nameOf(b[0]), 'it'))
+    .slice(0, limit)
+    .map(([id, v], i) => ({
+      marketer_id: id,
+      display_name: nameOf(id),
+      rank: rankOf(id),
+      value: v.count,
+      position: i + 1,
+      is_self: id === selfId,
+      cam_rate: null,
+    }));
+
+  const conversion: TopMarketerEntry[] = [...byOwner.entries()]
+    .filter(([, v]) => v.bi > 0)
+    .map(([id, v]) => ({ id, rate: v.closing / v.bi, bi: v.bi }))
+    .sort((a, b) => b.rate - a.rate || b.bi - a.bi)
+    .slice(0, limit)
+    .map((e, i) => ({
+      marketer_id: e.id,
+      display_name: nameOf(e.id),
+      rank: rankOf(e.id),
+      value: e.rate,
+      position: i + 1,
+      is_self: e.id === selfId,
+      cam_rate: null,
+    }));
+
+  return { data: { zoom, percorsi, conversion }, demo: false };
 }

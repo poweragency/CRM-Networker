@@ -159,6 +159,7 @@ export function ProspectBoard({
   const [sheetStage, setSheetStage] =
     React.useState<ProspectStage>('conoscitiva');
   const [deleteTarget, setDeleteTarget] = React.useState<ProspectView | null>(null);
+  const [enrollTarget, setEnrollTarget] = React.useState<ProspectView | null>(null);
 
   // Re-sync when the server sends fresh data (e.g. after router.refresh()).
   React.useEffect(() => {
@@ -320,6 +321,30 @@ export function ProspectBoard({
     toast({ title: 'Prospect eliminato', variant: 'success' });
   }
 
+  async function handleEnroll() {
+    const target = enrollTarget;
+    if (!target) return;
+    // Enrolling = move to the 'iscrizione' stage → the funnel completes and the
+    // prospect leaves the board (iscrizione isn't a column).
+    const res = await changeStageAction(target.id, 'iscrizione');
+    if (!res.ok) {
+      toast({ title: 'Operazione non riuscita. Riprova.', variant: 'error' });
+      return;
+    }
+    setStageMap((prev) => {
+      const next = {} as StageMap;
+      for (const stage of STAGE_ORDER) {
+        next[stage] = prev[stage].filter((p) => p.id !== target.id);
+      }
+      return next;
+    });
+    toast({
+      title: 'Prospect iscritto! 🎉',
+      description: res.demo ? 'Simulato in modalità demo.' : undefined,
+      variant: 'achievement',
+    });
+  }
+
   function openSheet(stage: ProspectStage = 'conoscitiva') {
     setSheetStage(stage);
     setSheetOpen(true);
@@ -383,6 +408,7 @@ export function ProspectBoard({
                 extraCards={lcByStage[stage]}
                 backHref={backHref}
                 onRequestDelete={setDeleteTarget}
+                onRequestEnroll={setEnrollTarget}
               />
             );
           })}
@@ -420,6 +446,22 @@ export function ProspectBoard({
         }
         confirmLabel="Elimina"
         onConfirm={handleDelete}
+      />
+
+      <ConfirmDialog
+        open={enrollTarget !== null}
+        onOpenChange={(o) => {
+          if (!o) setEnrollTarget(null);
+        }}
+        title="Segna come iscritto"
+        description={
+          enrollTarget
+            ? `Confermi che “${enrollTarget.full_name}” si è iscritto? Uscirà dal percorso (kanban).`
+            : undefined
+        }
+        confirmLabel="Iscritto"
+        destructive={false}
+        onConfirm={handleEnroll}
       />
     </div>
   );

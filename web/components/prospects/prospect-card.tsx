@@ -4,7 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ArrowUpRight, GripVertical, Trash2 } from 'lucide-react';
+import { ArrowUpRight, BadgeCheck, GripVertical, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar } from '@/components/ui/avatar';
 import { StatusPill } from '@/components/crm/status-pill';
@@ -38,9 +38,11 @@ export const ProspectCardBody = React.forwardRef<
     detailHref?: string;
     /** Delete handler — renders a trash button (omitted on the overlay / list cards). */
     onDelete?: () => void;
+    /** Enroll handler — renders an "iscritto" button (real prospects only). */
+    onEnroll?: () => void;
   } & React.HTMLAttributes<HTMLDivElement>
 >(function ProspectCardBody(
-  { prospect, overlay, dragging, handle, link, detailHref, onDelete, className, ...props },
+  { prospect, overlay, dragging, handle, link, detailHref, onDelete, onEnroll, className, ...props },
   ref,
 ) {
   const fromList = Boolean(prospect.listaContattiId);
@@ -105,6 +107,22 @@ export const ProspectCardBody = React.forwardRef<
                   <ArrowUpRight className="h-4 w-4" aria-hidden />
                 </Link>
               )}
+              {onEnroll && (
+                <button
+                  type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    onEnroll();
+                  }}
+                  aria-label={`Segna ${prospect.full_name} come iscritto`}
+                  title="Iscritto"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-muted/70 text-muted-foreground transition-colors hover:bg-success/15 hover:text-success focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <BadgeCheck className="h-4 w-4" aria-hidden />
+                </button>
+              )}
               {onDelete && (
                 <button
                   type="button"
@@ -164,10 +182,18 @@ export interface ProspectCardProps {
   backHref?: string;
   /** Ask the board to confirm + delete this prospect (real prospects only). */
   onRequestDelete?: (prospect: ProspectView) => void;
+  /** Ask the board to confirm + mark this prospect as enrolled (real prospects only). */
+  onRequestEnroll?: (prospect: ProspectView) => void;
 }
 
 /** Sortable + draggable instance placed inside a column. */
-export function ProspectCard({ prospect, disabled, backHref, onRequestDelete }: ProspectCardProps) {
+export function ProspectCard({
+  prospect,
+  disabled,
+  backHref,
+  onRequestDelete,
+  onRequestEnroll,
+}: ProspectCardProps) {
   const {
     attributes,
     listeners,
@@ -202,6 +228,11 @@ export function ProspectCard({ prospect, disabled, backHref, onRequestDelete }: 
       onDelete={
         onRequestDelete && !prospect.listaContattiId
           ? () => onRequestDelete(prospect)
+          : undefined
+      }
+      onEnroll={
+        onRequestEnroll && !prospect.listaContattiId
+          ? () => onRequestEnroll(prospect)
           : undefined
       }
       style={style}
