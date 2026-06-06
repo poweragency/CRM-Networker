@@ -1182,6 +1182,7 @@
     "rank_up_title": "Promozione! 🏆",
     "rank_up_body": "Nuovo rank: {rank}",
     "cancel": "Annulla",
+    "discard_confirm": "Hai modifiche non salvate. Vuoi chiudere senza salvare?",
     "error": "Salvataggio non riuscito. Riprova.",
     "f_first_name": "Nome",
     "f_last_name": "Cognome",

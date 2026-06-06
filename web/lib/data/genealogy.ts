@@ -87,6 +87,56 @@ function toTreeNode(row: MarketerRow): TreeNode {
   };
 }
 
+type SupabaseServerClient = NonNullable<ReturnType<typeof createClient>>;
+
+/**
+ * Team-size aggregates (team / left / right) for a set of ancestor nodes, derived
+ * from the closure table using the SAME definition as get_subtree: descendants at
+ * depth >= 1, split by `branch_leg`. The direct-select reads (getNode, getChildren,
+ * getRootMarketer) don't carry these aggregates, so we backfill them here in a
+ * single round-trip. RLS (`closure_select`) already scopes rows to the caller's
+ * visible subtree, so the counts can never leak across orgs/branches.
+ */
+async function fetchTeamCounts(
+  supabase: SupabaseServerClient,
+  ids: string[],
+): Promise<Map<string, { team: number; left: number; right: number }>> {
+  const counts = new Map<string, { team: number; left: number; right: number }>();
+  for (const id of ids) counts.set(id, { team: 0, left: 0, right: 0 });
+  if (ids.length === 0) return counts;
+  try {
+    const { data } = await supabase
+      .from('marketer_tree_closure')
+      .select('ancestor_id, branch_leg')
+      .in('ancestor_id', ids)
+      .gte('depth', 1);
+    const rows = (data ?? []) as { ancestor_id: string; branch_leg: PlacementLeg | null }[];
+    for (const r of rows) {
+      const c = counts.get(r.ancestor_id);
+      if (!c) continue;
+      c.team += 1;
+      if (r.branch_leg === 'LEFT') c.left += 1;
+      else if (r.branch_leg === 'RIGHT') c.right += 1;
+    }
+  } catch {
+    // best-effort: leave zeros so the node still renders.
+  }
+  return counts;
+}
+
+/** Stamp fetched counts onto already-built TreeNodes. */
+function withCounts(
+  nodes: TreeNode[],
+  counts: Map<string, { team: number; left: number; right: number }>,
+): TreeNode[] {
+  return nodes.map((n) => {
+    const c = counts.get(n.id);
+    return c
+      ? { ...n, team_size: c.team, left_count: c.left, right_count: c.right }
+      : n;
+  });
+}
+
 /** The caller's visible root: own marketer (members) or org root (admins). */
 export async function getRootMarketer(): Promise<GenealogyResult<TreeNode>> {
   if (!isSupabaseConfigured) {
@@ -108,7 +158,11 @@ export async function getRootMarketer(): Promise<GenealogyResult<TreeNode>> {
       .is('deleted_at', null)
       .limit(1)
       .maybeSingle<MarketerRow>();
-    if (rootData) return { data: toTreeNode(rootData), demo: false };
+    if (rootData) {
+      const node = toTreeNode(rootData);
+      const counts = await fetchTeamCounts(supabase, [node.id]);
+      return { data: withCounts([node], counts)[0], demo: false };
+    }
 
     // Fallback: root the tree at the caller's OWN marketer (top of their subtree).
     // NO deleted_at filter here — even if the caller's own marketer was soft-removed
@@ -120,7 +174,11 @@ export async function getRootMarketer(): Promise<GenealogyResult<TreeNode>> {
         .select(cols)
         .eq('id', claims.marketer_id)
         .maybeSingle<MarketerRow>();
-      if (selfData) return { data: toTreeNode(selfData), demo: false };
+      if (selfData) {
+        const node = toTreeNode(selfData);
+        const counts = await fetchTeamCounts(supabase, [node.id]);
+        return { data: withCounts([node], counts)[0], demo: false };
+      }
     }
 
     return { data: mockRoot(), demo: true };
@@ -150,7 +208,9 @@ export async function getChildren(
       .order('leg', { ascending: true });
 
     if (error || !data) return { data: [], demo: false };
-    return { data: (data as MarketerRow[]).map(toTreeNode), demo: false };
+    const nodes = (data as MarketerRow[]).map(toTreeNode);
+    const counts = await fetchTeamCounts(supabase, nodes.map((n) => n.id));
+    return { data: withCounts(nodes, counts), demo: false };
   } catch {
     return { data: [], demo: false };
   }
@@ -217,7 +277,9 @@ export async function getNode(
       .maybeSingle<MarketerRow>();
 
     if (error || !data) return { data: null, demo: false };
-    return { data: toTreeNode(data), demo: false };
+    const node = toTreeNode(data);
+    const counts = await fetchTeamCounts(supabase, [node.id]);
+    return { data: withCounts([node], counts)[0], demo: false };
   } catch {
     return { data: null, demo: false };
   }

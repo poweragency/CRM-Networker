@@ -28,6 +28,7 @@ import { Badge } from '@/components/ui/badge';
 import { RankBadge } from '@/components/ui/rank-badge';
 import { PackageBadge } from '@/components/ui/package-badge';
 import { useToast } from '@/components/crm/toaster';
+import { UnsavedBar } from '@/components/crm/unsaved-bar';
 import { WhatsAppButton } from '@/components/crm/whatsapp-button';
 import { cn, formatDate } from '@/lib/utils';
 import {
@@ -84,11 +85,15 @@ export function MarketerAnagrafica({
   canEditIdentity = false,
   /** Bare mode: drop the Card chrome + title (the host modal provides them). */
   bare = false,
+  /** Notifies the host (e.g. the modal) of the unsaved-changes state so it can
+   *  guard close. */
+  onDirtyChange,
 }: {
   profile: TeamMemberProfile;
   canEdit: boolean;
   canEditIdentity?: boolean;
   bare?: boolean;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const t = useTranslations('team');
   const { toast } = useToast();
@@ -161,7 +166,22 @@ export function MarketerAnagrafica({
   const v = saved;
   const RENEWAL_STATES: MarketerStatus[] = ['active', 'inactive'];
 
+  // Unsaved-changes detection (drives the floating save reminder, incl. when this
+  // editor is hosted inside the Anagrafica modal). Compares the live form against
+  // the last saved snapshot, plus rank/renewal when those are editable.
+  const extraDirty = (Object.keys(form) as (keyof MarketerExtra)[]).some(
+    (k) => (form[k] ?? null) !== (saved[k] ?? null),
+  );
+  const identityDirty =
+    canEditIdentity && (rank !== savedRank || status !== savedStatus);
+  const dirty = editing && (extraDirty || identityDirty);
+
+  React.useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
+
   return (
+    <>
     <Card className={cn(bare && 'border-0 bg-transparent shadow-none')}>
       <CardHeader
         className={cn(
@@ -423,6 +443,16 @@ export function MarketerAnagrafica({
         </section>
       </CardContent>
     </Card>
+
+      <UnsavedBar
+        dirty={dirty}
+        saving={saving}
+        onSave={save}
+        onDiscard={cancel}
+        saveLabel={t('save')}
+        discardLabel={t('cancel')}
+      />
+    </>
   );
 }
 

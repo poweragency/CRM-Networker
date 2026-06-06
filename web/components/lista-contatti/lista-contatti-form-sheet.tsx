@@ -163,8 +163,10 @@ export function ListaContattiFormSheet({
           <FieldError message={errors.relationship?.message} />
         </div>
 
-        {/* Rapporto + Stato (a tendina) */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {/* Rapporto (sempre) + Stato (solo in modifica). In fase di creazione la
+            lista resta snella: lo stato parte da "non invitato" e le note si
+            aggiungono dopo, dalla modifica. */}
+        <div className={cn('grid grid-cols-1 gap-4', isEdit && 'sm:grid-cols-2')}>
           <div className="space-y-1.5">
             <Label htmlFor={`${formId}-rapporto`}>{t('form_rapporto')}</Label>
             <select
@@ -180,39 +182,43 @@ export function ListaContattiFormSheet({
               ))}
             </select>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor={`${formId}-stato`}>{t('form_stato')}</Label>
-            <select
-              id={`${formId}-stato`}
-              className={selectCx}
-              {...register('stato')}
-            >
-              {LISTA_CONTATTI_STATUS_ORDER.map((s) => (
-                <option key={s} value={s}>
-                  {LISTA_CONTATTI_STATUS_LABELS[s]}
-                </option>
-              ))}
-            </select>
-          </div>
+          {isEdit && (
+            <div className="space-y-1.5">
+              <Label htmlFor={`${formId}-stato`}>{t('form_stato')}</Label>
+              <select
+                id={`${formId}-stato`}
+                className={selectCx}
+                {...register('stato')}
+              >
+                {LISTA_CONTATTI_STATUS_ORDER.map((s) => (
+                  <option key={s} value={s}>
+                    {LISTA_CONTATTI_STATUS_LABELS[s]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
-        {/* Notes */}
-        <div className="space-y-1.5">
-          <Label htmlFor={`${formId}-notes`}>{t('notes')}</Label>
-          <textarea
-            id={`${formId}-notes`}
-            rows={3}
-            placeholder={tc('notes_placeholder')}
-            {...notesReg}
-            ref={(el) => {
-              notesReg.ref(el);
-              notesRef.current = el;
-            }}
-            onInput={(e) => autosize(e.currentTarget)}
-            className="flex min-h-[4.5rem] w-full resize-none overflow-hidden rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          />
-          <FieldError message={errors.notes?.message} />
-        </div>
+        {/* Notes — solo in modifica */}
+        {isEdit && (
+          <div className="space-y-1.5">
+            <Label htmlFor={`${formId}-notes`}>{t('notes')}</Label>
+            <textarea
+              id={`${formId}-notes`}
+              rows={3}
+              placeholder={tc('notes_placeholder')}
+              {...notesReg}
+              ref={(el) => {
+                notesReg.ref(el);
+                notesRef.current = el;
+              }}
+              onInput={(e) => autosize(e.currentTarget)}
+              className="flex min-h-[4.5rem] w-full resize-none overflow-hidden rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            />
+            <FieldError message={errors.notes?.message} />
+          </div>
+        )}
       </form>
     </FormSheet>
   );

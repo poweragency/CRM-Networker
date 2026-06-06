@@ -25,6 +25,15 @@ export function AnagraficaModal({
 }) {
   const t = useTranslations('team');
   const [open, setOpen] = React.useState(false);
+  const [dirty, setDirty] = React.useState(false);
+
+  // Guard close while there are unsaved edits: confirm before discarding so a
+  // stray backdrop click / Esc can't wipe in-progress changes.
+  function handleOpenChange(next: boolean) {
+    if (!next && dirty && !window.confirm(t('discard_confirm'))) return;
+    if (!next) setDirty(false);
+    setOpen(next);
+  }
 
   return (
     <>
@@ -35,7 +44,7 @@ export function AnagraficaModal({
 
       <Modal
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={handleOpenChange}
         title={t('anagrafica_title')}
         description={t('anagrafica_subtitle')}
         size="xl"
@@ -44,6 +53,7 @@ export function AnagraficaModal({
           profile={profile}
           canEdit={canEdit}
           canEditIdentity={canEditIdentity}
+          onDirtyChange={setDirty}
           bare
         />
       </Modal>
