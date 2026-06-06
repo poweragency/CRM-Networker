@@ -190,8 +190,17 @@ export function AttendanceTable({
         )}
         <input
           type="date"
-          value={date}
-          onChange={(e) => e.target.value && go(e.target.value)}
+          // Uncontrolled + remount-on-date so typing isn't fought by React;
+          // `key` re-seeds the value after a real navigation (buttons/picker).
+          key={date}
+          defaultValue={date}
+          onChange={(e) => {
+            const v = e.target.value;
+            // Navigate ONLY on a complete date (4-digit year ≥ 1000). While the
+            // user types the year digit-by-digit (0002 → 0020 → 0202 → 2026) each
+            // intermediate value is < 1000, so the page no longer jumps away.
+            if (v && Number(v.slice(0, 4)) >= 1000 && v !== date) go(v);
+          }}
           className="ml-auto h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label={t('pick_day')}
         />
