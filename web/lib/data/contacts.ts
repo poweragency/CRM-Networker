@@ -242,9 +242,16 @@ export async function bulkTagContacts(
   const supabase = getClient();
   if (!supabase) return { data: { count: ids.length }, demo: true, ok: true };
   try {
-    // Per-row merge (Postgres array_cat) — done client-side here for simplicity.
+    // Per-row additive merge. Read the EXISTING tags from the DB row (never from
+    // the mock dataset) so bulk-tagging genuinely ADDS instead of overwriting and
+    // silently dropping the contact's current tags.
     for (const id of ids) {
-      const current = MOCK_CONTACTS.find((c) => c.id === id)?.tags ?? [];
+      const { data: row } = await supabase
+        .from('contacts')
+        .select('tags')
+        .eq('id', id)
+        .maybeSingle();
+      const current = ((row as { tags?: string[] | null } | null)?.tags) ?? [];
       const merged = Array.from(new Set([...current, ...tags]));
       await supabase
         .from('contacts')

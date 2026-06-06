@@ -98,7 +98,13 @@ function LoginForm() {
       return;
     }
 
-    const redirectTo = searchParams.get('redirect') ?? '/dashboard';
+    // Only allow site-relative redirects (block open-redirect via //evil.com or
+    // absolute URLs in the `redirect` param).
+    const rawRedirect = searchParams.get('redirect') ?? '/dashboard';
+    const redirectTo =
+      rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')
+        ? rawRedirect
+        : '/dashboard';
     router.replace(redirectTo);
     router.refresh();
   }

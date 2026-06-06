@@ -2,6 +2,18 @@ import 'server-only';
 import { createClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getCurrentClaims } from '@/lib/data/session';
+import { RANK_ORDER, type SessionClaims } from '@/lib/types/db';
+
+/**
+ * Caller authority for service-role account operations (ADR-003): admin/owner OR
+ * rank >= team_leader. This is enforced SERVER-SIDE here — the UI gate is not a
+ * security boundary, and these helpers wield the service-role client (bypasses
+ * RLS), so they must self-authorize before any privileged call.
+ */
+function canManageAccounts(claims: Pick<SessionClaims, 'role' | 'rank'>): boolean {
+  if (claims.role === 'owner' || claims.role === 'admin') return true;
+  return RANK_ORDER.indexOf(claims.rank) >= RANK_ORDER.indexOf('team_leader');
+}
 
 /**
  * CRM-access activation: create a login (auth user) for an EXISTING marketer and
@@ -30,6 +42,9 @@ export async function revokeAccountForMarketer(
 ): Promise<RevokeResult> {
   const { claims } = await getCurrentClaims();
   const orgId = claims.org_id;
+  // Authority check: only admins/team-leaders may revoke a login (mirrors the
+  // remove_marketer RPC gate; defense in depth alongside RLS).
+  if (!canManageAccounts(claims)) return { ok: false };
   const admin = getAdminClient();
   if (!admin || !orgId) return { ok: false };
 
@@ -91,6 +106,10 @@ export async function activateCrmAccess(
   const { claims } = await getCurrentClaims();
   const orgId = claims.org_id;
   if (!orgId) return { ok: false, error: 'forbidden' };
+  // Authority check FIRST: provisioning a login is a privileged op (service-role,
+  // attacker-chosen credentials). Require admin/owner OR rank >= team_leader.
+  // The UI gate is NOT a security boundary.
+  if (!canManageAccounts(claims)) return { ok: false, error: 'forbidden' };
 
   // 1) Authorize via RLS: the target must be visible to the caller (subtree/admin).
   const rls = createClient();

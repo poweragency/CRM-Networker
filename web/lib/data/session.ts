@@ -1,6 +1,7 @@
 import 'server-only';
+import { cache } from 'react';
 import { createClient } from '@/lib/supabase/server';
-import { isSupabaseConfigured } from '@/lib/env';
+import { isSupabaseConfigured, isDemoAllowed } from '@/lib/env';
 import type {
   MarketerRank,
   MembershipRole,
@@ -34,6 +35,31 @@ const DEMO_CLAIMS: SessionClaims = {
   crm_access: true,
 };
 
+/**
+ * Non-privileged fallback used when we must NOT impersonate an owner: production
+ * with missing env, or a configured session that fails/has unstamped claims. It
+ * carries no org/marketer and the lowest privileges, and is always paired with
+ * `demo: true` so the (app) layout bounces it to /accedi (fail closed).
+ */
+const UNAUTH_CLAIMS: SessionClaims = {
+  org_id: '',
+  marketer_id: '',
+  role: 'member',
+  rank: 'executive',
+  crm_access: false,
+};
+
+/** The fallback identity to hand out when there is no real session. */
+function fallbackResult(email: string | null = null): SessionResult {
+  // Only the explicit demo mode gets the rich owner persona; everywhere else we
+  // fail closed with a non-privileged identity (still demo:true → layout redirect).
+  return {
+    claims: isDemoAllowed && !isSupabaseConfigured ? DEMO_CLAIMS : UNAUTH_CLAIMS,
+    demo: true,
+    email,
+  };
+}
+
 function asRole(value: unknown): MembershipRole {
   return value === 'owner' ||
     value === 'admin' ||
@@ -60,20 +86,20 @@ function asRank(value: unknown): MarketerRank {
     : 'executive';
 }
 
-export async function getCurrentClaims(): Promise<SessionResult> {
+export const getCurrentClaims = cache(async function getCurrentClaims(): Promise<SessionResult> {
   if (!isSupabaseConfigured) {
-    return { claims: DEMO_CLAIMS, demo: true, email: null };
+    return fallbackResult();
   }
 
   try {
     const supabase = createClient();
-    if (!supabase) return { claims: DEMO_CLAIMS, demo: true, email: null };
+    if (!supabase) return fallbackResult();
 
     const {
       data: { session },
     } = await supabase.auth.getSession();
 
-    if (!session) return { claims: DEMO_CLAIMS, demo: true, email: null };
+    if (!session) return fallbackResult();
 
     // Decode the JWT claim set. `getSession()` returns the access token; the
     // custom claims live in its payload (no extra network round-trip).
@@ -96,21 +122,17 @@ export async function getCurrentClaims(): Promise<SessionResult> {
       ),
     };
 
-    // If the hook hasn't stamped org/marketer yet, degrade to demo so the UI
-    // never renders an empty/broken shell.
+    // If the hook hasn't stamped org/marketer yet, fail closed (do NOT hand out a
+    // privileged identity) — the layout will redirect to /accedi.
     if (!claims.org_id || !claims.marketer_id) {
-      return {
-        claims: DEMO_CLAIMS,
-        demo: true,
-        email: session.user.email ?? null,
-      };
+      return fallbackResult(session.user.email ?? null);
     }
 
     return { claims, demo: false, email: session.user.email ?? null };
   } catch {
-    return { claims: DEMO_CLAIMS, demo: true, email: null };
+    return fallbackResult();
   }
-}
+});
 
 /** Minimal, dependency-free JWT payload decoder (base64url → JSON). */
 function decodeJwt(token: string): Record<string, unknown> | null {

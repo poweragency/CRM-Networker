@@ -3,7 +3,7 @@ import { getCurrentClaims } from '@/lib/data/session';
 import { getNode } from '@/lib/data/genealogy';
 import { listNotifications } from '@/lib/data/notifications';
 import { getOrgIdentity } from '@/lib/data/org-identity';
-import { isSupabaseConfigured } from '@/lib/env';
+import { isSupabaseConfigured, isDemoAllowed } from '@/lib/env';
 import { AppShell } from '@/components/shell/app-shell';
 import type { NavViewer } from '@/lib/nav';
 import type { TopbarUser } from '@/components/shell/topbar';
@@ -31,8 +31,10 @@ export default async function AppLayout({
 }) {
   const { claims, demo, email } = await getCurrentClaims();
 
-  // Env configured but no real session → require login.
-  if (isSupabaseConfigured && demo) {
+  // Require login whenever there is no real session — EXCEPT in genuine local
+  // demo mode (no env + demo allowed). In production with missing env we fail
+  // closed here instead of rendering a fake owner shell (see env.isDemoAllowed).
+  if (demo && (isSupabaseConfigured || !isDemoAllowed)) {
     redirect('/accedi');
   }
 

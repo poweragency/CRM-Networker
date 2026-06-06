@@ -15,6 +15,20 @@ const PROSE =
   'prose-h1:text-xl prose-h2:text-lg prose-h3:text-base ' +
   'prose-p:leading-relaxed prose-a:text-primary';
 
+/**
+ * Allowlist link schemes to neutralise stored XSS: a saved Tiptap doc can contain
+ * a link mark with an arbitrary href (the write path does no sanitisation), and
+ * React escapes the value but does NOT block `javascript:`/`data:` URIs. Only
+ * http(s), mailto, tel, in-page anchors and site-relative links are allowed;
+ * anything else collapses to '#'.
+ */
+function safeHref(raw: unknown): string {
+  const v = String(raw ?? '').trim();
+  if (v.startsWith('/') || v.startsWith('#')) return v;
+  if (/^(https?:|mailto:|tel:)/i.test(v)) return v;
+  return '#';
+}
+
 /** Wrap a text node in its active marks (bold/italic/strike/code/link). */
 function renderText(node: TiptapNode, key: React.Key): React.ReactNode {
   let el: React.ReactNode = node.text ?? '';
@@ -33,7 +47,7 @@ function renderText(node: TiptapNode, key: React.Key): React.ReactNode {
         el = <code>{el}</code>;
         break;
       case 'link': {
-        const href = String((mark.attrs as { href?: string })?.href ?? '#');
+        const href = safeHref((mark.attrs as { href?: string })?.href);
         el = (
           <a href={href} target="_blank" rel="noopener noreferrer">
             {el}

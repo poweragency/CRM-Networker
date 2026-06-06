@@ -9,11 +9,7 @@ import { updateMarketerExtra } from '@/lib/data/team';
 import { createMarketer, removeMarketer } from '@/lib/data/admin';
 import { activateCrmAccess, revokeAccountForMarketer } from '@/lib/data/account';
 import { getAdminClient } from '@/lib/supabase/admin';
-import {
-  addRuntimeNode,
-  nextRuntimeId,
-  setCrmAccess,
-} from '@/lib/data/mock/runtime';
+import { addRuntimeNode, nextRuntimeId } from '@/lib/data/mock/runtime';
 import { isSupabaseConfigured } from '@/lib/env';
 import type {
   BranchScope,
@@ -220,59 +216,4 @@ export async function removeMarketerAction(nodeId: string): Promise<RemoveMember
     await revokeAccountForMarketer(nodeId);
   }
   return res;
-}
-
-/** Credentials captured by the "Attiva accesso CRM" dialog. */
-export interface ActivateCrmInput {
-  marketerId: string;
-  email: string;
-  password: string;
-}
-
-export interface ActivateCrmResult {
-  ok: boolean;
-  demo: boolean;
-  /** A message key (i18n under `genealogia`) when ok is false. */
-  errorKey?: 'email_invalid' | 'password_short' | 'service_missing' | 'failed';
-}
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-/**
- * Grant CRM access to an existing marketer by creating a login (email + password).
- *
- * SECURITY: the password is NEVER stored in our own tables. In production this is
- * a Supabase Auth user-creation / invitation call — Supabase hashes the password
- * and owns the credential; we'd only persist the membership link + the login
- * email for display. While Supabase env is missing (demo) we record just the
- * email in the in-memory runtime store and discard the password. Demo-safe; never
- * throws.
- */
-export async function activateCrmAccessAction(
-  input: ActivateCrmInput,
-): Promise<ActivateCrmResult> {
-  const email = input.email.trim();
-  if (!EMAIL_RE.test(email)) {
-    return { ok: false, demo: !isSupabaseConfigured, errorKey: 'email_invalid' };
-  }
-  if (input.password.length < 8) {
-    return { ok: false, demo: !isSupabaseConfigured, errorKey: 'password_short' };
-  }
-
-  // Demo (no env): record only the email and simulate success.
-  if (!isSupabaseConfigured) {
-    setCrmAccess(input.marketerId, email);
-    return { ok: true, demo: true };
-  }
-
-  // Real: create the login + activate the membership (service-role, server-side).
-  const res = await activateCrmAccess(input.marketerId, email, input.password);
-  if (!res.ok) {
-    return {
-      ok: false,
-      demo: false,
-      errorKey: res.error === 'service_missing' ? 'service_missing' : 'failed',
-    };
-  }
-  return { ok: true, demo: false };
 }

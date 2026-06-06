@@ -185,7 +185,12 @@ export function ProspectBoard({
     return null;
   }, [activeId, stageMap, lcByStage]);
 
+  // The pre-drag board snapshot, captured BEFORE onDragOver mutates stageMap, so a
+  // failed write can be rolled back to the true original (not the moved state).
+  const preDragMapRef = React.useRef<StageMap | null>(null);
+
   function onDragStart(e: DragStartEvent) {
+    preDragMapRef.current = stageMap;
     setActiveId(String(e.active.id));
   }
 
@@ -257,8 +262,9 @@ export function ProspectBoard({
       return;
     }
 
-    // Capture a snapshot for rollback on a real (configured) write failure.
-    const snapshot = stageMap;
+    // Roll back to the PRE-drag snapshot (onDragOver already moved the card in
+    // stageMap, so reading it here would "restore" the moved state).
+    const snapshot = preDragMapRef.current ?? toStageMap(board);
     setBusyId(id);
 
     const res = await changeStageAction(id, destStage);

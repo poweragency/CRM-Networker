@@ -268,6 +268,10 @@ export async function changeStage(
       p_prospect_id: prospectId,
       p_new_stage: toStage,
       p_notes: notes ?? null,
+      // Reaching the terminal stage MUST stamp the enrollment outcome (+closed_at);
+      // the RPC leaves outcome='open' when p_outcome is null. Without this the
+      // whole funnel/conversion fact base is wrong.
+      p_outcome: isEnrollment ? 'enrolled' : null,
     });
     if (error) {
       return {

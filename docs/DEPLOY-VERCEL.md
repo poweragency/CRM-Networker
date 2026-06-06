@@ -3,8 +3,11 @@
 L'app Next.js sta nella sottocartella **`web/`** del repo (la root contiene anche `docs/` e
 `supabase/`). L'unico passaggio non ovvio è quindi impostare la **Root Directory = `web`** su Vercel.
 
-Senza variabili d'ambiente l'app fa il build e gira in **modalità demo** (dati mock), quindi puoi
-deployare subito e vedere l'interfaccia online; collegherai Supabase più avanti.
+> ⚠️ **SICUREZZA — NON deployare in produzione senza variabili d'ambiente.**
+> In sviluppo locale, senza env, l'app gira in *modalità demo* (dati mock) per comodità.
+> In **produzione** invece, se le variabili Supabase mancano, l'app **fa fail-closed**
+> (reindirizza al login) e NON mostra più una shell admin demo. Imposta SEMPRE le
+> variabili (sezione sotto) **prima** del primo deploy di produzione.
 
 ---
 
@@ -20,8 +23,8 @@ deployare subito e vedere l'interfaccia online; collegherai Supabase più avanti
    - **Framework Preset**: si rileva da solo come **Next.js**.
    - **Build Command / Output / Install**: lascia i **default** (`next build`, gestione automatica,
      `npm install`). Il lockfile usato è `web/package-lock.json`.
-5. **Environment Variables**: per ora **lasciale vuote** (deploy in modalità demo). Vedi sotto per
-   quando colleghi Supabase.
+5. **Environment Variables**: **impostale ora** (sono obbligatorie in produzione — vedi la tabella
+   sotto). Senza, il deploy di produzione fa fail-closed e resta bloccato al login.
 6. **Deploy**. In ~1–2 minuti hai l'URL pubblico (es. `crm-networker.vercel.app`).
 7. Da qui in poi: ogni **push su `main`** → deploy di produzione automatico; ogni **Pull Request** →
    *Preview Deployment* con URL dedicato.
@@ -37,17 +40,24 @@ vercel --prod     # deploy di produzione
 
 ---
 
-## Variabili d'ambiente (quando Supabase sarà pronto)
+## Variabili d'ambiente (obbligatorie in produzione)
 
-Il frontend è **RLS-bound** e usa SOLO la chiave anon (mai la service-role). Servono **due** variabili,
-da aggiungere in Vercel → Project → *Settings → Environment Variables* (scope: Production + Preview):
+Il frontend è **RLS-bound** e usa la chiave anon nel browser. La service-role è **solo server-side**
+(mai `NEXT_PUBLIC`). Aggiungi in Vercel → Project → *Settings → Environment Variables*
+(scope: Production + Preview):
 
 | Nome | Valore | Dove trovarlo |
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://<ref>.supabase.co` | Supabase → Project Settings → API |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | la *anon / publishable key* | Supabase → Project Settings → API |
+| `SUPABASE_SERVICE_ROLE_KEY` | la *service_role secret* (server-only) | Supabase → Project Settings → API |
 
-(`NEXT_PUBLIC_DEFAULT_LOCALE=it` è opzionale: ha già `it` come default.)
+⚠️ `SUPABASE_SERVICE_ROLE_KEY` è un **segreto**: non va MAI prefissato con `NEXT_PUBLIC` né esposto al
+client. Serve per creare/eliminare i login dei membri (attivazione account, rimozione dall'albero, inviti);
+senza, quei flussi falliscono silenziosamente con `service_missing`.
+
+(`NEXT_PUBLIC_DEFAULT_LOCALE=it` è opzionale: ha già `it` come default. NON impostare `NEXT_PUBLIC_DEMO` in
+produzione.)
 
 Dopo averle inserite → **Redeploy** (Deployments → ⋯ → Redeploy). L'app esce dalla modalità demo e
 legge i dati reali. Imposta lo stesso set in `web/.env.local` per lo sviluppo locale.

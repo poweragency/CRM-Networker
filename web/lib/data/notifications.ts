@@ -144,10 +144,21 @@ export async function listNotifications(
   return { data, unread: activeUnread(data), demo: !supabase };
 }
 
+/**
+ * Both notification kinds are DERIVED at request time with synthetic ids
+ * (`bday-…` / `newmember-…`), not rows in the uuid-keyed table. A DB write keyed
+ * on such an id throws 22P02 (invalid uuid) that the catch would mask as success.
+ * Treat them as honest client-only no-ops.
+ */
+function isSyntheticId(id: string): boolean {
+  return id.startsWith('bday-') || id.startsWith('newmember-');
+}
+
 /** Mark a single notification read. */
 export async function markNotificationRead(
   id: string,
 ): Promise<NotificationMutationResult> {
+  if (isSyntheticId(id)) return { demo: true, ok: true };
   const supabase = getClient();
   if (!supabase) return { demo: true, ok: true };
   try {
@@ -167,11 +178,14 @@ export async function markAllNotificationsRead(): Promise<NotificationMutationRe
   const supabase = getClient();
   if (!supabase) return { demo: true, ok: true };
   try {
-    const { orgId } = await getOwnerContext();
+    const { orgId, marketerId } = await getOwnerContext();
     const { error } = await supabase
       .from('notifications')
       .update({ read_at: new Date().toISOString() })
       .eq('org_id', orgId)
+      // Always scope to the CALLER. The UPDATE policy widens for admins, so without
+      // this an admin would mark the whole org's notifications read.
+      .eq('recipient_marketer_id', marketerId)
       .is('read_at', null);
     return { demo: false, ok: !error };
   } catch {
@@ -183,6 +197,7 @@ export async function markAllNotificationsRead(): Promise<NotificationMutationRe
 export async function dismissNotification(
   id: string,
 ): Promise<NotificationMutationResult> {
+  if (isSyntheticId(id)) return { demo: true, ok: true };
   const supabase = getClient();
   if (!supabase) return { demo: true, ok: true };
   try {
