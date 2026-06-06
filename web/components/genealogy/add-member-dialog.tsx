@@ -202,7 +202,7 @@ export function AddMemberDialog({
             onChange={(e) => setRank(e.target.value as MarketerRank)}
             className={cn(fieldCx, 'cursor-pointer')}
           >
-            {RANK_ORDER.filter((r) => r !== 'cliente' && r !== 'no_rank').map((r) => (
+            {RANK_ORDER.map((r) => (
               <option key={r} value={r}>
                 {RANK_LABELS[r]}
               </option>

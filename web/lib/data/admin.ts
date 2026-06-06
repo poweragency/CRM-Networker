@@ -156,25 +156,13 @@ export interface CreateMarketerResult {
   ok: boolean;
 }
 
-/** DB-valid marketer ranks (the UI adds 'cliente'/'no_rank' which are NOT in the enum). */
-const DB_RANKS: readonly MarketerRank[] = [
-  'executive',
-  'consultant',
-  'team_leader',
-  'senior_team_leader',
-  'executive_team_leader',
-  'vice_president',
-  'senior_vice_president',
-  'executive_vice_president',
-  'global_director',
-];
-
 /**
  * Pre-register a marketer profile. Direct RLS-bound INSERT into `marketers`:
  * the BEFORE INSERT trigger computes the ltree path, the AFTER INSERT triggers
  * build the closure + write the audit/rank-history rows, and the partial unique
- * index enforces the one-child-per-leg (no-spillover) rule. Ranks the UI exposes
- * but the DB enum lacks (cliente/no_rank) map to the entry rank `executive`.
+ * index enforces the one-child-per-leg (no-spillover) rule. The full rank set —
+ * including `cliente` / `no_rank` (the lowest, below `executive`) — is stored
+ * as-is (the enum + ranks_meta carry these values).
  */
 export async function createMarketer(
   input: CreateMarketerInput,
@@ -183,7 +171,7 @@ export async function createMarketer(
   if (!supabase) return { id: `m-${input.lastName.toLowerCase()}`, demo: true, ok: true };
   try {
     const { orgId, marketerId } = await getOwnerContext();
-    const rank: MarketerRank = DB_RANKS.includes(input.rank) ? input.rank : 'executive';
+    const rank: MarketerRank = input.rank;
     // Generate the id server-side so we DON'T need RETURNING (`.select`): a
     // non-admin can't yet SELECT the brand-new row (its visibility closure is
     // built by an AFTER trigger), so RETURNING would trip the SELECT RLS policy
