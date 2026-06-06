@@ -2,6 +2,7 @@ import 'server-only';
 import { createClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getCurrentClaims } from '@/lib/data/session';
+import { logError } from '@/lib/log';
 import { RANK_ORDER, type SessionClaims } from '@/lib/types/db';
 
 /**
@@ -76,7 +77,8 @@ export async function revokeAccountForMarketer(
   if (userId) {
     try {
       await admin.auth.admin.deleteUser(userId);
-    } catch {
+    } catch (e) {
+      logError('revokeAccountForMarketer.deleteUser', e, { marketerId });
       return { ok: false };
     }
   }
@@ -147,6 +149,7 @@ export async function activateCrmAccess(
   });
   const userId = created?.user?.id;
   if (createErr || !userId) {
+    if (createErr) logError('activateCrmAccess.createUser', createErr);
     return { ok: false, error: 'email_taken' };
   }
 
@@ -163,6 +166,7 @@ export async function activateCrmAccess(
     { onConflict: 'org_id,marketer_id' },
   );
   if (memErr) {
+    logError('activateCrmAccess.membership', memErr, { targetMarketerId });
     // Roll back the orphaned auth user (best effort).
     await admin.auth.admin.deleteUser(userId);
     return { ok: false, error: 'failed' };

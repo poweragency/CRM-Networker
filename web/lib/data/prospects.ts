@@ -6,6 +6,7 @@ import type {
   ProspectWithJourney,
 } from '@/lib/types/db';
 import { STAGE_ORDER } from '@/lib/types/db';
+import { logError } from '@/lib/log';
 import { kpisFromStages, type ProspectKpis } from '@/lib/prospect-kpis';
 import {
   MOCK_JOURNEY_EVENTS,
@@ -274,6 +275,7 @@ export async function changeStage(
       p_outcome: isEnrollment ? 'enrolled' : null,
     });
     if (error) {
+      logError('changeStage', error, { prospectId, toStage });
       return {
         data: { prospect: simulatedProspect, event: simulatedEvent },
         demo: false,

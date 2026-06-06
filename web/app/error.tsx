@@ -1,13 +1,27 @@
 'use client';
 
+import * as React from 'react';
 import { useTranslations } from 'next-intl';
+import { logError } from '@/lib/log';
 
 /**
  * Root error boundary. No data is leaked in the message (sitemap §6 security
- * note). Client component as required by Next.js error boundaries.
+ * note). Client component as required by Next.js error boundaries. The error is
+ * LOGGED (with its digest) instead of being discarded, so production failures are
+ * diagnosable (audit M24).
  */
-export default function Error({ reset }: { error: Error; reset: () => void }) {
+export default function Error({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
   const t = useTranslations('error');
+
+  React.useEffect(() => {
+    logError('error-boundary', error, { digest: error.digest });
+  }, [error]);
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-4 px-4 text-center">

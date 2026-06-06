@@ -2,6 +2,7 @@ import 'server-only';
 import { cache } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured, isDemoAllowed } from '@/lib/env';
+import { logError } from '@/lib/log';
 import type {
   MarketerRank,
   MembershipRole,
@@ -129,10 +130,28 @@ export const getCurrentClaims = cache(async function getCurrentClaims(): Promise
     }
 
     return { claims, demo: false, email: session.user.email ?? null };
-  } catch {
+  } catch (e) {
+    // Let Next.js control-flow signals (dynamic-usage probe, redirect, notFound)
+    // propagate — swallowing them would break dynamic-route detection.
+    if (isNextControlFlowError(e)) throw e;
+    // A configured session that throws is a real fault (not demo) — surface it in
+    // the logs instead of silently failing closed.
+    logError('getCurrentClaims', e);
     return fallbackResult();
   }
 });
+
+/** True for Next.js internal control-flow errors that must NOT be swallowed. */
+function isNextControlFlowError(e: unknown): boolean {
+  const digest = (e as { digest?: unknown } | null)?.digest;
+  if (typeof digest !== 'string') return false;
+  return (
+    digest === 'DYNAMIC_SERVER_USAGE' ||
+    digest === 'NEXT_NOT_FOUND' ||
+    digest.startsWith('NEXT_REDIRECT') ||
+    digest.startsWith('NEXT_HTTP_ERROR_FALLBACK')
+  );
+}
 
 /** Minimal, dependency-free JWT payload decoder (base64url → JSON). */
 function decodeJwt(token: string): Record<string, unknown> | null {
