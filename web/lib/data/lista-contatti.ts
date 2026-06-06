@@ -72,21 +72,19 @@ export interface ListaContattiInput {
   notes?: string | null;
 }
 
-/** Create a Lista contatti entry (auto-appends at the next position when omitted). */
+/** Create a Lista contatti entry (auto-appends at the next free position). */
 export async function createListaContatti(
   input: ListaContattiInput,
 ): Promise<MutationResult<ListaContattiEntry>> {
   const { orgId, marketerId, demo } = await getOwnerContext();
   const supabase = getClient();
-  const nextPos =
-    input.position ??
-    (MOCK_LISTA_CONTATTI.reduce((m, e) => Math.max(m, e.position), 0) + 1);
 
-  const optimistic: ListaContattiEntry = {
+  // Shared row payload; `position` is resolved per-path below.
+  const makeEntry = (position: number): ListaContattiEntry => ({
     id: demoId('cn'),
     org_id: orgId,
     owner_marketer_id: marketerId,
-    position: nextPos,
+    position,
     full_name: input.full_name,
     phone: input.phone ?? null,
     relationship: input.relationship ?? null,
@@ -100,20 +98,46 @@ export async function createListaContatti(
     created_at: nowIso(),
     updated_at: nowIso(),
     deleted_at: null,
-  };
+  });
 
-  if (!supabase || demo) return { data: optimistic, demo: true, ok: true };
+  // Demo / no-env: append after the mock list and simulate success.
+  if (!supabase || demo) {
+    const nextPos =
+      input.position ??
+      (MOCK_LISTA_CONTATTI.reduce((m, e) => Math.max(m, e.position), 0) + 1);
+    return { data: makeEntry(nextPos), demo: true, ok: true };
+  }
 
   try {
+    // Next free position from the REAL list, NOT the mock (the previous bug:
+    // a constant mock-derived position collided with the partial unique index
+    // `lista_contatti_owner_position_uq` = (org_id, owner_marketer_id, position)
+    // WHERE deleted_at IS NULL → "duplicate key" on every add). Max over LIVE
+    // rows + 1 never collides.
+    let nextPos = input.position ?? null;
+    if (nextPos == null) {
+      const { data: top } = await supabase
+        .from('lista_contatti_entries')
+        .select('position')
+        .eq('org_id', orgId)
+        .eq('owner_marketer_id', marketerId)
+        .is('deleted_at', null)
+        .order('position', { ascending: false })
+        .limit(1)
+        .maybeSingle<{ position: number }>();
+      nextPos = (top?.position ?? 0) + 1;
+    }
+
+    const entry = makeEntry(nextPos);
     const { data, error } = await supabase
       .from('lista_contatti_entries')
-      .insert({ ...optimistic, id: undefined })
+      .insert({ ...entry, id: undefined })
       .select(SELECT)
       .single();
-    if (error || !data) return { data: optimistic, demo: false, ok: false };
+    if (error || !data) return { data: entry, demo: false, ok: false };
     return { data: data as ListaContattiEntry, demo: false, ok: true };
   } catch {
-    return { data: optimistic, demo: false, ok: false };
+    return { data: makeEntry(input.position ?? 0), demo: false, ok: false };
   }
 }
 

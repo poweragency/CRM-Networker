@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { FormSheet } from '@/components/crm/form-sheet';
 import { Button } from '@/components/ui/button';
@@ -21,9 +20,10 @@ import type { ProspectView } from './types';
  * NewProspectSheet — the "Nuovo prospect" create form in a right slide-over.
  * Validates the required name client-side, calls the createProspect server
  * action and reports the result (demo → "simulato" notice, real failure →
- * error). On success it pushes an optimistic card into the board via
- * `onCreated` and refreshes the route so a configured write re-reads canonical
- * data.
+ * error). On success it pushes the freshly created row into the board via
+ * `onCreated` (which already carries the canonical DB row, so no route refresh
+ * is needed — refreshing here raced the board re-fetch and made the new card
+ * vanish).
  */
 
 export interface ContactOption {
@@ -55,7 +55,6 @@ export function NewProspectSheet({
   defaultStage = 'conoscitiva',
   onCreated,
 }: NewProspectSheetProps) {
-  const router = useRouter();
   const { toast } = useToast();
 
   const [fullName, setFullName] = React.useState('');
@@ -122,7 +121,6 @@ export function NewProspectSheet({
       variant: 'success',
     });
     onOpenChange(false);
-    if (!res.demo) router.refresh();
   }
 
   const fieldLabel = 'mb-1.5 block';
