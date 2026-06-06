@@ -46,6 +46,9 @@ export function WishlistManager({
   // Completion = realised goals over the whole list (0% on an empty list).
   const doneCount = items.filter((i) => i.done).length;
   const pct = items.length ? Math.round((doneCount / items.length) * 100) : 0;
+  // Every single goal achieved → the whole widget turns GOLD (the `warning`
+  // token, same gold used at 100% in Presenze) instead of the usual green.
+  const allDone = items.length > 0 && doneCount === items.length;
 
   async function persist(next: WishlistItem[]) {
     setItems(next);
@@ -83,11 +86,23 @@ export function WishlistManager({
 
   return (
     <div className="space-y-4">
-      {/* Completion bar — how many goals are realised over the whole list. */}
-      <div className="rounded-xl border border-border/70 bg-gradient-to-br from-primary/[0.06] to-transparent p-4">
+      {/* Completion bar — green while in progress, GOLD once every goal is done. */}
+      <div
+        className={cn(
+          'rounded-xl border p-4 transition-colors',
+          allDone
+            ? 'border-warning/40 bg-gradient-to-br from-warning/[0.10] to-transparent'
+            : 'border-border/70 bg-gradient-to-br from-success/[0.06] to-transparent',
+        )}
+      >
         <div className="mb-2.5 flex items-end justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <span
+              className={cn(
+                'flex h-9 w-9 items-center justify-center rounded-lg transition-colors',
+                allDone ? 'bg-warning/15 text-warning' : 'bg-success/10 text-success',
+              )}
+            >
               <Trophy className="h-[18px] w-[18px]" aria-hidden />
             </span>
             <div>
@@ -100,7 +115,12 @@ export function WishlistManager({
             </div>
           </div>
           <div className="text-right">
-            <p className="text-2xl font-bold tabular-nums leading-none text-foreground">
+            <p
+              className={cn(
+                'text-2xl font-bold tabular-nums leading-none transition-colors',
+                allDone ? 'text-warning' : 'text-foreground',
+              )}
+            >
               {pct}
               <span className="text-base font-semibold text-muted-foreground">%</span>
             </p>
@@ -117,7 +137,12 @@ export function WishlistManager({
           aria-valuemax={100}
         >
           <div
-            className="h-full rounded-full bg-gradient-to-r from-primary/80 to-primary shadow-[0_0_12px_hsl(var(--primary)/0.5)] transition-all duration-500 ease-standard"
+            className={cn(
+              'h-full rounded-full transition-all duration-500 ease-standard',
+              allDone
+                ? 'bg-gradient-to-r from-warning/80 to-warning shadow-[0_0_12px_hsl(var(--warning)/0.6)]'
+                : 'bg-gradient-to-r from-success/80 to-success shadow-[0_0_12px_hsl(var(--success)/0.45)]',
+            )}
             style={{ width: `${pct}%` }}
           />
         </div>
@@ -158,7 +183,9 @@ export function WishlistManager({
               className={cn(
                 'group flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors',
                 item.done
-                  ? 'border-success/30 bg-success/[0.06]'
+                  ? allDone
+                    ? 'border-warning/40 bg-warning/[0.08]'
+                    : 'border-success/30 bg-success/[0.06]'
                   : 'border-border/70 bg-card hover:border-ring/40',
               )}
             >
@@ -175,7 +202,9 @@ export function WishlistManager({
                 className={cn(
                   'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors',
                   item.done
-                    ? 'border-success bg-success text-white'
+                    ? allDone
+                      ? 'border-warning bg-warning text-white'
+                      : 'border-success bg-success text-white'
                     : 'border-input hover:border-ring',
                   readOnly && 'cursor-default opacity-70',
                 )}
@@ -185,7 +214,11 @@ export function WishlistManager({
               <span
                 className={cn(
                   'min-w-0 flex-1 truncate text-sm',
-                  item.done ? 'text-muted-foreground line-through' : 'text-foreground',
+                  item.done
+                    ? allDone
+                      ? 'font-medium text-warning'
+                      : 'text-muted-foreground line-through'
+                    : 'text-foreground',
                 )}
               >
                 {item.title}
