@@ -1,22 +1,17 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { FileText, Folder, LinkIcon } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FileText, Download } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { STARTING_PACKAGE_LABELS } from '@/lib/types/db';
 import { PACKAGE_TONE } from '@/components/ui/package-badge';
-import {
-  MATERIAL_FOLDERS,
-  PACKAGE_INFO,
-  type MaterialType,
-} from '@/lib/data/informativa';
+import { PACKAGE_INFO } from '@/lib/data/informativa';
+import { listOrgDocuments } from '@/lib/data/org-documents';
 
 /**
- * /informativa — package prices + downloadable PDFs (RSC). Prices are shown in
- * dollars (+ IVA); the PDF section groups the downloadable materials into folders
- * (Business Info, Follow Up, GPS). File urls are placeholders for now. Lives in
- * the sidebar provisionally; can be relocated later.
+ * /informativa — package prices + downloadable documents (RSC). Prices are shown
+ * in dollars (+ IVA); the documents are admin/co-admin managed (org & team scope)
+ * and read here via the RLS-scoped data layer (demo-safe → empty list with no env).
  */
 export const dynamic = 'force-dynamic';
 
@@ -25,13 +20,9 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t('title') };
 }
 
-const MATERIAL_ICON: Record<MaterialType, typeof FileText> = {
-  pdf: FileText,
-  link: LinkIcon,
-};
-
 export default async function InformativaPage() {
   const t = await getTranslations('informativa');
+  const docs = (await listOrgDocuments()).data;
 
   return (
     <div className="space-y-8">
@@ -82,59 +73,48 @@ export default async function InformativaPage() {
         </div>
       </section>
 
-      {/* PDF — downloadable materials grouped in folders */}
+      {/* Downloadable documents (admin / co-admin managed) */}
       <section className="space-y-4">
         <div className="space-y-1">
           <h2 className="text-lg font-semibold tracking-tight text-foreground">
             {t('pdf_title')}
           </h2>
-          <p className="text-sm text-muted-foreground">{t('pdf_subtitle')}</p>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          {MATERIAL_FOLDERS.map((folder) => (
-            <Card key={folder.title} className="flex flex-col shadow-sm transition-[box-shadow,transform] duration-base ease-standard hover:-translate-y-px hover:shadow-md">
-              <CardHeader className="flex-row items-center gap-2.5 space-y-0 p-5 pb-3">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                  <Folder className="h-[18px] w-[18px]" aria-hidden />
+        {docs.length === 0 ? (
+          <div className="rounded-xl border border-dashed bg-card/40 px-6 py-10 text-center">
+            <p className="text-sm font-medium text-foreground">{t('docs_empty')}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{t('docs_empty_body')}</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {docs.map((d) => (
+              <div
+                key={d.id}
+                className="group flex items-center gap-3 rounded-xl border bg-card p-3 shadow-sm transition-[box-shadow,transform] duration-base ease-standard hover:-translate-y-px hover:shadow-md"
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <FileText className="h-5 w-5" aria-hidden />
                 </span>
-                <CardTitle>{folder.title}</CardTitle>
-              </CardHeader>
-              <CardContent className="flex-1 p-5 pt-0">
-                <ul className="space-y-2">
-                  {folder.items.map((item) => {
-                    const Icon = MATERIAL_ICON[item.type];
-                    return (
-                      <li
-                        key={item.title}
-                        className="flex items-center gap-3 rounded-lg border bg-background p-3"
-                      >
-                        <Icon
-                          className="h-4 w-4 shrink-0 text-muted-foreground"
-                          aria-hidden
-                        />
-                        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-                          {item.title}
-                        </span>
-                        <a
-                          href={item.url}
-                          className={cn(
-                            buttonVariants({ variant: 'outline', size: 'sm' }),
-                            'shrink-0',
-                          )}
-                          target={item.url !== '#' ? '_blank' : undefined}
-                          rel={item.url !== '#' ? 'noopener noreferrer' : undefined}
-                        >
-                          {item.type === 'pdf' ? t('download') : t('open')}
-                        </a>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                <span
+                  className="min-w-0 flex-1 truncate text-sm font-medium text-foreground"
+                  title={d.title}
+                >
+                  {d.title}
+                </span>
+                <a
+                  href={d.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'shrink-0')}
+                >
+                  <Download aria-hidden />
+                  {t('download')}
+                </a>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );

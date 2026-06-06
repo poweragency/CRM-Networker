@@ -4,7 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Network, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import type { NavViewer } from '@/lib/nav';
 import { SidebarNav } from '@/components/shell/sidebar-nav';
 import { cn } from '@/lib/utils';
@@ -18,12 +18,13 @@ import { cn } from '@/lib/utils';
 
 export interface MobileNavProps {
   viewer: NavViewer;
+  orgName: string;
+  orgLogoUrl?: string | null;
   open: boolean;
   onClose: () => void;
 }
 
-export function MobileNav({ viewer, open, onClose }: MobileNavProps) {
-  const tc = useTranslations('common');
+export function MobileNav({ viewer, orgName, orgLogoUrl, open, onClose }: MobileNavProps) {
   const t = useTranslations('topbar');
   const pathname = usePathname();
 
@@ -69,7 +70,7 @@ export function MobileNav({ viewer, open, onClose }: MobileNavProps) {
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={tc('appName')}
+        aria-label={orgName}
         className={cn(
           'fixed inset-y-0 left-0 z-50 flex w-[17rem] max-w-[85vw] flex-col border-r border-nav-foreground/10 bg-nav text-nav-foreground shadow-xl transition-transform duration-200 ease-out',
           open ? 'translate-x-0' : '-translate-x-full',
@@ -81,11 +82,23 @@ export function MobileNav({ viewer, open, onClose }: MobileNavProps) {
             className="flex items-center gap-2 outline-none focus-visible:ring-2 focus-visible:ring-ring"
             onClick={onClose}
           >
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-              <Network className="h-[18px] w-[18px]" aria-hidden />
-            </span>
-            <span className="text-sm font-semibold tracking-tight text-nav-foreground">
-              {tc('appName')}
+            {orgLogoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={orgLogoUrl}
+                alt={orgName}
+                className="h-8 w-8 shrink-0 rounded-lg object-contain shadow-sm"
+              />
+            ) : (
+              <span
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground shadow-sm"
+                aria-hidden
+              >
+                {orgName.charAt(0).toUpperCase() || 'G'}
+              </span>
+            )}
+            <span className="truncate text-sm font-semibold tracking-tight text-nav-foreground">
+              {orgName}
             </span>
           </Link>
           <button

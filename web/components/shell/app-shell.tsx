@@ -26,6 +26,8 @@ export interface AppShellProps {
   viewer: NavViewer;
   user: TopbarUser;
   orgName: string;
+  /** Org logo URL for the sidebar brand (null → letter placeholder). */
+  orgLogoUrl?: string | null;
   unreadCount?: number;
   /** Org-theme CSS-variable overrides (admin-chosen colors), or null. */
   themeVars?: Record<string, string> | null;
@@ -36,6 +38,7 @@ export function AppShell({
   viewer,
   user,
   orgName,
+  orgLogoUrl = null,
   unreadCount = 0,
   themeVars,
   children,
@@ -84,11 +87,19 @@ export function AppShell({
 
           <Sidebar
             viewer={viewer}
+            orgName={orgName}
+            orgLogoUrl={orgLogoUrl}
             collapsed={collapsed}
             onToggleCollapsed={toggleCollapsed}
           />
 
-          <MobileNav viewer={viewer} open={mobileOpen} onClose={closeMobile} />
+          <MobileNav
+            viewer={viewer}
+            orgName={orgName}
+            orgLogoUrl={orgLogoUrl}
+            open={mobileOpen}
+            onClose={closeMobile}
+          />
 
           <div className="relative z-10 flex min-w-0 flex-1 flex-col">
             <Topbar

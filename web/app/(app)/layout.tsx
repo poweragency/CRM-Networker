@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getCurrentClaims } from '@/lib/data/session';
 import { getNode } from '@/lib/data/genealogy';
 import { listNotifications } from '@/lib/data/notifications';
+import { getOrgIdentity } from '@/lib/data/org-identity';
 import { isSupabaseConfigured } from '@/lib/env';
 import { AppShell } from '@/components/shell/app-shell';
 import type { NavViewer } from '@/lib/nav';
@@ -56,16 +57,20 @@ export default async function AppLayout({
     avatarUrl: null,
   };
 
-  const orgName = demo ? 'Networker · Demo' : claims.org_id || 'Workspace';
-
   // Live unread count from the notifications feed (includes team birthdays).
   const { unread: unreadCount } = await listNotifications();
+
+  // Org identity (name + logo) for the shell brand; placeholders when unset.
+  const identity = (await getOrgIdentity()).data;
+  const orgName = demo ? 'Networker · Demo' : identity?.name || 'Workspace';
+  const orgLogoUrl = identity?.logoUrl ?? null;
 
   return (
     <AppShell
       viewer={viewer}
       user={user}
       orgName={orgName}
+      orgLogoUrl={orgLogoUrl}
       unreadCount={unreadCount}
     >
       {children}

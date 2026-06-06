@@ -20,13 +20,16 @@ import { cn } from '@/lib/utils';
 
 export interface SidebarProps {
   viewer: NavViewer;
+  /** Org display name shown in the brand header. */
+  orgName: string;
+  /** Org logo URL (null → first-letter placeholder). */
+  orgLogoUrl?: string | null;
   collapsed: boolean;
   onToggleCollapsed: () => void;
 }
 
-export function Sidebar({ viewer, collapsed, onToggleCollapsed }: SidebarProps) {
+export function Sidebar({ viewer, orgName, orgLogoUrl, collapsed, onToggleCollapsed }: SidebarProps) {
   const t = useTranslations('topbar');
-  const tc = useTranslations('common');
 
   return (
     <aside
@@ -56,17 +59,26 @@ export function Sidebar({ viewer, collapsed, onToggleCollapsed }: SidebarProps) 
           <>
             <Link
               href="/dashboard"
-              className="flex items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label={tc('appName')}
+              className="flex min-w-0 items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label={orgName}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/logo-gg.png"
-                alt={tc('appName')}
-                className="h-8 w-8 shrink-0 rounded-lg object-contain shadow-sm transition-transform hover:scale-105"
-              />
+              {orgLogoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={orgLogoUrl}
+                  alt={orgName}
+                  className="h-8 w-8 shrink-0 rounded-lg object-contain shadow-sm transition-transform hover:scale-105"
+                />
+              ) : (
+                <span
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground shadow-sm"
+                  aria-hidden
+                >
+                  {orgName.charAt(0).toUpperCase() || 'G'}
+                </span>
+              )}
               <span className="truncate text-sm font-semibold tracking-tight text-nav-foreground">
-                {tc('appName')}
+                {orgName}
               </span>
             </Link>
 
