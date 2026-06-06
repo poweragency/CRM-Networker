@@ -150,7 +150,7 @@ export function GenealogySearch({
           id="genealogy-search-results"
           role="listbox"
           aria-label={t('search_results')}
-          className="absolute z-30 mt-1.5 max-h-80 w-full overflow-y-auto rounded-lg border bg-popover bg-card p-1 shadow-lg animate-fade-in"
+          className="glass absolute z-30 mt-2 max-h-80 w-full overflow-y-auto rounded-xl border border-border/70 p-1.5 shadow-xl ring-1 ring-black/5 animate-fade-in"
         >
           {results.length === 0 ? (
             <p className="px-3 py-4 text-center text-sm text-muted-foreground">
@@ -166,8 +166,10 @@ export function GenealogySearch({
                 onMouseEnter={() => setActive(i)}
                 onClick={() => pick(node)}
                 className={cn(
-                  'flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left transition-colors',
-                  i === active ? 'bg-muted' : 'hover:bg-muted/60',
+                  'flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors duration-fast',
+                  i === active
+                    ? 'bg-primary/10 ring-1 ring-inset ring-primary/15'
+                    : 'hover:bg-muted/60',
                 )}
               >
                 <Avatar name={node.display_name} size="sm" />

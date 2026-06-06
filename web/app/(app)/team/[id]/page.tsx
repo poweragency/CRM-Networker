@@ -144,7 +144,7 @@ export default async function MarketerProfilePage({
   );
 
   return (
-    <div className="space-y-5">
+    <div className="animate-fade-in space-y-5">
       {demo && <ConfigNotice variant="inline" />}
 
       {/* Identity masthead — always visible (the numbers live in Produzione).
@@ -181,7 +181,7 @@ export default async function MarketerProfilePage({
         production={
           <>
             <MarketerKpis node={node} />
-            <div className="flex justify-center">
+            <div className="flex justify-center py-1">
               <PerformanceModal prospects={personalProspects} />
             </div>
             <ListaContattiStoreProvider

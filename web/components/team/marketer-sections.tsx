@@ -22,12 +22,12 @@ export function MarketerSections({
   const t = useTranslations('team');
   return (
     <Tabs defaultValue="produzione" className="gap-4">
-      <TabsList>
-        <TabsTrigger value="produzione">
+      <TabsList className="h-10 p-1">
+        <TabsTrigger value="produzione" className="px-4 py-1.5 font-semibold">
           <TrendingUp className="h-4 w-4" aria-hidden />
           {t('section_produzione')}
         </TabsTrigger>
-        <TabsTrigger value="formazione">
+        <TabsTrigger value="formazione" className="px-4 py-1.5 font-semibold">
           <GraduationCap className="h-4 w-4" aria-hidden />
           {t('section_formazione')}
         </TabsTrigger>

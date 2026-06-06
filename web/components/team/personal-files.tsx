@@ -3,8 +3,9 @@
 import * as React from 'react';
 import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import { HelpCircle, ListChecks } from 'lucide-react';
+import { ChevronRight, HelpCircle, ListChecks } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import { Modal } from '@/components/ui/modal';
 import { WishlistManager } from '@/components/team/wishlist-manager';
 import type { WishlistItem } from '@/lib/types/db';
@@ -35,12 +36,14 @@ export function PersonalFiles({
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <FileCard
           icon={<HelpCircle className="h-[18px] w-[18px]" aria-hidden />}
+          chip="bg-info/10 text-info"
           title={t('file_seven_whys')}
           description={t('file_seven_whys_desc')}
           onClick={() => setWhysOpen(true)}
         />
         <FileCard
           icon={<ListChecks className="h-[18px] w-[18px]" aria-hidden />}
+          chip="bg-warning/10 text-warning"
           title={t('file_wishlist')}
           description={t('file_wishlist_desc')}
           onClick={() => setWishOpen(true)}
@@ -76,11 +79,14 @@ export function PersonalFiles({
 
 function FileCard({
   icon,
+  chip,
   title,
   description,
   onClick,
 }: {
   icon: ReactNode;
+  /** Tone classes for the icon chip (bg + text). */
+  chip: string;
   title: string;
   description: string;
   onClick: () => void;
@@ -96,15 +102,24 @@ function FileCard({
           onClick();
         }
       }}
-      className="flex cursor-pointer items-center gap-3 p-4 outline-none transition-colors hover:border-ring/60 hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring"
+      className="group flex cursor-pointer items-center gap-3.5 p-4 outline-none transition-all duration-base ease-standard hover:-translate-y-px hover:border-ring/50 hover:shadow-card-hover focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+      <span
+        className={cn(
+          'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-transform duration-base group-hover:scale-105',
+          chip,
+        )}
+      >
         {icon}
       </span>
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-foreground">{title}</p>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold text-foreground">{title}</p>
         <p className="truncate text-xs text-muted-foreground">{description}</p>
       </div>
+      <ChevronRight
+        className="h-4 w-4 shrink-0 text-muted-foreground/40 transition-all group-hover:translate-x-0.5 group-hover:text-foreground"
+        aria-hidden
+      />
     </Card>
   );
 }

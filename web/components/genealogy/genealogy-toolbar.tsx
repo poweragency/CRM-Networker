@@ -59,12 +59,12 @@ export function GenealogyToolbar({
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1 rounded-lg border bg-muted/50 p-0.5">
+        <div className="glass flex items-center gap-0.5 rounded-xl border border-border/70 p-1 shadow-sm">
           <Tooltip content={t('expand_all')} side="bottom">
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-8 w-8 text-muted-foreground transition-colors duration-base hover:bg-primary/10 hover:text-primary"
               aria-label={t('expand_all')}
               onClick={onExpandAll}
             >
@@ -75,18 +75,19 @@ export function GenealogyToolbar({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-8 w-8 text-muted-foreground transition-colors duration-base hover:bg-primary/10 hover:text-primary"
               aria-label={t('collapse_all')}
               onClick={onCollapseAll}
             >
               <ChevronsDownUp aria-hidden />
             </Button>
           </Tooltip>
+          <span className="mx-0.5 h-5 w-px bg-border" aria-hidden />
           <Tooltip content={t('fit_view')} side="bottom">
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-8 w-8 text-muted-foreground transition-colors duration-base hover:bg-primary/10 hover:text-primary"
               aria-label={t('fit_view')}
               onClick={onFitView}
             >

@@ -24,8 +24,12 @@ export interface AddSlotNodeData {
 
 function AddSlotNodeImpl({ data }: NodeProps) {
   const d = data as AddSlotNodeData;
+  const legTint =
+    d.leg === 'LEFT'
+      ? 'hover:border-branch-left/60 hover:bg-branch-left/10 hover:text-branch-left'
+      : 'hover:border-branch-right/60 hover:bg-branch-right/10 hover:text-branch-right';
   return (
-    <div className="relative h-[150px] w-[248px]">
+    <div className="group relative h-[150px] w-[248px]">
       <Handle
         type="target"
         position={Position.Top}
@@ -39,12 +43,13 @@ function AddSlotNodeImpl({ data }: NodeProps) {
         }}
         aria-label="Aggiungi membro"
         className={cn(
-          'flex h-full w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-muted/30 text-muted-foreground transition-colors',
-          'hover:border-primary/60 hover:bg-primary/5 hover:text-primary',
+          'flex h-full w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/80 bg-muted/20 text-muted-foreground transition-all duration-base ease-emphasized',
+          'hover:-translate-y-0.5 hover:shadow-card-hover',
+          legTint,
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         )}
       >
-        <span className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-current">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-current transition-transform duration-base group-hover:scale-110">
           <Plus className="h-6 w-6" aria-hidden />
         </span>
       </button>

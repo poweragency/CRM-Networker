@@ -15,6 +15,7 @@ import {
   type Node,
   type NodeMouseHandler,
 } from '@xyflow/react';
+import { Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { BranchScope, PlacementLeg, TreeNode } from '@/lib/types/db';
 import { MarketerNode, type MarketerNodeData } from './marketer-node';
@@ -128,17 +129,24 @@ function toFlow(
 
   const rfEdges: Edge[] = edges.map((e) => {
     const isAdd = e.target.includes('__add_');
+    // Focus: when a node is selected, the edges touching it read brighter and
+    // thicker; everything else recedes so the active lineage pops (doc 14 §7.6).
+    const touchesSelected =
+      ctx.selectedId != null &&
+      (e.source === ctx.selectedId || e.target === ctx.selectedId);
+    const dimmed = ctx.selectedId != null && !touchesSelected && !isAdd;
     return {
       id: e.id,
       source: e.source,
       target: e.target,
       type: 'smoothstep',
-      animated: ctx.animate && !isAdd,
+      animated: (ctx.animate || touchesSelected) && !isAdd,
       style: {
         stroke: legStroke[e.leg ?? 'root'],
-        strokeWidth: 1.75,
-        opacity: isAdd ? 0.4 : 0.55,
+        strokeWidth: touchesSelected ? 2.75 : 1.75,
+        opacity: isAdd ? 0.4 : dimmed ? 0.22 : touchesSelected ? 0.95 : 0.6,
         strokeDasharray: isAdd ? '4 4' : undefined,
+        transition: 'stroke-width 150ms ease, opacity 150ms ease',
       },
     };
   });
@@ -253,7 +261,12 @@ function CanvasInner(
   const empty = positioned.length === 0;
 
   return (
-    <div className="relative h-full w-full">
+    <div className="surface-grid relative h-full w-full bg-muted/20">
+      {/* Soft radial vignette so the canvas reads as a deep, lit stage. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(120%_80%_at_50%_0%,transparent_40%,hsl(var(--background)/0.55)_100%)]"
+      />
       <ReactFlow
         nodes={flowNodes}
         edges={flowEdges}
@@ -276,42 +289,47 @@ function CanvasInner(
         elementsSelectable
         proOptions={{ hideAttribution: true }}
         defaultEdgeOptions={{ type: 'smoothstep' }}
-        className="bg-transparent [&_.react-flow__attribution]:hidden"
+        className="relative z-[1] bg-transparent [&_.react-flow__attribution]:hidden"
       >
         <Background
           variant={BackgroundVariant.Dots}
-          gap={22}
-          size={1}
-          className="!bg-muted/30"
+          gap={24}
+          size={1.25}
+          className="!bg-transparent"
           color="hsl(var(--border))"
         />
         <Controls
           showInteractive={false}
-          className="!rounded-lg !border !border-border !bg-card !shadow-md [&_button]:!border-border [&_button]:!bg-card [&_button]:!text-foreground [&_button:hover]:!bg-muted [&_svg]:!fill-current"
+          className="!overflow-hidden !rounded-xl !border !border-border !bg-card/90 !shadow-lg !backdrop-blur [&_button]:!border-border/60 [&_button]:!bg-transparent [&_button]:!text-muted-foreground [&_button:hover]:!bg-primary/10 [&_button:hover]:!text-primary [&_svg]:!fill-current"
         />
         {showMinimap && (
           <MiniMap
             pannable
             zoomable
             ariaLabel={t('fit_view')}
-            className="!rounded-lg !border !border-border !bg-card !shadow-md"
-            maskColor="hsl(var(--muted) / 0.6)"
+            className="!rounded-xl !border !border-border !bg-card/85 !shadow-lg !backdrop-blur"
+            maskColor="hsl(var(--background) / 0.7)"
+            maskStrokeColor="hsl(var(--ring))"
             nodeColor={(n) => {
               const leg = (n.data as unknown as MarketerNodeData)?.branchLeg;
               return legStroke[leg ?? 'root'];
             }}
-            nodeStrokeWidth={2}
+            nodeBorderRadius={4}
+            nodeStrokeWidth={2.5}
           />
         )}
       </ReactFlow>
 
       {empty && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="rounded-xl border bg-card px-6 py-5 text-center shadow-sm">
-            <p className="text-sm font-medium text-foreground">
+        <div className="pointer-events-none absolute inset-0 z-[2] flex items-center justify-center">
+          <div className="glass animate-scale-in rounded-2xl border border-border/60 px-8 py-7 text-center shadow-xl ring-1 ring-white/5">
+            <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary ring-1 ring-primary/20">
+              <Users className="h-6 w-6" aria-hidden />
+            </span>
+            <p className="text-sm font-semibold text-foreground">
               {t('empty_title')}
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1.5 max-w-[16rem] text-xs leading-relaxed text-muted-foreground">
               {t('empty_body')}
             </p>
           </div>

@@ -96,6 +96,8 @@ export function MarketerFormazione({
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
       <TrainingArea
         icon={<ListVideo className="h-[18px] w-[18px]" aria-hidden />}
+        chip="bg-info/10 text-info"
+        accent="bg-info"
         title={t('formazione_wow')}
         items={FORMAZIONE_CATALOG.wow}
         done={done}
@@ -104,6 +106,8 @@ export function MarketerFormazione({
       />
       <TrainingArea
         icon={<MonitorPlay className="h-[18px] w-[18px]" aria-hidden />}
+        chip="bg-primary/10 text-primary"
+        accent="bg-primary"
         title={t('formazione_click')}
         items={FORMAZIONE_CATALOG.click}
         done={done}
@@ -112,6 +116,8 @@ export function MarketerFormazione({
       />
       <TrainingArea
         icon={<BookOpen className="h-[18px] w-[18px]" aria-hidden />}
+        chip="bg-warning/10 text-warning"
+        accent="bg-warning"
         title={t('formazione_books')}
         items={FORMAZIONE_CATALOG.books}
         done={done}
@@ -124,6 +130,8 @@ export function MarketerFormazione({
 
 function TrainingArea({
   icon,
+  chip,
+  accent,
   title,
   items,
   done,
@@ -131,6 +139,10 @@ function TrainingArea({
   onToggle,
 }: {
   icon: ReactNode;
+  /** Tone classes for the icon chip (bg + text). */
+  chip: string;
+  /** Solid tone class for the progress bar fill. */
+  accent: string;
   title: string;
   items: TrainingItem[];
   done: Set<string>;
@@ -138,21 +150,38 @@ function TrainingArea({
   onToggle: (id: string) => void;
 }) {
   const doneCount = items.reduce((n, it) => (done.has(it.id) ? n + 1 : n), 0);
+  const pct = items.length ? Math.round((doneCount / items.length) * 100) : 0;
+  const complete = doneCount === items.length && items.length > 0;
 
   return (
-    <Card className="flex flex-col">
-      <CardHeader className="flex-row items-center justify-between space-y-0 p-4 pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-            {icon}
+    <Card className="flex flex-col transition-shadow duration-base ease-standard hover:shadow-card-hover">
+      <CardHeader className="space-y-0 p-4 pb-3">
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <span className={cn('flex h-8 w-8 items-center justify-center rounded-lg', chip)}>
+              {icon}
+            </span>
+            {title}
+          </CardTitle>
+          <span
+            className={cn(
+              'rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums',
+              complete ? 'bg-success/12 text-success' : 'bg-muted text-muted-foreground',
+            )}
+          >
+            {doneCount}/{items.length}
           </span>
-          {title}
-        </CardTitle>
-        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold tabular-nums text-muted-foreground">
-          {doneCount}/{items.length}
-        </span>
+        </div>
+        {/* Progress bar — at-a-glance completion per area. */}
+        <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+          <div
+            className={cn('h-full rounded-full transition-all duration-base ease-standard', complete ? 'bg-success' : accent)}
+            style={{ width: `${pct}%` }}
+            aria-hidden
+          />
+        </div>
       </CardHeader>
-      <CardContent className="flex-1 p-4 pt-0">
+      <CardContent className="flex-1 p-4 pt-1">
         <ul className="space-y-1.5">
           {items.map((it) => {
             const isDone = done.has(it.id);
@@ -166,17 +195,18 @@ function TrainingArea({
                   disabled={readOnly}
                   onClick={() => onToggle(it.id)}
                   className={cn(
-                    'flex w-full items-start gap-2.5 rounded-lg border bg-card/60 p-2.5 text-left transition-colors',
-                    !readOnly && 'hover:border-ring/60 hover:bg-muted/40',
+                    'flex w-full items-start gap-2.5 rounded-lg border p-2.5 text-left transition-colors',
+                    isDone ? 'border-success/30 bg-success/[0.06]' : 'border-border/70 bg-card/60',
+                    !readOnly && 'hover:border-ring/50 hover:bg-muted/40',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                     readOnly && 'cursor-default',
                   )}
                 >
                   <span
                     className={cn(
-                      'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors',
+                      'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors',
                       isDone
-                        ? 'border-success bg-success text-white'
+                        ? 'border-success bg-success text-success-foreground'
                         : 'border-input',
                     )}
                     aria-hidden

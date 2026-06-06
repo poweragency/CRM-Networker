@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import { Video } from 'lucide-react';
 import { getZoomAttendance } from '@/lib/data/attendance';
 import { ConfigNotice } from '@/components/config-notice';
+import { PageHeader } from '@/components/crm/page-header';
 import { AttendanceTable } from '@/components/presenze/attendance-table';
 
 /**
@@ -38,8 +40,14 @@ export default async function PresenzePage({
   const { calls, members, demo } = await getZoomAttendance(date);
 
   return (
-    <div className="space-y-4">
+    <div className="animate-fade-in space-y-5">
       {demo && <ConfigNotice variant="inline" />}
+      <PageHeader
+        title={t('title')}
+        description={t('subtitle')}
+        icon={<Video className="text-primary" />}
+        className="mb-0"
+      />
       <AttendanceTable date={date} calls={calls} members={members} today={today} />
     </div>
   );

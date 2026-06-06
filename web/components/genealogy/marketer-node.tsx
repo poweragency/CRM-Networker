@@ -12,6 +12,7 @@ import {
 import { useTranslations } from 'next-intl';
 import { Avatar } from '@/components/ui/avatar';
 import { RankBadge } from '@/components/ui/rank-badge';
+import { StatusDot } from '@/components/ui/status-dot';
 import { cn, formatNumber, formatPercent } from '@/lib/utils';
 import { type PlacementLeg, type TreeNode } from '@/lib/types/db';
 import { NODE_HEIGHT, NODE_WIDTH } from './layout';
@@ -23,7 +24,7 @@ import { NODE_HEIGHT, NODE_WIDTH } from './layout';
  * binary team counts (left/right + total) and the three headline KPIs (prospects,
  * iscrizioni, conversion %). The whole card is the selection target; a dedicated
  * chevron toggles lazy expand/collapse without selecting. Branch identity is
- * carried by the left border accent (LEFT=viola, RIGHT=verde, root=blu).
+ * carried by the left border accent (LEFT=viola, RIGHT=verde, root=indigo).
  *
  * Data is passed through React Flow's `data` prop; the callbacks are injected by
  * the canvas so the node stays a pure presenter.
@@ -39,10 +40,18 @@ export interface MarketerNodeData extends Record<string, unknown> {
   onSelect: (node: TreeNode) => void;
 }
 
+/** Left-accent rail color carrying the branch identity of the node. */
 const legAccent: Record<'root' | PlacementLeg, string> = {
-  root: 'border-l-branch-global',
-  LEFT: 'border-l-branch-left',
-  RIGHT: 'border-l-branch-right',
+  root: 'bg-branch-global',
+  LEFT: 'bg-branch-left',
+  RIGHT: 'bg-branch-right',
+};
+
+/** Soft tint behind the avatar ring, matching the branch identity. */
+const legRing: Record<'root' | PlacementLeg, string> = {
+  root: 'ring-branch-global/40',
+  LEFT: 'ring-branch-left/40',
+  RIGHT: 'ring-branch-right/40',
 };
 
 function KpiCell({
@@ -57,14 +66,14 @@ function KpiCell({
   accent: string;
 }) {
   return (
-    <div className="flex min-w-0 flex-col items-center gap-0.5 px-1">
-      <span className="flex items-center gap-1">
-        <Icon className={cn('h-3 w-3', accent)} aria-hidden />
-        <span className="text-sm font-semibold tabular-nums text-treeNode-foreground">
+    <div className="flex min-w-0 flex-col gap-0.5 px-2.5 py-0.5">
+      <span className="flex items-center gap-1.5">
+        <Icon className={cn('h-3.5 w-3.5 shrink-0', accent)} aria-hidden />
+        <span className="text-[15px] font-semibold leading-none tabular-nums text-treeNode-foreground">
           {value}
         </span>
       </span>
-      <span className="truncate text-[10px] leading-none text-treeNode-foreground/55">
+      <span className="truncate pl-[1.375rem] text-[10px] font-medium uppercase leading-none tracking-wide text-treeNode-foreground/45">
         {label}
       </span>
     </div>
@@ -77,7 +86,7 @@ function MarketerNodeImpl({ data, selected: rfSelected }: NodeProps) {
     data as unknown as MarketerNodeData;
 
   const isSelected = selected || rfSelected;
-  const accent = legAccent[branchLeg ?? 'root'];
+  const key = branchLeg ?? 'root';
 
   return (
     <div
@@ -94,10 +103,12 @@ function MarketerNodeImpl({ data, selected: rfSelected }: NodeProps) {
         }
       }}
       className={cn(
-        'group relative flex cursor-pointer flex-col rounded-xl border border-l-[3px] bg-treeNode text-treeNode-foreground shadow-sm outline-none transition-all',
-        'hover:shadow-md hover:border-ring/50',
-        accent,
-        isSelected && 'ring-2 ring-ring shadow-md',
+        'group relative isolate flex cursor-pointer flex-col overflow-hidden rounded-xl',
+        'bg-treeNode text-treeNode-foreground shadow-card outline-none ring-1 ring-white/10',
+        'transition-all duration-base ease-emphasized',
+        'hover:-translate-y-0.5 hover:shadow-card-hover hover:ring-ring/60',
+        isSelected &&
+          '-translate-y-0.5 shadow-glow ring-2 ring-ring',
       )}
     >
       {/* React Flow connection handles (top = incoming, bottom = outgoing). */}
@@ -114,10 +125,53 @@ function MarketerNodeImpl({ data, selected: rfSelected }: NodeProps) {
         isConnectable={false}
       />
 
+      {/* Depth: a subtle top-down sheen over the neutral black + branch glow on
+          hover/selected, so the card reads as a layered surface (never flat). */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-white/[0.07] via-transparent to-black/30"
+      />
+      <span
+        aria-hidden
+        className={cn(
+          'pointer-events-none absolute -inset-px -z-10 rounded-xl opacity-0 blur-md transition-opacity duration-base',
+          'group-hover:opacity-30',
+          isSelected && '!opacity-40',
+          legAccent[key],
+        )}
+      />
+
+      {/* Branch identity rail (LEFT=viola · RIGHT=verde · root=indigo). */}
+      <span
+        aria-hidden
+        className={cn(
+          'absolute inset-y-0 left-0 w-1 rounded-l-xl',
+          legAccent[key],
+        )}
+      />
+
       {/* Header: avatar + identity + activity dot */}
-      <div className="flex items-start gap-2.5 px-3 pb-2 pt-2.5">
-        <Avatar name={node.display_name} size="md" />
-        <div className="min-w-0 flex-1">
+      <div className="flex items-start gap-2.5 px-3.5 pb-2 pt-3">
+        <span className="relative shrink-0">
+          <Avatar
+            name={node.display_name}
+            size="md"
+            className={cn(
+              'ring-2 ring-offset-2 ring-offset-treeNode transition-all duration-base',
+              legRing[key],
+            )}
+          />
+          {/* Activity health dot, anchored to the avatar (rolled-up node
+              health, doc 14 §7.2). Uses the shared StatusDot for token color +
+              accessible Italian label; pulses when "hot". */}
+          <StatusDot
+            kind="activity"
+            value={node.activity}
+            pulse={node.activity === 'hot'}
+            className="absolute -bottom-1 -right-1 rounded-full bg-treeNode p-0.5 ring-2 ring-treeNode"
+          />
+        </span>
+        <div className="min-w-0 flex-1 pt-0.5">
           <div className="flex items-center gap-1.5">
             <span className="truncate text-sm font-semibold leading-tight text-treeNode-foreground">
               {node.display_name}
@@ -127,17 +181,20 @@ function MarketerNodeImpl({ data, selected: rfSelected }: NodeProps) {
               title={node.crm_access ? t('crm_active') : t('crm_inactive')}
               aria-label={node.crm_access ? t('crm_active') : t('crm_inactive')}
               className={cn(
-                'h-2.5 w-2.5 shrink-0 rounded-full ring-2',
+                'h-2 w-2 shrink-0 rounded-full ring-2',
                 node.crm_access
-                  ? 'bg-success ring-success/30'
-                  : 'bg-muted-foreground/40 ring-muted-foreground/20',
+                  ? 'bg-success ring-success/25'
+                  : 'bg-treeNode-foreground/30 ring-treeNode-foreground/10',
               )}
             />
           </div>
-          <div className="mt-1 flex items-center gap-1.5">
-            <RankBadge rank={node.rank} className="px-1.5 py-0 text-[10px]" />
+          <div className="mt-1.5 flex items-center gap-1.5">
+            <RankBadge
+              rank={node.rank}
+              className="border border-white/10 px-2 py-0.5 text-[10px] shadow-xs"
+            />
             {!node.crm_access && (
-              <span className="truncate text-[10px] font-medium text-treeNode-foreground/55">
+              <span className="truncate text-[10px] font-medium text-treeNode-foreground/50">
                 {t('crm_inactive')}
               </span>
             )}
@@ -146,23 +203,23 @@ function MarketerNodeImpl({ data, selected: rfSelected }: NodeProps) {
       </div>
 
       {/* Binary counts */}
-      <div className="flex items-center gap-1 px-3 text-[11px] text-treeNode-foreground/70">
-        <span className="inline-flex items-center gap-1 rounded bg-branch-left/20 px-1.5 py-0.5 font-medium text-branch-left">
+      <div className="flex items-center gap-1.5 px-3.5 text-[11px]">
+        <span className="inline-flex items-center gap-1 rounded-md bg-branch-left/25 px-1.5 py-0.5 font-semibold tabular-nums text-branch-left ring-1 ring-inset ring-branch-left/30">
           <PanelLeft className="h-3 w-3" aria-hidden />
           {formatNumber(node.left_count)}
         </span>
-        <span className="inline-flex items-center gap-1 rounded bg-branch-right/20 px-1.5 py-0.5 font-medium text-branch-right">
+        <span className="inline-flex items-center gap-1 rounded-md bg-branch-right/25 px-1.5 py-0.5 font-semibold tabular-nums text-branch-right ring-1 ring-inset ring-branch-right/30">
           <PanelRight className="h-3 w-3" aria-hidden />
           {formatNumber(node.right_count)}
         </span>
-        <span className="ml-auto inline-flex items-center gap-1 font-medium text-treeNode-foreground">
-          <Users className="h-3 w-3 text-treeNode-foreground/55" aria-hidden />
+        <span className="ml-auto inline-flex items-center gap-1 font-semibold tabular-nums text-treeNode-foreground/85">
+          <Users className="h-3 w-3 text-treeNode-foreground/50" aria-hidden />
           {formatNumber(node.team_size)}
         </span>
       </div>
 
       {/* KPI strip */}
-      <div className="mt-auto grid grid-cols-2 items-center gap-1 rounded-b-[inherit] border-t border-treeNode-foreground/10 bg-black/20 px-1 py-2">
+      <div className="mt-auto grid grid-cols-2 items-center divide-x divide-white/10 border-t border-white/10 bg-black/30 py-2">
         <KpiCell
           icon={Target}
           value={formatNumber(node.kpis.prospects)}
@@ -176,7 +233,6 @@ function MarketerNodeImpl({ data, selected: rfSelected }: NodeProps) {
           accent="text-warning"
         />
       </div>
-
     </div>
   );
 }

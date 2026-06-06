@@ -15,7 +15,7 @@ import {
   type DragOverEvent,
 } from '@dnd-kit/core';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
-import { Plus } from 'lucide-react';
+import { Plus, Users } from 'lucide-react';
 import {
   STAGE_LABELS,
   STAGE_ORDER,
@@ -306,14 +306,24 @@ export function ProspectBoard({
     <div className="space-y-4">
       {demo && <ConfigNotice variant="inline" />}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          <span className="font-medium text-foreground tabular-nums">
-            {total}
-          </span>{' '}
-          prospect nel funnel
-        </p>
-        <Button onClick={() => openSheet('conoscitiva')}>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-card px-4 py-3 shadow-xs">
+        <div className="flex items-center gap-3">
+          <span
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-inset ring-primary/15"
+            aria-hidden
+          >
+            <Users className="h-4 w-4" />
+          </span>
+          <div className="leading-tight">
+            <p className="text-xl font-bold tabular-nums tracking-tight text-foreground">
+              {total}
+            </p>
+            <p className="text-xs font-medium text-muted-foreground">
+              prospect nel funnel
+            </p>
+          </div>
+        </div>
+        <Button onClick={() => openSheet('conoscitiva')} className="shadow-sm">
           <Plus className="h-4 w-4" aria-hidden />
           Nuovo prospect
         </Button>
@@ -330,7 +340,7 @@ export function ProspectBoard({
           setStageMap(toStageMap(board));
         }}
       >
-        <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-3">
+        <div className="-mx-1 flex gap-4 overflow-x-auto px-1 pb-4">
           {BOARD_STAGES.map((stage) => {
             const prospects = stageMap[stage];
             return (

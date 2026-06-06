@@ -106,7 +106,7 @@ export function CallsSettings({
 
       <CardContent className="space-y-5">
         {/* Add form */}
-        <div className="flex flex-wrap items-end gap-2 rounded-lg border bg-muted/20 p-3">
+        <div className="flex flex-wrap items-end gap-2 rounded-xl border border-border/70 bg-muted/30 p-3">
           <label className="flex min-w-[12rem] flex-1 flex-col gap-1 text-xs font-medium text-muted-foreground">
             {t('calls_name')}
             <Input
@@ -166,9 +166,15 @@ export function CallsSettings({
             description={t('calls_empty_body')}
           />
         ) : (
-          <ul className="divide-y">
+          <ul className="-mx-2 space-y-0.5">
             {initial.map((c) => (
-              <li key={c.id} className="flex items-center gap-3 py-2.5">
+              <li
+                key={c.id}
+                className="flex items-center gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-muted/50"
+              >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                  <CalendarClock className="h-4 w-4" aria-hidden />
+                </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-foreground">{c.title}</p>
                   <p className="truncate text-xs text-muted-foreground">

@@ -7,6 +7,7 @@ import {
   stageIndex,
   type ProspectStage,
 } from '@/lib/types/db';
+import { stageTokens } from './stage-tokens';
 
 /**
  * FunnelProgress — a compact 6-step indicator of where a prospect sits in the
@@ -31,15 +32,22 @@ export function FunnelProgress({ current, className }: FunnelProgressProps) {
         const idx = i + 1;
         const done = idx < currentIdx;
         const active = idx === currentIdx;
+        const tok = stageTokens(stage);
         return (
           <li key={stage} className="flex min-w-0 flex-1 items-center gap-1">
-            <div className="flex min-w-0 flex-col items-center gap-1">
+            <div className="flex min-w-0 flex-col items-center gap-1.5">
               <span
                 className={cn(
-                  'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold tabular-nums',
-                  done && 'bg-success/15 text-success',
-                  active && 'bg-primary text-primary-foreground',
-                  !done && !active && 'bg-muted text-muted-foreground',
+                  'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold tabular-nums ring-1 ring-inset transition-colors',
+                  done && 'bg-success/15 text-success ring-success/30',
+                  active &&
+                    cn(
+                      tok.bg,
+                      'text-primary-foreground shadow-sm ring-transparent',
+                    ),
+                  !done &&
+                    !active &&
+                    'bg-muted text-muted-foreground ring-border/60',
                 )}
                 aria-hidden
               >
@@ -47,8 +55,12 @@ export function FunnelProgress({ current, className }: FunnelProgressProps) {
               </span>
               <span
                 className={cn(
-                  'hidden truncate text-[10px] sm:block',
-                  active ? 'font-medium text-foreground' : 'text-muted-foreground',
+                  'hidden truncate text-[10px] font-medium sm:block',
+                  active
+                    ? cn(tok.text)
+                    : done
+                      ? 'text-foreground/70'
+                      : 'text-muted-foreground',
                 )}
               >
                 {STAGE_LABELS[stage]}
@@ -57,8 +69,8 @@ export function FunnelProgress({ current, className }: FunnelProgressProps) {
             {i < STAGE_ORDER.length - 1 && (
               <span
                 className={cn(
-                  'h-px flex-1',
-                  idx < currentIdx ? 'bg-success/40' : 'bg-border',
+                  'h-0.5 flex-1 rounded-full',
+                  idx < currentIdx ? 'bg-success/50' : 'bg-border',
                 )}
                 aria-hidden
               />

@@ -77,9 +77,14 @@ export function PerformanceModal({
       <Button
         size="lg"
         onClick={() => setOpen(true)}
-        className="w-full gap-2 shadow-glow sm:w-auto sm:px-8"
+        className="group relative w-full gap-2.5 overflow-hidden px-8 text-base font-semibold shadow-glow sm:w-auto sm:min-w-[15rem]"
       >
-        <LineChart className="h-4 w-4" aria-hidden />
+        {/* Sweeping sheen on hover — gives the primary CTA a premium shimmer. */}
+        <span
+          className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 ease-emphasized group-hover:translate-x-full"
+          aria-hidden
+        />
+        <LineChart className="h-[18px] w-[18px]" aria-hidden />
         {t('performance_button')}
       </Button>
 
@@ -146,8 +151,12 @@ function PerformanceContent({ prospects }: { prospects: PersonalProspect[] }) {
 
   return (
     <div className="space-y-5">
-      {/* Mode toggle */}
-      <div className="flex gap-1" role="group" aria-label={t('period_label')}>
+      {/* Mode toggle — segmented control */}
+      <div
+        className="inline-flex gap-1 rounded-lg border border-border/70 bg-muted/60 p-1"
+        role="group"
+        aria-label={t('period_label')}
+      >
         {MODES.map((m) => (
           <button
             key={m.key}
@@ -155,10 +164,10 @@ function PerformanceContent({ prospects }: { prospects: PersonalProspect[] }) {
             onClick={() => setMode(m.key)}
             aria-pressed={mode === m.key}
             className={cn(
-              'rounded-md px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              'rounded-md px-3.5 py-1.5 text-xs font-semibold transition-all duration-base ease-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               mode === m.key
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                ? 'bg-card text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground',
             )}
           >
             {m.label}
@@ -209,14 +218,24 @@ function PerformanceContent({ prospects }: { prospects: PersonalProspect[] }) {
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {PHASES.map((p) => (
-              <div key={p.key} className="rounded-lg border bg-card p-4">
+              <div
+                key={p.key}
+                className="group relative overflow-hidden rounded-xl border border-border/70 bg-card p-4 shadow-card transition-shadow duration-base ease-standard hover:shadow-card-hover"
+              >
                 <div className="flex items-center gap-2">
-                  <span className={cn('h-2 w-2 rounded-full bg-current', p.color)} aria-hidden />
+                  <span className={cn('h-2.5 w-2.5 rounded-full bg-current', p.color)} aria-hidden />
                   <p className="text-xs font-medium text-muted-foreground">{t(p.labelKey)}</p>
                 </div>
-                <div className="mt-1.5 text-2xl font-semibold tabular-nums text-foreground">
+                <div className="mt-2 text-3xl font-bold tabular-nums text-foreground">
                   <Pct c={customConv[p.key]} big />
                 </div>
+                <span
+                  className={cn(
+                    'pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-current opacity-30',
+                    p.color,
+                  )}
+                  aria-hidden
+                />
               </div>
             ))}
           </div>
@@ -248,10 +267,10 @@ function TrendChart({ months }: { months: MonthBucket[] }) {
   const yAt = (rate: number) => PAD.top + (1 - rate) * PLOT_H;
 
   return (
-    <div className="rounded-lg border bg-card p-4">
+    <div className="rounded-xl border border-border/70 bg-card p-4 shadow-card">
       {/* Title + legend */}
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-medium text-foreground">{t('perf_chart_title')}</p>
+        <p className="text-sm font-semibold text-foreground">{t('perf_chart_title')}</p>
         <div className="flex flex-wrap gap-3">
           {PHASES.map((p) => (
             <span key={p.key} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
@@ -348,14 +367,14 @@ function MonthlyTable({ months }: { months: MonthBucket[] }) {
   const t = useTranslations('team');
   return (
     <div>
-      <p className="mb-2 text-sm font-medium text-foreground">{t('perf_table_title')}</p>
-      <div className="overflow-x-auto rounded-lg border">
+      <p className="mb-2 text-sm font-semibold text-foreground">{t('perf_table_title')}</p>
+      <div className="overflow-x-auto rounded-xl border border-border/70 shadow-card">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b bg-muted/40 text-left">
-              <th className="px-3 py-2 font-medium text-muted-foreground">{t('perf_month')}</th>
+            <tr className="border-b bg-muted/50 text-left text-[11px] uppercase tracking-wide">
+              <th className="px-3 py-2.5 font-semibold text-muted-foreground">{t('perf_month')}</th>
               {PHASES.map((p) => (
-                <th key={p.key} className="px-3 py-2 text-right font-medium text-muted-foreground">
+                <th key={p.key} className="px-3 py-2.5 text-right font-semibold text-muted-foreground">
                   {t(p.labelKey)}
                 </th>
               ))}
@@ -366,7 +385,7 @@ function MonthlyTable({ months }: { months: MonthBucket[] }) {
               // "Mese precedente" = the older month (one row below, recent-first list).
               const prev = months[idx + 1];
               return (
-                <tr key={m.key}>
+                <tr key={m.key} className="transition-colors hover:bg-muted/40">
                   <td className="whitespace-nowrap px-3 py-2 font-medium text-foreground">
                     {m.label}
                   </td>

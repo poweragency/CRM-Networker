@@ -23,6 +23,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { RankBadge } from '@/components/ui/rank-badge';
+import { StatusDot } from '@/components/ui/status-dot';
 import { Separator } from '@/components/ui/separator';
 import { cn, formatNumber, formatPercent } from '@/lib/utils';
 import type { TreeNode } from '@/lib/types/db';
@@ -63,16 +64,28 @@ function StatRow({
   label,
   value,
   accent,
+  accentBg,
 }: {
   icon: typeof Users;
   label: string;
   value: string;
   accent?: string;
+  accentBg?: string;
 }) {
   return (
-    <div className="flex items-center justify-between gap-2 rounded-lg border bg-card px-3 py-2">
-      <span className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Icon className={cn('h-4 w-4', accent ?? 'text-muted-foreground')} aria-hidden />
+    <div className="group flex items-center justify-between gap-2 rounded-lg border bg-card px-3 py-2.5 transition-colors duration-base hover:border-border hover:bg-muted/40">
+      <span className="flex items-center gap-2.5 text-sm text-muted-foreground">
+        <span
+          className={cn(
+            'flex h-7 w-7 shrink-0 items-center justify-center rounded-md',
+            accentBg ?? 'bg-muted',
+          )}
+        >
+          <Icon
+            className={cn('h-4 w-4', accent ?? 'text-muted-foreground')}
+            aria-hidden
+          />
+        </span>
         {label}
       </span>
       <span className="text-sm font-semibold tabular-nums text-foreground">
@@ -115,32 +128,49 @@ export function NodeDetailPanel({
     <aside
       aria-label={node.display_name}
       className={cn(
-        'flex h-full w-full flex-col overflow-hidden bg-card',
+        'flex h-full w-full flex-col overflow-hidden bg-card/80',
         className,
       )}
     >
-      {/* Header */}
-      <div className="flex items-start gap-3 border-b p-4">
-        <Avatar name={node.display_name} size="lg" />
-        <div className="min-w-0 flex-1">
-          <h2 className="truncate text-base font-semibold leading-tight text-foreground">
-            {node.display_name}
-          </h2>
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            <RankBadge rank={node.rank} />
-            <Badge variant={node.crm_access || activated ? 'success' : 'secondary'}>
-              {node.crm_access || activated ? t('crm_active') : t('crm_inactive')}
-            </Badge>
+      {/* Header — a compact identity hero with a subtle accent wash + close. */}
+      <div className="relative overflow-hidden border-b">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/[0.03] to-transparent"
+        />
+        <div className="relative flex items-start gap-3 p-4">
+          <Avatar
+            name={node.display_name}
+            size="lg"
+            className="ring-2 ring-primary/20 ring-offset-2 ring-offset-card"
+          />
+          <div className="min-w-0 flex-1 pt-0.5">
+            <h2 className="truncate text-base font-semibold leading-tight text-foreground">
+              {node.display_name}
+            </h2>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <RankBadge rank={node.rank} />
+              <Badge
+                variant={node.crm_access || activated ? 'success' : 'secondary'}
+              >
+                {node.crm_access || activated
+                  ? t('crm_active')
+                  : t('crm_inactive')}
+              </Badge>
+            </div>
+            <div className="mt-2">
+              <StatusDot kind="activity" value={node.activity} showLabel />
+            </div>
           </div>
+          <button
+            type="button"
+            aria-label={tc('close')}
+            onClick={onClose}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors duration-base hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <X className="h-4 w-4" aria-hidden />
+          </button>
         </div>
-        <button
-          type="button"
-          aria-label={tc('close')}
-          onClick={onClose}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <X className="h-4 w-4" aria-hidden />
-        </button>
       </div>
 
       {/* Scrollable body */}
@@ -151,26 +181,53 @@ export function NodeDetailPanel({
             {t('team_size')}
           </h3>
           <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-lg border bg-branch-left/5 p-2.5 text-center">
-              <PanelLeft className="mx-auto h-4 w-4 text-branch-left" aria-hidden />
-              <p className="mt-1 text-base font-semibold tabular-nums text-foreground">
+            <div className="relative overflow-hidden rounded-lg border border-branch-left/20 bg-branch-left/10 p-2.5 text-center">
+              <span
+                aria-hidden
+                className="absolute inset-x-0 top-0 h-0.5 bg-branch-left/60"
+              />
+              <PanelLeft
+                className="mx-auto h-4 w-4 text-branch-left"
+                aria-hidden
+              />
+              <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">
                 {formatNumber(node.left_count)}
               </p>
-              <p className="text-[11px] text-muted-foreground">{t('left_count')}</p>
+              <p className="text-[11px] text-muted-foreground">
+                {t('left_count')}
+              </p>
             </div>
-            <div className="rounded-lg border bg-muted/40 p-2.5 text-center">
-              <Users className="mx-auto h-4 w-4 text-muted-foreground" aria-hidden />
-              <p className="mt-1 text-base font-semibold tabular-nums text-foreground">
+            <div className="relative overflow-hidden rounded-lg border bg-muted/50 p-2.5 text-center">
+              <span
+                aria-hidden
+                className="absolute inset-x-0 top-0 h-0.5 bg-primary/60"
+              />
+              <Users
+                className="mx-auto h-4 w-4 text-primary"
+                aria-hidden
+              />
+              <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">
                 {formatNumber(node.team_size)}
               </p>
-              <p className="text-[11px] text-muted-foreground">{t('team_size')}</p>
+              <p className="text-[11px] text-muted-foreground">
+                {t('team_size')}
+              </p>
             </div>
-            <div className="rounded-lg border bg-branch-right/5 p-2.5 text-center">
-              <PanelRight className="mx-auto h-4 w-4 text-branch-right" aria-hidden />
-              <p className="mt-1 text-base font-semibold tabular-nums text-foreground">
+            <div className="relative overflow-hidden rounded-lg border border-branch-right/20 bg-branch-right/10 p-2.5 text-center">
+              <span
+                aria-hidden
+                className="absolute inset-x-0 top-0 h-0.5 bg-branch-right/60"
+              />
+              <PanelRight
+                className="mx-auto h-4 w-4 text-branch-right"
+                aria-hidden
+              />
+              <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">
                 {formatNumber(node.right_count)}
               </p>
-              <p className="text-[11px] text-muted-foreground">{t('right_count')}</p>
+              <p className="text-[11px] text-muted-foreground">
+                {t('right_count')}
+              </p>
             </div>
           </div>
         </section>
@@ -188,32 +245,42 @@ export function NodeDetailPanel({
               label={t('kpi_prospects')}
               value={formatNumber(node.kpis.prospects)}
               accent="text-info"
+              accentBg="bg-info/12"
             />
             <StatRow
               icon={Phone}
               label={t('kpi_calls')}
               value={formatNumber(node.kpis.calls)}
               accent="text-primary"
+              accentBg="bg-primary/12"
             />
             <StatRow
               icon={UserPlus}
               label={t('kpi_iscrizioni')}
               value={formatNumber(node.kpis.iscrizioni)}
               accent="text-success"
+              accentBg="bg-success/12"
             />
             <StatRow
               icon={TrendingUp}
               label={t('kpi_conversion')}
               value={formatPercent(node.kpis.conversion_rate)}
               accent="text-warning"
+              accentBg="bg-warning/12"
             />
           </div>
         </section>
       </div>
 
       {/* Footer actions */}
-      <div className="space-y-2 border-t p-4">
-        <Link href={`/team/${node.id}`} className={cn(buttonVariants(), 'w-full')}>
+      <div className="space-y-2 border-t bg-muted/30 p-4">
+        <Link
+          href={`/team/${node.id}`}
+          className={cn(
+            buttonVariants(),
+            'w-full shadow-sm transition-all duration-base hover:shadow-glow',
+          )}
+        >
           <FolderOpen aria-hidden />
           {t('open_profile')}
         </Link>

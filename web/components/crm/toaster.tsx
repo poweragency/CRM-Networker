@@ -34,18 +34,53 @@ interface ToastContextValue {
 
 const ToastContext = React.createContext<ToastContextValue | null>(null);
 
-const VARIANT_META: Record<
-  ToastVariant,
-  { Icon: typeof Info; accent: string; iconColor: string; wrapCx?: string }
-> = {
-  success: { Icon: CheckCircle2, accent: 'border-success/40', iconColor: 'text-success' },
-  error: { Icon: AlertTriangle, accent: 'border-danger/40', iconColor: 'text-danger' },
-  info: { Icon: Info, accent: 'border-info/40', iconColor: 'text-info' },
+interface VariantMeta {
+  Icon: typeof Info;
+  /** Border + accent rail tone. */
+  accent: string;
+  /** Accent rail (left edge) color. */
+  rail: string;
+  /** Icon color. */
+  iconColor: string;
+  /** Tinted disc behind the icon. */
+  iconBg: string;
+  /** Extra wrapper classes (gradient/glow for the prestige achievement toast). */
+  wrapCx?: string;
+  /** When true, a soft halo pulses behind the icon and a sheen sweeps the card. */
+  prestige?: boolean;
+}
+
+const VARIANT_META: Record<ToastVariant, VariantMeta> = {
+  success: {
+    Icon: CheckCircle2,
+    accent: 'border-success/30',
+    rail: 'bg-success',
+    iconColor: 'text-success',
+    iconBg: 'bg-success/12',
+  },
+  error: {
+    Icon: AlertTriangle,
+    accent: 'border-danger/30',
+    rail: 'bg-danger',
+    iconColor: 'text-danger',
+    iconBg: 'bg-danger/12',
+  },
+  info: {
+    Icon: Info,
+    accent: 'border-info/30',
+    rail: 'bg-info',
+    iconColor: 'text-info',
+    iconBg: 'bg-info/12',
+  },
   achievement: {
     Icon: Trophy,
     accent: 'border-warning/50',
+    rail: 'bg-warning',
     iconColor: 'text-warning',
-    wrapCx: 'animate-pop bg-gradient-to-br from-warning/[0.12] to-card shadow-glow-warning',
+    iconBg: 'bg-warning/15',
+    prestige: true,
+    wrapCx:
+      'animate-pop bg-gradient-to-br from-warning/[0.14] via-card to-card shadow-glow-warning ring-1 ring-warning/30',
   },
 };
 
@@ -111,20 +146,59 @@ export function Toaster({ children }: { children?: React.ReactNode }) {
         aria-label="Notifiche"
       >
         {items.map((t) => {
-          const { Icon, accent, iconColor, wrapCx } = VARIANT_META[t.variant];
+          const { Icon, accent, rail, iconColor, iconBg, wrapCx, prestige } =
+            VARIANT_META[t.variant];
           return (
             <div
               key={t.id}
               role="status"
               className={cn(
-                'pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-lg border bg-card p-4 text-card-foreground shadow-lg animate-scale-in',
+                'group/toast pointer-events-auto relative flex w-full max-w-sm items-start gap-3 overflow-hidden rounded-xl border bg-card/95 p-4 pl-6 text-card-foreground shadow-lg backdrop-blur-sm animate-slide-in-right',
                 accent,
                 wrapCx,
               )}
             >
-              <Icon className={cn('mt-0.5 h-5 w-5 shrink-0', iconColor)} aria-hidden />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">{t.title}</p>
+              {/* Left accent rail — colored edge that anchors the variant tone. */}
+              <span
+                aria-hidden
+                className={cn('absolute inset-y-0 left-0 w-1', rail)}
+              />
+              {/* Prestige sheen — a single gold sweep across the achievement card. */}
+              {prestige && (
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-warning/20 to-transparent animate-sheen"
+                />
+              )}
+              {/* Icon disc — tinted, with a pulsing halo for achievements. */}
+              <span className="relative mt-0.5 inline-flex shrink-0">
+                {prestige && (
+                  <span
+                    aria-hidden
+                    className={cn(
+                      'absolute -inset-1 rounded-full opacity-60 animate-glow-pulse',
+                      iconBg,
+                    )}
+                  />
+                )}
+                <span
+                  className={cn(
+                    'relative inline-flex h-9 w-9 items-center justify-center rounded-full',
+                    iconBg,
+                  )}
+                >
+                  <Icon
+                    className={cn(
+                      'h-5 w-5',
+                      iconColor,
+                      prestige && 'animate-float',
+                    )}
+                    aria-hidden
+                  />
+                </span>
+              </span>
+              <div className="relative min-w-0 flex-1">
+                <p className="text-sm font-semibold tracking-tight">{t.title}</p>
                 {t.description && (
                   <p className="mt-0.5 text-sm text-muted-foreground">
                     {t.description}
@@ -134,7 +208,7 @@ export function Toaster({ children }: { children?: React.ReactNode }) {
               <button
                 type="button"
                 onClick={() => dismiss(t.id)}
-                className="shrink-0 rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="relative -mr-1 -mt-1 shrink-0 rounded-md p-1 text-muted-foreground transition-colors duration-base hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 aria-label="Chiudi notifica"
               >
                 <X className="h-4 w-4" aria-hidden />

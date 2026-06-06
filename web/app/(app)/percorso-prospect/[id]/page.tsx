@@ -72,33 +72,37 @@ export default async function ProspectDetailPage({
       {demo && <ConfigNotice variant="inline" />}
 
       {/* Compact summary: responsabile + timing */}
-      <Card>
-        <CardContent className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-3">
-          <div className="space-y-1">
-            <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
+      <Card className="shadow-card">
+        <CardContent className="grid grid-cols-1 gap-4 divide-y divide-border/60 p-5 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          <div className="space-y-1.5 sm:pr-4">
+            <dt className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
               <User className="h-3.5 w-3.5" aria-hidden />
               {t('owner')}
             </dt>
-            <dd className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-              <Avatar name={ownerName} size="sm" className="h-5 w-5 text-[9px]" />
+            <dd className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <Avatar
+                name={ownerName}
+                size="sm"
+                className="h-6 w-6 text-[10px] ring-1 ring-border/60"
+              />
               <span className="truncate">{ownerName}</span>
             </dd>
           </div>
-          <div className="space-y-1">
-            <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <div className="space-y-1.5 pt-4 sm:px-4 sm:pt-0">
+            <dt className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
               <Clock className="h-3.5 w-3.5" aria-hidden />
               {t('in_stage_since')}
             </dt>
-            <dd className="text-sm font-medium text-foreground">
+            <dd className="text-sm font-semibold text-foreground">
               {formatRelativeTime(prospect.current_stage_since)}
             </dd>
           </div>
-          <div className="space-y-1">
-            <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <div className="space-y-1.5 pt-4 sm:pl-4 sm:pt-0">
+            <dt className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
               <History className="h-3.5 w-3.5" aria-hidden />
               {t('in_funnel_since')}
             </dt>
-            <dd className="text-sm font-medium text-foreground">
+            <dd className="text-sm font-semibold text-foreground">
               {formatDate(prospect.entered_funnel_at)}
             </dd>
           </div>

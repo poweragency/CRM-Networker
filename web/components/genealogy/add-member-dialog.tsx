@@ -208,7 +208,7 @@ export function AddMemberDialog({
           </select>
         </div>
 
-        <label className="flex items-center gap-2 text-sm text-foreground">
+        <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border bg-muted/30 px-3 py-2.5 text-sm text-foreground transition-colors duration-base hover:bg-muted/50">
           <input
             type="checkbox"
             className="h-4 w-4 rounded border-input accent-primary"

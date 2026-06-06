@@ -23,6 +23,7 @@ import {
 } from '@/lib/types/db';
 import { cn } from '@/lib/utils';
 import { changeStageAction } from '@/app/(app)/percorso-prospect/actions';
+import { stageTokens } from './stage-tokens';
 
 /**
  * StageChanger — the explicit "Cambia fase" control on the prospect detail page.
@@ -99,6 +100,7 @@ export function StageChanger({ prospectId, currentStage }: StageChangerProps) {
           {STAGE_ORDER.map((stage) => {
             const idx = stageIndex(stage);
             const isCurrent = stage === currentStage;
+            const tok = stageTokens(stage);
             return (
               <DropdownMenuItem
                 key={stage}
@@ -108,12 +110,12 @@ export function StageChanger({ prospectId, currentStage }: StageChangerProps) {
               >
                 <span
                   className={cn(
-                    'flex h-5 w-5 shrink-0 items-center justify-center rounded text-[11px] font-semibold tabular-nums',
+                    'flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[11px] font-bold tabular-nums ring-1 ring-inset',
                     idx < currentIdx
-                      ? 'bg-success/15 text-success'
+                      ? 'bg-success/15 text-success ring-success/25'
                       : idx === currentIdx
-                        ? 'bg-primary/15 text-primary'
-                        : 'bg-muted text-muted-foreground',
+                        ? cn(tok.bgSoft, tok.text, tok.border)
+                        : 'bg-muted text-muted-foreground ring-border/50',
                   )}
                   aria-hidden
                 >

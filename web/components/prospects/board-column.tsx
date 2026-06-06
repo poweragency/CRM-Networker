@@ -6,9 +6,11 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
+import { Inbox } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { STAGE_LABELS, stageIndex } from '@/lib/types/db';
 import { ProspectCard } from './prospect-card';
+import { stageTokens } from './stage-tokens';
 import type { ProspectView, StageColumnView } from './types';
 
 /**
@@ -50,38 +52,60 @@ export function BoardColumn({
   );
 
   const idx = stageIndex(stage);
-  const isEnrollment = stage === 'iscrizione';
+  const tok = stageTokens(stage);
 
   return (
     <section
       aria-label={STAGE_LABELS[stage]}
-      className="flex w-72 shrink-0 flex-col sm:w-[19rem]"
+      className={cn(
+        'flex w-72 shrink-0 flex-col rounded-xl transition-opacity duration-base sm:w-[19rem]',
+        // Subtly recede the non-target columns while dragging for focus.
+        isDraggingActive && !isOver && 'opacity-[0.92]',
+      )}
     >
       {/* Header */}
       <div
         className={cn(
-          'mb-2 rounded-lg border bg-muted/40 px-3 py-2.5',
-          isEnrollment && 'border-success/30 bg-success/5',
+          'relative mb-2.5 overflow-hidden rounded-xl border border-border/70 bg-card px-3 py-2.5 shadow-xs',
         )}
       >
-        <div className="flex items-center justify-between gap-2">
+        {/* stage-colored top accent */}
+        <span
+          aria-hidden
+          className={cn('absolute inset-x-0 top-0 h-[3px]', tok.bg)}
+        />
+        <span
+          aria-hidden
+          className={cn(
+            'pointer-events-none absolute inset-0 bg-gradient-to-b to-transparent opacity-60',
+            tok.from,
+          )}
+        />
+        <div className="relative flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
             <span
               className={cn(
-                'flex h-5 w-5 shrink-0 items-center justify-center rounded text-[11px] font-semibold tabular-nums',
-                isEnrollment
-                  ? 'bg-success/15 text-success'
-                  : 'bg-background text-muted-foreground',
+                'flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[11px] font-bold tabular-nums ring-1 ring-inset',
+                tok.bgSoft,
+                tok.text,
+                tok.border,
               )}
               aria-hidden
             >
               {idx}
             </span>
-            <h2 className="truncate text-sm font-semibold text-foreground">
+            <h2 className="truncate text-sm font-semibold tracking-tight text-foreground">
               {STAGE_LABELS[stage]}
             </h2>
           </div>
-          <span className="shrink-0 rounded-full bg-background px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
+          <span
+            className={cn(
+              'shrink-0 rounded-full px-2 py-0.5 text-xs font-bold tabular-nums',
+              count > 0
+                ? cn(tok.bgSoft, tok.text)
+                : 'bg-muted text-muted-foreground',
+            )}
+          >
             {count}
           </span>
         </div>
@@ -91,13 +115,13 @@ export function BoardColumn({
       <div
         ref={setNodeRef}
         className={cn(
-          'flex-1 space-y-2 rounded-lg p-1.5 transition-colors',
+          'flex-1 space-y-2.5 rounded-xl p-2 transition-all duration-base ease-standard',
           'min-h-[8rem]',
           isOver
-            ? 'bg-primary/8 ring-2 ring-inset ring-primary/40'
+            ? cn('bg-card shadow-inner ring-2 ring-inset', tok.ring)
             : isDraggingActive
-              ? 'bg-muted/30'
-              : 'bg-muted/20',
+              ? 'bg-muted/40'
+              : 'bg-muted/25',
         )}
       >
         <SortableContext
@@ -112,13 +136,19 @@ export function BoardColumn({
         {count === 0 && (
           <div
             className={cn(
-              'flex h-24 items-center justify-center rounded-lg border border-dashed text-center text-xs',
+              'flex h-28 flex-col items-center justify-center gap-2 rounded-xl border border-dashed text-center text-xs transition-colors duration-base',
               isOver
-                ? 'border-primary/50 text-primary'
-                : 'border-border/70 text-muted-foreground/70',
+                ? cn(tok.border, tok.text, 'bg-card')
+                : 'border-border/60 text-muted-foreground/60',
             )}
           >
-            {isOver ? 'Rilascia qui' : 'Nessun prospect in questa fase'}
+            <Inbox
+              className={cn('h-5 w-5', isOver ? tok.text : 'opacity-50')}
+              aria-hidden
+            />
+            <span className="font-medium">
+              {isOver ? 'Rilascia qui' : 'Nessun prospect'}
+            </span>
           </div>
         )}
       </div>

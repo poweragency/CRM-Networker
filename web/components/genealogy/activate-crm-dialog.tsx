@@ -171,9 +171,12 @@ export function ActivateCrmDialog({
 
         {error && <p className="text-xs text-danger">{error}</p>}
 
-        <p className="text-[11px] leading-relaxed text-muted-foreground">
-          {t('activate_security_note')}
-        </p>
+        <div className="flex items-start gap-2.5 rounded-lg border border-info/30 bg-info/10 px-3 py-2.5">
+          <KeyRound className="mt-0.5 h-3.5 w-3.5 shrink-0 text-info" aria-hidden />
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            {t('activate_security_note')}
+          </p>
+        </div>
       </form>
     </Modal>
   );

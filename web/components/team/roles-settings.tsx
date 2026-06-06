@@ -70,14 +70,17 @@ export function RolesSettings({ initial }: { initial: OrgRoleRow[] }) {
             description={t('roles_empty_body')}
           />
         ) : (
-          <ul className="divide-y">
+          <ul className="-mx-2 space-y-0.5">
             {rows.map((r) => {
               const locked = r.role === 'owner' || r.role === 'admin';
               const isCo = r.role === 'co_admin';
               const eligible =
                 RANK_ORDER.indexOf(r.rank) >= RANK_ORDER.indexOf('team_leader');
               return (
-                <li key={r.marketer_id} className="flex items-center gap-3 py-2.5">
+                <li
+                  key={r.marketer_id}
+                  className="flex items-center gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-muted/50"
+                >
                   <Avatar name={r.display_name} size="sm" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-foreground">

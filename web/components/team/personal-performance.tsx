@@ -109,7 +109,11 @@ export function PersonalPerformance({
         <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           {t('kpi_personal_title')}
         </p>
-        <div className="flex flex-wrap gap-1" role="group" aria-label={t('period_label')}>
+        <div
+          className="flex flex-wrap gap-1 rounded-lg border border-border/70 bg-muted/50 p-1"
+          role="group"
+          aria-label={t('period_label')}
+        >
           {PRESETS.map((p) => (
             <button
               key={p.key}
@@ -117,10 +121,10 @@ export function PersonalPerformance({
               onClick={() => setPreset(p.key)}
               aria-pressed={preset === p.key}
               className={cn(
-                'rounded-md px-2 py-1 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                'rounded-md px-2.5 py-1 text-[11px] font-semibold transition-all duration-base ease-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 preset === p.key
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
               )}
             >
               {p.label}

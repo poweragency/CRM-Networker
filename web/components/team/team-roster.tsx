@@ -3,11 +3,12 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { MapPin, Search, Users, X } from 'lucide-react';
+import { ChevronRight, MapPin, Network, Search, Users, UserCheck, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Avatar } from '@/components/ui/avatar';
+import { CountUp } from '@/components/ui/count-up';
 import { RankBadge } from '@/components/ui/rank-badge';
-import { PackageBadge } from '@/components/ui/package-badge';
+import { PackageBadge, PACKAGE_TONE } from '@/components/ui/package-badge';
 import { EmptyState } from '@/components/crm/empty-state';
 import { WhatsAppButton } from '@/components/crm/whatsapp-button';
 import { TopbarSlot } from '@/components/shell/topbar-slot';
@@ -15,21 +16,29 @@ import { cn, formatDate, formatNumber } from '@/lib/utils';
 import {
   STATUS_LABELS,
   type MarketerStatus,
+  type StartingPackage,
   type TeamMemberRow,
 } from '@/lib/types/db';
 
 /**
  * TeamRoster — the Statistiche roster. A client component for instant
- * name/città/regione search over the server rows. Premium table: a two-line
- * identity cell (avatar + name with città·regione subtitle + status dot), rank,
- * package, registration and team size, with the WHOLE row navigating to the
- * member profile (/team/[id]). A summary strip surfaces totals at a glance.
+ * name/città/regione search over the server rows. Premium presentation: glowing
+ * KPI summary cards (tallying numbers + icon chips), then a premium roster table
+ * with a left package-tinted rail, a two-line identity cell (avatar + status dot +
+ * città·regione), rank, package and team size, with the WHOLE row navigating to
+ * the member profile (/team/[id]). Data immediately comprehensible at a glance.
  */
 
 const STATUS_TONE: Record<MarketerStatus, string> = {
   active: 'bg-success',
   inactive: 'bg-muted-foreground/50',
 };
+
+/** Left accent rail tone per package (falls back to a neutral border). */
+function packageRail(pkg: StartingPackage | null): string {
+  if (!pkg) return 'bg-border';
+  return PACKAGE_TONE[pkg].dot;
+}
 
 export function TeamRoster({ rows }: { rows: TeamMemberRow[] }) {
   const t = useTranslations('statistiche');
@@ -62,7 +71,7 @@ export function TeamRoster({ rows }: { rows: TeamMemberRow[] }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Search lives in the top navbar (only while this screen is up). */}
       <TopbarSlot>
         <div className="relative w-full max-w-md">
@@ -90,14 +99,31 @@ export function TeamRoster({ rows }: { rows: TeamMemberRow[] }) {
         </div>
       </TopbarSlot>
 
-      {/* Summary strip */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="grid flex-1 grid-cols-3 gap-3">
-          <SummaryStat label={t('stat_members')} value={rows.length} />
-          <SummaryStat label={t('stat_active')} value={activeCount} tone="success" />
-          <SummaryStat label={t('stat_team')} value={teamTotal} tone="info" />
-        </div>
+      {/* KPI summary cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <SummaryStat
+          icon={Users}
+          label={t('stat_members')}
+          value={rows.length}
+          chip="bg-primary/10 text-primary"
+          bar="from-primary/60"
+        />
+        <SummaryStat
+          icon={UserCheck}
+          label={t('stat_active')}
+          value={activeCount}
+          chip="bg-success/10 text-success"
+          bar="from-success/60"
+        />
+        <SummaryStat
+          icon={Network}
+          label={t('stat_team')}
+          value={teamTotal}
+          chip="bg-info/10 text-info"
+          bar="from-info/60"
+        />
       </div>
+
       <p className="text-sm text-muted-foreground" aria-live="polite">
         {needle
           ? t('count', { count: filtered.length })
@@ -111,88 +137,104 @@ export function TeamRoster({ rows }: { rows: TeamMemberRow[] }) {
           description={t('no_results_body')}
         />
       ) : (
-        <div className="overflow-x-auto rounded-xl border bg-card shadow-sm">
-          <table className="w-full caption-bottom text-sm">
-            <thead className="bg-muted/50">
-              <tr className="border-b text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                <th className="h-10 px-4 text-left">{t('col_name')}</th>
-                <th className="h-10 px-3 text-left">{t('col_rank')}</th>
-                <th className="h-10 px-3 text-left">{t('col_package')}</th>
-                <th className="hidden h-10 px-3 text-left lg:table-cell">
-                  {t('col_registration')}
-                </th>
-                <th className="h-10 px-4 text-right">{t('col_team')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((r) => {
-                const location = [r.city, r.region].filter(Boolean).join(' · ');
-                return (
-                  <tr
-                    key={r.id}
-                    onClick={() => router.push(`/team/${r.id}`)}
-                    className="group cursor-pointer border-b transition-colors last:border-0 hover:bg-muted/40"
-                  >
-                    {/* Identity — two lines */}
-                    <td className="px-4 py-3">
-                      <span className="flex items-center gap-3">
-                        <span className="relative shrink-0">
-                          <Avatar name={r.display_name} size="md" />
-                          <span
-                            className={cn(
-                              'absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card',
-                              STATUS_TONE[r.status],
-                            )}
-                            title={STATUS_LABELS[r.status]}
-                            aria-hidden
+        <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-card">
+          <div className="overflow-x-auto">
+            <table className="w-full caption-bottom text-sm">
+              <thead className="bg-muted/50">
+                <tr className="border-b text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <th className="h-11 px-4 text-left">{t('col_name')}</th>
+                  <th className="h-11 px-3 text-left">{t('col_rank')}</th>
+                  <th className="h-11 px-3 text-left">{t('col_package')}</th>
+                  <th className="hidden h-11 px-3 text-left lg:table-cell">
+                    {t('col_registration')}
+                  </th>
+                  <th className="h-11 px-4 text-right">{t('col_team')}</th>
+                  <th className="h-11 w-8 px-2" aria-hidden />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filtered.map((r) => {
+                  const location = [r.city, r.region].filter(Boolean).join(' · ');
+                  return (
+                    <tr
+                      key={r.id}
+                      onClick={() => router.push(`/team/${r.id}`)}
+                      className="group relative cursor-pointer transition-colors hover:bg-muted/40"
+                    >
+                      {/* Identity — two lines, with a package-tinted accent rail. */}
+                      <td className="relative py-3 pl-4 pr-4">
+                        <span
+                          className={cn(
+                            'absolute inset-y-1.5 left-0 w-1 rounded-full opacity-70 transition-opacity group-hover:opacity-100',
+                            packageRail(r.starting_package),
+                          )}
+                          aria-hidden
+                        />
+                        <span className="flex items-center gap-3 pl-2">
+                          <span className="relative shrink-0">
+                            <Avatar name={r.display_name} size="md" />
+                            <span
+                              className={cn(
+                                'absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card',
+                                STATUS_TONE[r.status],
+                              )}
+                              title={STATUS_LABELS[r.status]}
+                              aria-hidden
+                            />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block truncate font-semibold text-foreground transition-colors group-hover:text-primary">
+                              {r.display_name}
+                            </span>
+                            <span className="flex items-center gap-1 truncate text-xs text-muted-foreground">
+                              {location ? (
+                                <>
+                                  <MapPin className="h-3 w-3 shrink-0" aria-hidden />
+                                  {location}
+                                </>
+                              ) : (
+                                STATUS_LABELS[r.status]
+                              )}
+                            </span>
+                          </span>
+                          <WhatsAppButton
+                            phone={r.phone}
+                            name={r.display_name}
+                            className="ml-auto shrink-0"
                           />
                         </span>
-                        <span className="min-w-0">
-                          <span className="block truncate font-medium text-foreground group-hover:text-primary">
-                            {r.display_name}
-                          </span>
-                          <span className="flex items-center gap-1 truncate text-xs text-muted-foreground">
-                            {location ? (
-                              <>
-                                <MapPin className="h-3 w-3 shrink-0" aria-hidden />
-                                {location}
-                              </>
-                            ) : (
-                              STATUS_LABELS[r.status]
-                            )}
-                          </span>
+                      </td>
+                      <td className="px-3 py-3">
+                        <RankBadge rank={r.rank} variant="dot" />
+                      </td>
+                      <td className="px-3 py-3">
+                        {r.starting_package ? (
+                          <PackageBadge pkg={r.starting_package} />
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="hidden px-3 py-3 text-muted-foreground lg:table-cell">
+                        {r.registration_date ? formatDate(r.registration_date) : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <span className="inline-flex items-center gap-1.5 font-semibold tabular-nums text-foreground">
+                          <Users className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+                          {formatNumber(r.team_size)}
                         </span>
-                        <WhatsAppButton
-                          phone={r.phone}
-                          name={r.display_name}
-                          className="ml-auto shrink-0"
+                      </td>
+                      <td className="px-2 py-3 text-right">
+                        <ChevronRight
+                          className="h-4 w-4 text-muted-foreground/40 transition-all group-hover:translate-x-0.5 group-hover:text-primary"
+                          aria-hidden
                         />
-                      </span>
-                    </td>
-                    <td className="px-3 py-3">
-                      <RankBadge rank={r.rank} variant="dot" />
-                    </td>
-                    <td className="px-3 py-3">
-                      {r.starting_package ? (
-                        <PackageBadge pkg={r.starting_package} />
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </td>
-                    <td className="hidden px-3 py-3 text-muted-foreground lg:table-cell">
-                      {r.registration_date ? formatDate(r.registration_date) : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <span className="inline-flex items-center gap-1.5 tabular-nums text-foreground">
-                        <Users className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
-                        {formatNumber(r.team_size)}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
@@ -200,27 +242,40 @@ export function TeamRoster({ rows }: { rows: TeamMemberRow[] }) {
 }
 
 function SummaryStat({
+  icon: Icon,
   label,
   value,
-  tone = 'default',
+  chip,
+  bar,
 }: {
+  icon: typeof Users;
   label: string;
   value: number;
-  tone?: 'default' | 'success' | 'info';
+  /** Tone classes for the icon chip (bg + text). */
+  chip: string;
+  /** Gradient start color for the bottom accent bar. */
+  bar: string;
 }) {
-  const dot =
-    tone === 'success' ? 'bg-success' : tone === 'info' ? 'bg-info' : 'bg-muted-foreground/50';
   return (
-    <div className="rounded-xl border bg-card p-4 shadow-sm">
-      <div className="flex items-center gap-1.5">
-        <span className={cn('h-1.5 w-1.5 rounded-full', dot)} aria-hidden />
-        <span className="truncate text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+    <div className="group relative overflow-hidden rounded-xl border border-border/70 bg-card p-4 shadow-card transition-all duration-base ease-standard hover:-translate-y-px hover:shadow-card-hover">
+      <div className="flex items-center justify-between gap-2">
+        <span className="truncate text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           {label}
         </span>
+        <span className={cn('flex h-9 w-9 items-center justify-center rounded-lg', chip)}>
+          <Icon className="h-[18px] w-[18px]" aria-hidden />
+        </span>
       </div>
-      <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-foreground">
-        {formatNumber(value)}
+      <p className="mt-2 text-3xl font-bold tabular-nums tracking-tight text-foreground">
+        <CountUp value={value} format={formatNumber} />
       </p>
+      <span
+        className={cn(
+          'pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r to-transparent opacity-0 transition-opacity duration-base group-hover:opacity-100',
+          bar,
+        )}
+        aria-hidden
+      />
     </div>
   );
 }

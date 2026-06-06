@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
+import { Building2 } from 'lucide-react';
 import { getCurrentClaims } from '@/lib/data/session';
 import { listOrgRoles } from '@/lib/data/roles';
 import { listManageableCalls } from '@/lib/data/zoom-calls';
@@ -33,14 +34,19 @@ export default async function OrgSettingsPage() {
   const calls = (await listManageableCalls()).data;
 
   return (
-    <div className="space-y-6">
+    <div className="animate-fade-in space-y-6">
       {demo && <ConfigNotice variant="inline" />}
 
-      <div className="space-y-1">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          {t('title')}
-        </h1>
-        <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
+      <div className="flex items-center gap-3">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <Building2 className="h-5 w-5" aria-hidden />
+        </span>
+        <div className="space-y-0.5">
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">
+            {t('title')}
+          </h1>
+          <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
+        </div>
       </div>
 
       <CallsSettings

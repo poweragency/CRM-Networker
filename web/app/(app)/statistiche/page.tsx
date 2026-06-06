@@ -17,11 +17,18 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function StatistichePage() {
+  const t = await getTranslations('statistiche');
   const { data, demo } = await listTeamMembers();
 
   return (
-    <div className="space-y-4">
+    <div className="animate-fade-in space-y-5">
       {demo && <ConfigNotice variant="inline" />}
+
+      <div className="space-y-1">
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">{t('title')}</h1>
+        <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
+      </div>
+
       <TeamRoster rows={data} />
     </div>
   );

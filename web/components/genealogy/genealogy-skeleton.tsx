@@ -26,18 +26,18 @@ export function GenealogySkeleton({ className }: { className?: string }) {
       </div>
 
       {/* Canvas with a faux binary fan */}
-      <div className="relative h-[560px] overflow-hidden rounded-xl border bg-muted/20">
+      <div className="surface-grid relative h-[560px] overflow-hidden rounded-xl border bg-muted/20 ring-1 ring-black/5">
         <div className="flex flex-col items-center gap-10 pt-12">
-          <Skeleton className="h-[150px] w-[248px] rounded-xl" />
+          <Skeleton className="h-[150px] w-[248px] rounded-xl shadow-card ring-1 ring-black/5" />
           <div className="flex gap-12">
-            <Skeleton className="h-[150px] w-[248px] rounded-xl" />
-            <Skeleton className="h-[150px] w-[248px] rounded-xl" />
+            <Skeleton className="h-[150px] w-[248px] rounded-xl shadow-card ring-1 ring-black/5" />
+            <Skeleton className="h-[150px] w-[248px] rounded-xl shadow-card ring-1 ring-black/5" />
           </div>
           <div className="flex gap-8">
-            <Skeleton className="h-[150px] w-[248px] rounded-xl opacity-70" />
-            <Skeleton className="h-[150px] w-[248px] rounded-xl opacity-70" />
-            <Skeleton className="h-[150px] w-[248px] rounded-xl opacity-70" />
-            <Skeleton className="h-[150px] w-[248px] rounded-xl opacity-70" />
+            <Skeleton className="h-[150px] w-[248px] rounded-xl opacity-70 shadow-sm" />
+            <Skeleton className="h-[150px] w-[248px] rounded-xl opacity-70 shadow-sm" />
+            <Skeleton className="h-[150px] w-[248px] rounded-xl opacity-70 shadow-sm" />
+            <Skeleton className="h-[150px] w-[248px] rounded-xl opacity-70 shadow-sm" />
           </div>
         </div>
       </div>

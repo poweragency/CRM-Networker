@@ -30,6 +30,8 @@ export function CountUp({
 }: CountUpProps) {
   const [n, setN] = React.useState(0);
   const frame = React.useRef<number | undefined>(undefined);
+  const nRef = React.useRef(0);
+  nRef.current = n;
 
   React.useEffect(() => {
     const reduce =
@@ -40,10 +42,12 @@ export function CountUp({
       return;
     }
     const start = performance.now();
+    const from = nRef.current; // count up from wherever we are (smooth on re-targets)
     const tick = (t: number) => {
       const p = Math.min(1, (t - start) / duration);
-      const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
-      setN(value * eased);
+      // easeOutExpo — fast take-off, long graceful settle so the number "lands".
+      const eased = p === 1 ? 1 : 1 - Math.pow(2, -10 * p);
+      setN(from + (value - from) * eased);
       if (p < 1) frame.current = requestAnimationFrame(tick);
     };
     frame.current = requestAnimationFrame(tick);

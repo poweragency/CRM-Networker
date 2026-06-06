@@ -1,61 +1,83 @@
 import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
-import { Crown } from 'lucide-react';
+import { Crown, Medal, Sparkles, Trophy } from 'lucide-react';
 import { Avatar } from '@/components/ui/avatar';
 import { RankBadge } from '@/components/ui/rank-badge';
+import { SpotlightValue } from '@/components/dashboard/spotlight-value';
 import { cn } from '@/lib/utils';
 import type { TopMarketerEntry } from '@/lib/data/mock/dashboard';
 
 /**
  * Dashboard leaderboard presenters (server components — no hooks).
  *
- * `SpotlightCard` = the hero card for a category's #1 marketer (big avatar, name,
- * rank, oversized value, accent gradient). `LeaderboardCard` = the full ranked
- * list with a 1/2/3 podium (gold/silver/bronze), avatars and a value bar relative
- * to the leader. Both are pure presentation over `TopMarketerEntry`.
+ * `SpotlightCard` = the hero card for a category's #1 marketer (oversized avatar,
+ * name, rank, animated value, floating premium crown, accent aura).
+ * `LeaderboardCard` = the full ranked competition: the #1 is the CHAMPION
+ * (spotlight row, gold prestige glow + ring), 2/3 silver/bronze podium, then a
+ * value bar relative to the leader, all entering in a cascade (animate-rank-in).
+ * Both are pure presentation over `TopMarketerEntry`.
+ *
+ * The animated hero number is delegated to {@link SpotlightValue} (a client
+ * island that builds its own formatter), so NO function ever crosses the
+ * server → client boundary from these RSCs.
  */
 
 export type Accent = 'primary' | 'info' | 'success' | 'warning';
 
 interface AccentTheme {
+  /** Icon chip (soft tinted square). */
   chip: string;
+  /** Solid value-bar fill. */
   bar: string;
-  gradient: string;
+  /** Hero aura gradient (radial accent wash). */
+  aura: string;
+  /** Avatar / surface ring. */
   ring: string;
+  /** Eyebrow / accent text. */
+  text: string;
 }
 
 const ACCENT: Record<Accent, AccentTheme> = {
   primary: {
-    chip: 'bg-primary/10 text-primary',
+    chip: 'bg-primary/12 text-primary ring-1 ring-primary/20',
     bar: 'bg-primary',
-    gradient: 'from-primary/[0.10]',
-    ring: 'ring-primary/15',
+    aura: 'from-primary/25 via-primary/[0.07]',
+    ring: 'ring-primary/25',
+    text: 'text-primary',
   },
   info: {
-    chip: 'bg-info/12 text-info',
+    chip: 'bg-info/12 text-info ring-1 ring-info/20',
     bar: 'bg-info',
-    gradient: 'from-info/[0.12]',
-    ring: 'ring-info/15',
+    aura: 'from-info/25 via-info/[0.07]',
+    ring: 'ring-info/25',
+    text: 'text-info',
   },
   success: {
-    chip: 'bg-success/12 text-success',
+    chip: 'bg-success/12 text-success ring-1 ring-success/20',
     bar: 'bg-success',
-    gradient: 'from-success/[0.12]',
-    ring: 'ring-success/15',
+    aura: 'from-success/25 via-success/[0.07]',
+    ring: 'ring-success/25',
+    text: 'text-success',
   },
   warning: {
-    chip: 'bg-warning/15 text-warning',
+    chip: 'bg-warning/15 text-warning ring-1 ring-warning/25',
     bar: 'bg-warning',
-    gradient: 'from-warning/[0.14]',
-    ring: 'ring-warning/20',
+    aura: 'from-warning/30 via-warning/[0.08]',
+    ring: 'ring-warning/30',
+    text: 'text-warning',
   },
 };
 
+/** Conversion is a 0..1 ratio (success accent); everything else is a count. */
+function valueKind(accent: Accent): 'count' | 'percent' {
+  return accent === 'success' ? 'percent' : 'count';
+}
+
 /** Podium tone per position: gold / silver / bronze, then muted. */
 const MEDAL: Record<number, string> = {
-  1: 'bg-warning/15 text-warning ring-1 ring-warning/30',
+  1: 'bg-warning/15 text-warning ring-1 ring-warning/35',
   2: 'bg-muted text-foreground ring-1 ring-border',
-  3: 'bg-[hsl(25_60%_45%/0.14)] text-[hsl(25_55%_42%)] ring-1 ring-[hsl(25_55%_42%/0.25)]',
+  3: 'bg-[hsl(25_60%_45%/0.16)] text-[hsl(25_55%_42%)] ring-1 ring-[hsl(25_55%_42%/0.30)]',
 };
 
 export interface SpotlightCardProps {
@@ -73,7 +95,10 @@ export function SpotlightCard({
   icon: Icon,
   accent,
   entry,
-  formatValue,
+  // NOTE: `formatValue` stays in the props contract (callers still pass it), but
+  // the live hero number is animated by <SpotlightValue> (a client island that
+  // builds its own formatter), so we don't render `formatValue` here — that keeps
+  // any function from crossing the server → client boundary.
   youLabel,
   emptyLabel,
 }: SpotlightCardProps) {
@@ -81,9 +106,9 @@ export function SpotlightCard({
 
   if (!entry) {
     return (
-      <div className="flex flex-col gap-3 rounded-xl border bg-card p-5 shadow-sm">
+      <div className="surface-grid relative flex flex-col gap-3 overflow-hidden rounded-xl border bg-card p-5 shadow-card">
         <CategoryEyebrow icon={Icon} accent={accent} label={label} />
-        <p className="py-8 text-center text-sm text-muted-foreground">{emptyLabel}</p>
+        <p className="py-10 text-center text-sm text-muted-foreground">{emptyLabel}</p>
       </div>
     );
   }
@@ -92,25 +117,30 @@ export function SpotlightCard({
     <Link
       href={`/team/${entry.marketer_id}`}
       className={cn(
-        'group relative flex flex-col gap-4 overflow-hidden rounded-xl border bg-card p-5 shadow-sm outline-none transition-[box-shadow,transform] duration-base ease-standard hover:-translate-y-0.5 hover:shadow-glow focus-visible:ring-2 focus-visible:ring-ring',
+        'group relative flex flex-col gap-4 overflow-hidden rounded-xl border border-border/80 bg-card p-5 shadow-card outline-none',
+        'animate-scale-in transition-[box-shadow,transform,border-color] duration-base ease-emphasized',
+        'hover:-translate-y-1 hover:border-border hover:shadow-glow focus-visible:ring-2 focus-visible:ring-ring',
       )}
     >
-      {/* Accent gradient wash */}
+      {/* Layer 1 — drifting accent aura (controlled glow). */}
       <div
         className={cn(
-          'pointer-events-none absolute inset-0 bg-gradient-to-br to-transparent',
-          a.gradient,
+          'pointer-events-none absolute -right-16 -top-20 h-44 w-44 rounded-full bg-gradient-to-br to-transparent blur-2xl opacity-70 animate-aurora',
+          a.aura,
         )}
         aria-hidden
       />
+      {/* Layer 2 — faint tech grid for depth. */}
+      <div className="surface-grid pointer-events-none absolute inset-0 opacity-[0.35]" aria-hidden />
+      {/* Layer 3 — sheen sweep on hover. */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+        <div className="absolute -inset-y-2 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-foreground/[0.06] to-transparent opacity-0 transition-opacity duration-base group-hover:opacity-100 group-hover:animate-sheen" />
+      </div>
 
       <div className="relative flex items-center justify-between">
         <CategoryEyebrow icon={Icon} accent={accent} label={label} />
         <span
-          className={cn(
-            'flex h-7 w-7 items-center justify-center rounded-full animate-float shadow-glow-warning',
-            MEDAL[1],
-          )}
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-warning/15 text-warning ring-1 ring-warning/35 shadow-glow-warning animate-float"
           title="1ª posizione"
           aria-hidden
         >
@@ -119,12 +149,24 @@ export function SpotlightCard({
       </div>
 
       <div className="relative flex items-center gap-3">
-        <Avatar name={entry.display_name} size="lg" className={cn('ring-2', a.ring)} />
+        <span className="relative">
+          <Avatar
+            name={entry.display_name}
+            size="lg"
+            className={cn('ring-2 ring-offset-2 ring-offset-card', a.ring)}
+          />
+          <span
+            className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-warning text-warning-foreground ring-2 ring-card shadow-sm"
+            aria-hidden
+          >
+            <Trophy className="h-3 w-3" />
+          </span>
+        </span>
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-foreground">
-            {entry.display_name}
+          <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-foreground">
+            <span className="truncate">{entry.display_name}</span>
             {entry.is_self && (
-              <span className="ml-1.5 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+              <span className="shrink-0 rounded bg-primary/12 px-1.5 py-0.5 text-[10px] font-semibold text-primary ring-1 ring-primary/20">
                 {youLabel}
               </span>
             )}
@@ -136,8 +178,8 @@ export function SpotlightCard({
       </div>
 
       <div className="relative flex items-baseline gap-2">
-        <span className="text-3xl font-semibold tabular-nums tracking-tight text-foreground">
-          {formatValue(entry.value)}
+        <span className="text-4xl font-bold leading-none tracking-tight text-foreground tabular-nums">
+          <SpotlightValue value={entry.value} kind={valueKind(accent)} />
         </span>
         {entry.cam_rate != null && (
           <span
@@ -175,10 +217,13 @@ export function LeaderboardCard({
 }: LeaderboardCardProps) {
   const a = ACCENT[accent];
   const max = entries.length ? entries[0]!.value : 0;
+  const champion = entries[0];
+  const rest = entries.slice(1);
 
   return (
-    <div className="flex flex-col rounded-xl border bg-card shadow-sm">
-      <div className="flex items-start gap-3 border-b p-5">
+    <div className="group/card relative flex flex-col overflow-hidden rounded-xl border border-border/80 bg-card shadow-card transition-shadow duration-base ease-standard hover:shadow-card-hover">
+      {/* Header */}
+      <div className="relative flex items-start gap-3 border-b border-border/70 p-5">
         <span
           className={cn(
             'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
@@ -197,73 +242,139 @@ export function LeaderboardCard({
         </div>
       </div>
 
-      <div className="p-3">
-        {entries.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">{emptyLabel}</p>
-        ) : (
-          <ol className="space-y-0.5">
-            {entries.map((e, i) => {
-              const pct = max > 0 ? Math.max(6, Math.round((e.value / max) * 100)) : 0;
-              return (
-                <li
-                  key={e.marketer_id}
-                  className="animate-rank-in"
-                  style={{ animationDelay: `${i * 60}ms` }}
-                >
-                  <Link
-                    href={`/team/${e.marketer_id}`}
-                    className={cn(
-                      'flex items-center gap-3 rounded-lg px-2 py-2 outline-none transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring',
-                      e.is_self && 'bg-primary/[0.06]',
-                    )}
+      {entries.length === 0 ? (
+        <p className="py-12 text-center text-sm text-muted-foreground">{emptyLabel}</p>
+      ) : (
+        <div className="flex flex-col gap-3 p-3">
+          {/* CHAMPION — spotlight row with gold prestige. */}
+          {champion && (
+            <Link
+              href={`/team/${champion.marketer_id}`}
+              className={cn(
+                'group/champ relative flex items-center gap-3 overflow-hidden rounded-lg border border-warning/30 p-3 outline-none',
+                'bg-gradient-to-br from-warning/[0.12] via-warning/[0.04] to-transparent',
+                'shadow-glow-warning ring-1 ring-warning/25',
+                'animate-rank-in transition-transform duration-base ease-emphasized hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring',
+                champion.is_self && 'ring-primary/40',
+              )}
+            >
+              {/* Champion crown badge */}
+              <span
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-warning/15 text-warning ring-1 ring-warning/40 shadow-glow-warning animate-float"
+                aria-hidden
+              >
+                <Crown className="h-[18px] w-[18px]" />
+              </span>
+              <span className="relative shrink-0">
+                <Avatar
+                  name={champion.display_name}
+                  size="md"
+                  className="ring-2 ring-warning/40 ring-offset-2 ring-offset-card"
+                />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                  <span className="truncate">{champion.display_name}</span>
+                  {champion.is_self && (
+                    <span className="shrink-0 rounded bg-primary/12 px-1.5 py-0.5 text-[10px] font-semibold text-primary ring-1 ring-primary/20">
+                      {youLabel}
+                    </span>
+                  )}
+                </p>
+                <span className="mt-0.5 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-warning">
+                  <Sparkles className="h-3 w-3" aria-hidden />
+                  Campione del mese
+                </span>
+              </div>
+              <span className="flex shrink-0 flex-col items-end gap-0.5">
+                <span className="text-lg font-bold tabular-nums tracking-tight text-foreground">
+                  {formatValue(champion.value)}
+                </span>
+                {champion.cam_rate != null && (
+                  <span
+                    className="text-[11px] font-medium tabular-nums text-muted-foreground"
+                    title="% di cam attiva sulle Zoom del mese"
                   >
-                    <span
+                    {Math.round(champion.cam_rate * 100)}% cam
+                  </span>
+                )}
+              </span>
+            </Link>
+          )}
+
+          {/* Challengers — 2/3 podium then the rest, value bars relative to leader. */}
+          {rest.length > 0 && (
+            <ol className="space-y-0.5">
+              {rest.map((e, i) => {
+                const pct = max > 0 ? Math.max(6, Math.round((e.value / max) * 100)) : 0;
+                const isPodium = e.position === 2 || e.position === 3;
+                return (
+                  <li
+                    key={e.marketer_id}
+                    className="animate-rank-in"
+                    // Cascade: champion is 0, challengers stagger after it.
+                    style={{ animationDelay: `${(i + 1) * 70}ms` }}
+                  >
+                    <Link
+                      href={`/team/${e.marketer_id}`}
                       className={cn(
-                        'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums',
-                        MEDAL[e.position] ?? 'text-muted-foreground',
-                        e.position === 1 && 'shadow-glow-warning',
+                        'flex items-center gap-3 rounded-lg px-2 py-2 outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring',
+                        e.is_self && 'bg-primary/[0.06] ring-1 ring-primary/20',
                       )}
                     >
-                      {e.position}
-                    </span>
-                    <Avatar name={e.display_name} size="sm" />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-foreground">
-                        {e.display_name}
-                        {e.is_self && (
-                          <span className="ml-1.5 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                            {youLabel}
+                      <span
+                        className={cn(
+                          'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums',
+                          isPodium
+                            ? MEDAL[e.position]
+                            : 'bg-muted/60 text-muted-foreground',
+                        )}
+                      >
+                        {isPodium ? (
+                          <Medal className="h-[14px] w-[14px]" aria-hidden />
+                        ) : (
+                          e.position
+                        )}
+                      </span>
+                      <Avatar name={e.display_name} size="sm" />
+                      <div className="min-w-0 flex-1">
+                        <p className="flex items-center gap-1.5 truncate text-sm font-medium text-foreground">
+                          <span className="truncate">{e.display_name}</span>
+                          {e.is_self && (
+                            <span className="shrink-0 rounded bg-primary/12 px-1.5 py-0.5 text-[10px] font-semibold text-primary ring-1 ring-primary/20">
+                              {youLabel}
+                            </span>
+                          )}
+                        </p>
+                        {/* Value bar relative to the leader. */}
+                        <span className="mt-1.5 block h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                          <span
+                            className={cn('block h-full rounded-full transition-all duration-base ease-emphasized', a.bar)}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </span>
+                      </div>
+                      <span className="flex shrink-0 flex-col items-end gap-0.5">
+                        <span className="text-sm font-semibold tabular-nums text-foreground">
+                          {formatValue(e.value)}
+                        </span>
+                        {e.cam_rate != null && (
+                          <span
+                            className="text-[11px] font-medium tabular-nums text-muted-foreground"
+                            title="% di cam attiva sulle Zoom del mese"
+                          >
+                            {Math.round(e.cam_rate * 100)}% cam
                           </span>
                         )}
-                      </p>
-                      {/* Value bar relative to the leader. */}
-                      <span className="mt-1 block h-1 w-full overflow-hidden rounded-full bg-muted">
-                        <span
-                          className={cn('block h-full rounded-full', a.bar)}
-                          style={{ width: `${pct}%` }}
-                        />
                       </span>
-                    </div>
-                    <span className="flex shrink-0 flex-col items-end gap-0.5">
-                      <span className="text-sm font-semibold tabular-nums text-foreground">
-                        {formatValue(e.value)}
-                      </span>
-                      {e.cam_rate != null && (
-                        <span
-                          className="text-[11px] font-medium tabular-nums text-muted-foreground"
-                          title="% di cam attiva sulle Zoom del mese"
-                        >
-                          {Math.round(e.cam_rate * 100)}% cam
-                        </span>
-                      )}
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ol>
-        )}
-      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </div>
+      )}
     </div>
   );
 }

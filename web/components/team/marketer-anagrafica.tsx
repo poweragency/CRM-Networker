@@ -197,7 +197,7 @@ export function MarketerAnagrafica({
 
       <CardContent className={cn('space-y-6 p-5 pt-2', bare && 'px-0 pb-0')}>
         {/* Identità — read-only, except rank/renewal for a downline. */}
-        <Section icon={User} title={t('sec_identity')}>
+        <Section icon={User} title={t('sec_identity')} chip="bg-primary/10 text-primary">
           <Field icon={User} label={t('f_first_name')} value={profile.first_name} />
           <Field icon={User} label={t('f_last_name')} value={profile.last_name} />
           <Field
@@ -254,7 +254,7 @@ export function MarketerAnagrafica({
         </Section>
 
         {/* Dati personali */}
-        <Section icon={MapPin} title={t('sec_personal')}>
+        <Section icon={MapPin} title={t('sec_personal')} chip="bg-info/10 text-info">
           <Field
             icon={Cake}
             label={t('f_birth_date')}
@@ -340,7 +340,7 @@ export function MarketerAnagrafica({
         </Section>
 
         {/* Business */}
-        <Section icon={Package} title={t('sec_business')}>
+        <Section icon={Package} title={t('sec_business')} chip="bg-warning/10 text-warning">
           <Field
             icon={Package}
             label={t('f_package')}
@@ -403,7 +403,7 @@ export function MarketerAnagrafica({
 
         {/* Note — full width */}
         <section>
-          <SectionTitle icon={StickyNote} title={t('f_notes')} />
+          <SectionTitle icon={StickyNote} title={t('f_notes')} chip="bg-muted text-muted-foreground" />
           {editing ? (
             <textarea
               id="anagrafica-notes"
@@ -414,7 +414,7 @@ export function MarketerAnagrafica({
               onChange={(e) => set('notes', e.target.value || null)}
             />
           ) : (
-            <div className="rounded-lg border bg-background/40 px-3 py-2.5">
+            <div className="rounded-lg border border-border/70 bg-muted/30 px-3 py-2.5">
               <p className="whitespace-pre-wrap text-sm text-foreground">
                 {v.notes || <span className="text-muted-foreground">{t('not_set')}</span>}
               </p>
@@ -429,15 +429,18 @@ export function MarketerAnagrafica({
 function Section({
   icon,
   title,
+  chip,
   children,
 }: {
   icon: LucideIcon;
   title: string;
+  /** Tone classes for the section icon chip (bg + text). */
+  chip?: string;
   children: React.ReactNode;
 }) {
   return (
     <section>
-      <SectionTitle icon={icon} title={title} />
+      <SectionTitle icon={icon} title={title} chip={chip} />
       <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {children}
       </dl>
@@ -445,10 +448,18 @@ function Section({
   );
 }
 
-function SectionTitle({ icon: Icon, title }: { icon: LucideIcon; title: string }) {
+function SectionTitle({
+  icon: Icon,
+  title,
+  chip = 'bg-muted text-muted-foreground',
+}: {
+  icon: LucideIcon;
+  title: string;
+  chip?: string;
+}) {
   return (
     <div className="mb-3 flex items-center gap-2">
-      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+      <span className={cn('flex h-7 w-7 items-center justify-center rounded-lg', chip)}>
         <Icon className="h-4 w-4" aria-hidden />
       </span>
       <h3 className="text-sm font-semibold tracking-tight text-foreground">{title}</h3>
@@ -479,7 +490,7 @@ function Field({
   const t = useTranslations('team');
   const showEditor = Boolean(editing && editor);
   return (
-    <div className="rounded-lg border bg-background/40 px-3 py-2.5 transition-colors hover:border-border/80">
+    <div className="rounded-lg border border-border/70 bg-muted/30 px-3 py-2.5 transition-colors hover:border-ring/40 hover:bg-muted/50">
       <dt className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
         <Icon className="h-3.5 w-3.5" aria-hidden />
         {label}

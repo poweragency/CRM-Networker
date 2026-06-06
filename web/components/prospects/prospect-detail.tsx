@@ -26,6 +26,7 @@ import {
   changeStageAction,
   saveProspectExtraAction,
 } from '@/app/(app)/percorso-prospect/actions';
+import { stageTokens } from './stage-tokens';
 
 /**
  * ProspectDetail — the client detail for /percorso-prospect/[id]. The funnel is
@@ -114,8 +115,12 @@ export function ProspectDetail({ prospect, extra }: ProspectDetailProps) {
   return (
     <div className="space-y-5">
       {/* Funnel control card */}
-      <Card>
-        <CardContent className="space-y-4 p-5">
+      <Card className="relative overflow-hidden shadow-card">
+        <span
+          aria-hidden
+          className={cn('absolute inset-x-0 top-0 h-1', stageTokens(stage).bg)}
+        />
+        <CardContent className="space-y-5 p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-3">
               <StatusPill kind="stage" value={stage} />
@@ -123,7 +128,12 @@ export function ProspectDetail({ prospect, extra }: ProspectDetailProps) {
                 {t('phase_of', { idx: currentIdx })}
               </span>
             </div>
-            <Button onClick={saveStage} disabled={!stageDirty || savingStage} size="sm">
+            <Button
+              onClick={saveStage}
+              disabled={!stageDirty || savingStage}
+              size="sm"
+              className={cn(stageDirty && !savingStage && 'shadow-glow')}
+            >
               {savingStage ? (
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
               ) : (
@@ -136,25 +146,32 @@ export function ProspectDetail({ prospect, extra }: ProspectDetailProps) {
           <p className="text-xs text-muted-foreground">{t('funnel_hint')}</p>
 
           {/* Clickable funnel */}
-          <ol className="flex items-center gap-1" aria-label={t('title')}>
+          <ol className="flex items-center gap-1.5" aria-label={t('title')}>
             {STAGE_ORDER.map((s, i) => {
               const idx = i + 1;
               const done = idx < currentIdx;
               const active = idx === currentIdx;
+              const tok = stageTokens(s);
               return (
-                <li key={s} className="flex min-w-0 flex-1 items-center gap-1">
+                <li key={s} className="flex min-w-0 flex-1 items-center gap-1.5">
                   <button
                     type="button"
                     onClick={() => setStage(s)}
                     aria-pressed={active}
-                    className="flex min-w-0 flex-1 flex-col items-center gap-1 rounded-md p-1 outline-none transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring"
+                    className="group/step flex min-w-0 flex-1 flex-col items-center gap-1.5 rounded-lg p-1.5 outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <span
                       className={cn(
-                        'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold tabular-nums transition-colors',
-                        done && 'bg-success/15 text-success',
-                        active && 'bg-primary text-primary-foreground',
-                        !done && !active && 'bg-muted text-muted-foreground',
+                        'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold tabular-nums ring-1 ring-inset transition-all duration-base group-hover/step:scale-105',
+                        done && 'bg-success/15 text-success ring-success/30',
+                        active &&
+                          cn(
+                            tok.bg,
+                            'text-primary-foreground shadow-sm ring-transparent',
+                          ),
+                        !done &&
+                          !active &&
+                          'bg-muted text-muted-foreground ring-border/60',
                       )}
                       aria-hidden
                     >
@@ -162,8 +179,12 @@ export function ProspectDetail({ prospect, extra }: ProspectDetailProps) {
                     </span>
                     <span
                       className={cn(
-                        'hidden truncate text-[11px] sm:block',
-                        active ? 'font-medium text-foreground' : 'text-muted-foreground',
+                        'hidden truncate text-[11px] font-medium sm:block',
+                        active
+                          ? tok.text
+                          : done
+                            ? 'text-foreground/70'
+                            : 'text-muted-foreground',
                       )}
                     >
                       {STAGE_LABELS[s]}
@@ -172,8 +193,8 @@ export function ProspectDetail({ prospect, extra }: ProspectDetailProps) {
                   {i < STAGE_ORDER.length - 1 && (
                     <span
                       className={cn(
-                        'h-px flex-1',
-                        idx < currentIdx ? 'bg-success/40' : 'bg-border',
+                        'h-0.5 flex-1 rounded-full',
+                        idx < currentIdx ? 'bg-success/50' : 'bg-border',
                       )}
                       aria-hidden
                     />
@@ -186,7 +207,7 @@ export function ProspectDetail({ prospect, extra }: ProspectDetailProps) {
       </Card>
 
       {/* Editable details: profilazione, pacchetto, note */}
-      <Card>
+      <Card className="shadow-card">
         <CardContent className="space-y-4 p-5">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold tracking-tight text-foreground">

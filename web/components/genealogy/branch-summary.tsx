@@ -72,10 +72,10 @@ function StatPill({
   accent: string;
 }) {
   return (
-    <div className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2">
+    <div className="flex items-center gap-2.5 rounded-lg border bg-card px-3 py-2.5 shadow-xs transition-all duration-base hover:-translate-y-px hover:shadow-card-hover">
       <span
         className={cn(
-          'flex h-7 w-7 shrink-0 items-center justify-center rounded-md',
+          'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
           accent,
         )}
       >

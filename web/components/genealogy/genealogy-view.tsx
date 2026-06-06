@@ -167,7 +167,7 @@ export function GenealogyView({
 
       {/* Full-bleed canvas; the detail panel floats over it as an overlay so the
           tree always uses the whole width (no reserved empty column). */}
-      <Card className="relative h-[calc(100vh-8rem)] min-h-[520px] overflow-hidden p-0 shadow-sm">
+      <Card className="relative h-[calc(100vh-8rem)] min-h-[520px] overflow-hidden p-0 shadow-card ring-1 ring-black/5">
         <GenealogyCanvas
           ref={canvasRef}
           nodes={tree.visibleNodes}
@@ -185,7 +185,7 @@ export function GenealogyView({
         {/* Detail panel: floating overlay (desktop) / bottom-anchored (mobile). */}
         {selectedNode && (
           <div
-            className="absolute inset-y-0 right-0 z-20 w-[min(22rem,92vw)] border-l bg-card/95 shadow-xl backdrop-blur-sm animate-slide-in-right"
+            className="glass absolute inset-y-0 right-0 z-20 w-[min(22rem,92vw)] border-l border-border/70 shadow-xl ring-1 ring-black/5 animate-slide-in-right"
             role="dialog"
             aria-modal="false"
           >

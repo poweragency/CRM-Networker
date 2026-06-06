@@ -127,7 +127,7 @@ export default async function ImpostazioniPage({
   );
 
   return (
-    <div className="space-y-5">
+    <div className="animate-fade-in space-y-5">
       {demo && <ConfigNotice variant="inline" />}
 
       {/* Hero masthead (own profile) — the Anagrafica button rides to the right
@@ -156,7 +156,7 @@ export default async function ImpostazioniPage({
         production={
           <>
             {node && <MarketerKpis node={node} />}
-            <div className="flex justify-center">
+            <div className="flex justify-center py-1">
               <PerformanceModal prospects={personalProspects} />
             </div>
             <ListaContattiStoreProvider
