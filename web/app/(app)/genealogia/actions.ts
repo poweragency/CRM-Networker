@@ -8,6 +8,7 @@ import {
 import { updateMarketerExtra } from '@/lib/data/team';
 import { createMarketer, removeMarketer } from '@/lib/data/admin';
 import { activateCrmAccess, revokeAccountForMarketer } from '@/lib/data/account';
+import { getAdminClient } from '@/lib/supabase/admin';
 import {
   addRuntimeNode,
   nextRuntimeId,
@@ -74,6 +75,9 @@ export interface AddMemberInput {
   pack: StartingPackage | null;
   /** "click" — accesso alla piattaforma aziendale. */
   click: boolean;
+  /** Login created up-front for the new member (auth user + membership). */
+  email: string;
+  password: string;
 }
 
 export interface AddMemberResult {
@@ -81,6 +85,8 @@ export interface AddMemberResult {
   node: TreeNode | null;
   demo: boolean;
   ok: boolean;
+  /** Why account creation failed (so the dialog can show the right message). */
+  error?: 'email_taken' | 'service_missing' | 'failed';
 }
 
 /**
@@ -118,6 +124,32 @@ export async function addMarketerAction(
       starting_package: input.pack,
       platform_click: input.click,
     });
+
+    // Create the login (auth user + active membership) for the new member.
+    const acc = await activateCrmAccess(res.id, input.email, input.password);
+    if (!acc.ok) {
+      // Roll back the half-created marketer (+ its closure) so the admin can retry.
+      const admin = getAdminClient();
+      if (admin) {
+        await admin.from('marketer_tree_closure').delete().eq('descendant_id', res.id);
+        await admin.from('marketer_tree_closure').delete().eq('ancestor_id', res.id);
+        await admin
+          .from('marketers')
+          .update({ deleted_at: new Date().toISOString() })
+          .eq('id', res.id);
+      }
+      return {
+        node: null,
+        demo: false,
+        ok: false,
+        error:
+          acc.error === 'email_taken'
+            ? 'email_taken'
+            : acc.error === 'service_missing'
+              ? 'service_missing'
+              : 'failed',
+      };
+    }
 
     const node: TreeNode = {
       id: res.id,

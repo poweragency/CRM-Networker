@@ -58,6 +58,8 @@ export function AddMemberDialog({
   const [pack, setPack] = React.useState<StartingPackage | ''>('');
   const [rank, setRank] = React.useState<MarketerRank>('executive');
   const [click, setClick] = React.useState(false);
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
 
@@ -69,6 +71,8 @@ export function AddMemberDialog({
       setPack('');
       setRank('executive');
       setClick(false);
+      setEmail('');
+      setPassword('');
       setError(null);
       setSaving(false);
     }
@@ -84,6 +88,15 @@ export function AddMemberDialog({
       setError(t('add_name_required'));
       return;
     }
+    const mail = email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) {
+      setError(t('add_email_invalid'));
+      return;
+    }
+    if (password.length < 8) {
+      setError(t('add_password_short'));
+      return;
+    }
     setError(null);
     setSaving(true);
     const res = await addMarketerAction({
@@ -94,10 +107,18 @@ export function AddMemberDialog({
       rank,
       pack: pack || null,
       click,
+      email: mail,
+      password,
     });
     setSaving(false);
     if (!res.ok || !res.node) {
-      toast({ title: t('add_error'), variant: 'error' });
+      setError(
+        res.error === 'email_taken'
+          ? t('add_email_taken')
+          : res.error === 'service_missing'
+            ? t('add_service_missing')
+            : t('add_error'),
+      );
       return;
     }
     onAdded(res.node);
@@ -206,6 +227,47 @@ export function AddMemberDialog({
               </option>
             ))}
           </select>
+        </div>
+
+        {/* Account di accesso — creato subito per la persona. */}
+        <div className="space-y-3 rounded-lg border border-border/70 bg-muted/20 p-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {t('add_account')}
+          </p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="am-email" className="mb-1.5 block">
+                {t('add_email')}
+              </Label>
+              <Input
+                id="am-email"
+                type="email"
+                autoComplete="off"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (error) setError(null);
+                }}
+                placeholder={t('add_email_ph')}
+              />
+            </div>
+            <div>
+              <Label htmlFor="am-password" className="mb-1.5 block">
+                {t('add_password')}
+              </Label>
+              <Input
+                id="am-password"
+                type="password"
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (error) setError(null);
+                }}
+                placeholder={t('add_password_ph')}
+              />
+            </div>
+          </div>
         </div>
 
         <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border bg-muted/30 px-3 py-2.5 text-sm text-foreground transition-colors duration-base hover:bg-muted/50">

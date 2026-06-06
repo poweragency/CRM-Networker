@@ -86,14 +86,20 @@ export const navSections: NavSection[] = [
  * Footer items pinned at the bottom: Informativa, then Impostazioni below a
  * divider so the two read as elegantly separated.
  */
+const INFORMATIVA_ITEM: NavItem = {
+  href: '/informativa',
+  labelKey: 'informativa',
+  icon: BookOpen,
+};
+const PROFILE_ITEM: NavItem = {
+  href: '/impostazioni',
+  labelKey: 'profile',
+  icon: UserRound,
+};
+
 export const navFooterItems: NavItem[] = [
-  { href: '/informativa', labelKey: 'informativa', icon: BookOpen },
-  {
-    href: '/impostazioni',
-    labelKey: 'profile',
-    icon: UserRound,
-    separatorBefore: true,
-  },
+  INFORMATIVA_ITEM,
+  { ...PROFILE_ITEM, separatorBefore: true },
 ];
 
 /* ───────────────────────── gating helpers ───────────────────────── */
@@ -130,11 +136,31 @@ export function passesGate(viewer: NavViewer, gate?: NavGate): boolean {
 }
 
 /**
+ * Limited members (cliente / no_rank / executive with a plain `member` role) get
+ * a reduced shell — only their Profilo + the Informativa. Anyone co-admin+ OR
+ * rank consultant+ sees the full app.
+ */
+export function isLimitedViewer(viewer: NavViewer): boolean {
+  return !(
+    roleAtLeast(viewer.role, 'co_admin') || rankAtLeast(viewer.rank, 'consultant')
+  );
+}
+
+/** Footer items for the viewer — empty for limited members (moved into the rail). */
+export function visibleNavFooter(viewer: NavViewer): NavItem[] {
+  return isLimitedViewer(viewer) ? [] : navFooterItems;
+}
+
+/**
  * Compute the viewer's visible sidebar model. An item is shown when it passes
  * BOTH its section gate and its own gate — except an item-level gate that names
  * a rank/role overrides (widens) the section gate for that item (Attivazioni).
  */
 export function visibleNavSections(viewer: NavViewer): NavSection[] {
+  // Limited members: a minimal rail — Profilo first, then Informativa.
+  if (isLimitedViewer(viewer)) {
+    return [{ titleKey: 'principale', items: [PROFILE_ITEM, INFORMATIVA_ITEM] }];
+  }
   return navSections
     .map((section) => {
       const items = section.items.filter((item) => {

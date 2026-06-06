@@ -100,10 +100,16 @@ function rankZoom(rows: PresentRow[], limit: number, selfId: string): TopMarkete
 
 /**
  * Prospects entered THIS month, RLS-scoped to the subtree. Deleted prospects are
- * INCLUDED on purpose: a "percorso fatto" stays counted in the leaderboard even
- * after the card is removed from the kanban (deleting it shouldn't erase the work).
+ * INCLUDED on purpose (the "percorso fatto" stays counted even after the card is
+ * removed). Each row is classified for the conversion metric:
+ *   • enrolled = iscritto (outcome 'enrolled' or stage 'iscrizione')
+ *   • deleted  = removed from the kanban
+ * An OPEN prospect (still in the kanban) is neither → it does NOT count toward the
+ * conversion average until it is resolved (iscritto or eliminato).
  */
-async function fetchMonthProspects(): Promise<{ owner: string; stageIdx: number }[]> {
+async function fetchMonthProspects(): Promise<
+  { owner: string; enrolled: boolean; deleted: boolean }[]
+> {
   const supabase = getClient();
   if (!supabase) return [];
   const now = new Date();
@@ -112,13 +118,17 @@ async function fetchMonthProspects(): Promise<{ owner: string; stageIdx: number 
   try {
     const { data, error } = await supabase
       .from('prospects')
-      .select('owner_marketer_id, current_stage')
+      .select('owner_marketer_id, current_stage, outcome, deleted_at')
       .gte('entered_funnel_at', from)
       .lt('entered_funnel_at', toExclusive);
     if (error || !data) return [];
+    const iscr = stageIndex('iscrizione');
     return (data as Record<string, unknown>[]).map((r) => ({
       owner: String(r.owner_marketer_id),
-      stageIdx: stageIndex(r.current_stage as ProspectStage),
+      enrolled:
+        r.outcome === 'enrolled' ||
+        stageIndex(r.current_stage as ProspectStage) === iscr,
+      deleted: r.deleted_at != null,
     }));
   } catch {
     return [];
@@ -169,15 +179,16 @@ export async function getMonthlyTopMarketers(
   const zoom = rankZoom(rows, limit, selfId);
 
   // Percorsi + conversione — derived from this month's prospects per marketer.
+  // count = all percorsi (incl. deleted). For conversion ONLY resolved prospects
+  // count: enrolled = success, deleted-not-enrolled = failure; open prospects in
+  // the kanban are excluded until resolved.
   const prospectRows = await fetchMonthProspects();
-  const biIdx = stageIndex('business_info');
-  const closingIdx = stageIndex('closing');
-  const byOwner = new Map<string, { count: number; bi: number; closing: number }>();
+  const byOwner = new Map<string, { count: number; enrolled: number; resolvedFail: number }>();
   for (const p of prospectRows) {
-    const cur = byOwner.get(p.owner) ?? { count: 0, bi: 0, closing: 0 };
+    const cur = byOwner.get(p.owner) ?? { count: 0, enrolled: 0, resolvedFail: 0 };
     cur.count += 1;
-    if (p.stageIdx >= biIdx) cur.bi += 1;
-    if (p.stageIdx >= closingIdx) cur.closing += 1;
+    if (p.enrolled) cur.enrolled += 1;
+    else if (p.deleted) cur.resolvedFail += 1;
     byOwner.set(p.owner, cur);
   }
   const names = await resolveMarketers([...byOwner.keys()]);
@@ -198,9 +209,10 @@ export async function getMonthlyTopMarketers(
     }));
 
   const conversion: TopMarketerEntry[] = [...byOwner.entries()]
-    .filter(([, v]) => v.bi > 0)
-    .map(([id, v]) => ({ id, rate: v.closing / v.bi, bi: v.bi }))
-    .sort((a, b) => b.rate - a.rate || b.bi - a.bi)
+    .map(([id, v]) => ({ id, resolved: v.enrolled + v.resolvedFail, enrolled: v.enrolled }))
+    .filter((e) => e.resolved > 0)
+    .map((e) => ({ id: e.id, rate: e.enrolled / e.resolved, resolved: e.resolved }))
+    .sort((a, b) => b.rate - a.rate || b.resolved - a.resolved)
     .slice(0, limit)
     .map((e, i) => ({
       marketer_id: e.id,

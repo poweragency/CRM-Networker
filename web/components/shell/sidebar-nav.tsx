@@ -4,7 +4,12 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { LucideIcon } from 'lucide-react';
-import { visibleNavSections, navFooterItems, type NavViewer } from '@/lib/nav';
+import {
+  visibleNavSections,
+  visibleNavFooter,
+  navFooterItems,
+  type NavViewer,
+} from '@/lib/nav';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
@@ -28,6 +33,7 @@ export function SidebarNav({ viewer, collapsed = false, onNavigate }: SidebarNav
   const t = useTranslations('nav');
   const pathname = usePathname();
   const sections = visibleNavSections(viewer);
+  const footer = visibleNavFooter(viewer);
 
   function isActive(href: string): boolean {
     // Exact match, or a nested route — but guard against `/admin` swallowing
@@ -85,25 +91,27 @@ export function SidebarNav({ viewer, collapsed = false, onNavigate }: SidebarNav
         ))}
       </nav>
 
-      <div className={cn('border-t border-nav-foreground/10 py-3', collapsed ? 'px-2' : 'px-3')}>
-        <ul className="space-y-0.5">
-          {navFooterItems.map((item) => (
-            <li
-              key={item.href}
-              className={cn(item.separatorBefore && 'mt-2 border-t pt-2')}
-            >
-              <NavLink
-                href={item.href}
-                label={t(item.labelKey)}
-                Icon={item.icon}
-                active={isActive(item.href)}
-                collapsed={collapsed}
-                onNavigate={onNavigate}
-              />
-            </li>
-          ))}
-        </ul>
-      </div>
+      {footer.length > 0 && (
+        <div className={cn('border-t border-nav-foreground/10 py-3', collapsed ? 'px-2' : 'px-3')}>
+          <ul className="space-y-0.5">
+            {footer.map((item) => (
+              <li
+                key={item.href}
+                className={cn(item.separatorBefore && 'mt-2 border-t pt-2')}
+              >
+                <NavLink
+                  href={item.href}
+                  label={t(item.labelKey)}
+                  Icon={item.icon}
+                  active={isActive(item.href)}
+                  collapsed={collapsed}
+                  onNavigate={onNavigate}
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

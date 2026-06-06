@@ -22,10 +22,6 @@ import {
   type AddMemberTarget,
 } from './add-member-dialog';
 import {
-  ActivateCrmDialog,
-  type ActivateCrmTarget,
-} from './activate-crm-dialog';
-import {
   GenealogyCanvas,
   type GenealogyCanvasHandle,
 } from './genealogy-canvas';
@@ -120,22 +116,6 @@ export function GenealogyView({
     canvasRef.current?.centerOn(node.id);
   }, []);
 
-  // CRM activation: a dialog (email + password) opened from the detail panel; the
-  // set tracks profiles activated this session so the panel flips to "done".
-  const [crmTarget, setCrmTarget] = React.useState<ActivateCrmTarget | null>(null);
-  const [activatedIds, setActivatedIds] = React.useState<ReadonlySet<string>>(
-    () => new Set(),
-  );
-
-  const handleActivate = React.useCallback((node: TreeNode) => {
-    setCrmTarget({ marketerId: node.id, name: node.display_name });
-  }, []);
-
-  const handleActivated = React.useCallback((marketerId: string) => {
-    setActivatedIds((prev) => new Set(prev).add(marketerId));
-    setCrmTarget(null);
-  }, []);
-
   // Remove a node from the tree (reattaches its single downline). The server RPC
   // enforces the rules (no removal with two legs / root / self); the client cache
   // mirrors the reattach optimistically.
@@ -192,9 +172,6 @@ export function GenealogyView({
             <NodeDetailPanel
               node={selectedNode}
               canActivate={canActivate}
-              demo={tree.demo}
-              activatedIds={activatedIds}
-              onActivate={handleActivate}
               onClose={() => setSelectedId(null)}
               onLocate={handleLocate}
               onRemove={handleRemove}
@@ -212,16 +189,6 @@ export function GenealogyView({
         }}
         target={addTarget}
         onAdded={handleAdded}
-      />
-
-      {/* Activate-CRM dialog (email + password), opened from the detail panel */}
-      <ActivateCrmDialog
-        open={crmTarget !== null}
-        onOpenChange={(o) => {
-          if (!o) setCrmTarget(null);
-        }}
-        target={crmTarget}
-        onActivated={handleActivated}
       />
     </div>
   );

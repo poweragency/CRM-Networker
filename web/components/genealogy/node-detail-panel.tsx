@@ -5,7 +5,6 @@ import Link from 'next/link';
 import {
   AlertTriangle,
   FolderOpen,
-  KeyRound,
   Loader2,
   Locate,
   PanelLeft,
@@ -27,28 +26,19 @@ import { StatusDot } from '@/components/ui/status-dot';
 import { Separator } from '@/components/ui/separator';
 import { cn, formatNumber, formatPercent } from '@/lib/utils';
 import type { TreeNode } from '@/lib/types/db';
-import { isCrmEligibleRank } from './permissions';
 
 /**
  * Side detail panel opened on node selection (doc 14 §7.1). Shows a profile
- * summary (identity, rank, status, binary team stats, KPI block) and the
- * "Attiva accesso CRM" action. The action is surfaced only when: the viewer is
- * allowed (role admin/owner OR rank ≥ team_leader), the TARGET rank is CRM-
- * eligible (consultant upward — not executive/no_rank/cliente), and the target is
- * not already active. Clicking it opens the activation dialog (email + password),
- * handled by the parent.
+ * summary (identity, rank, status, binary team stats, KPI block), a link to the
+ * full profile, and — for Team Leader+ / admin — the "remove from tree" action.
+ * (Account access is now created up-front when a member is added, so there is no
+ * separate "attiva accesso" step here.)
  */
 
 export interface NodeDetailPanelProps {
   node: TreeNode | null;
-  /** Viewer can perform "Attiva accesso CRM". */
+  /** Viewer can manage the node (Team Leader+ / admin) — gates removal. */
   canActivate: boolean;
-  /** True in demo / no-env mode (activation is simulated). */
-  demo: boolean;
-  /** Target ids that already had CRM access granted this session. */
-  activatedIds: ReadonlySet<string>;
-  /** Open the activation dialog for this node. */
-  onActivate: (node: TreeNode) => void;
   onClose: () => void;
   /** Re-root / locate the node in the canvas. */
   onLocate: (node: TreeNode) => void;
@@ -98,9 +88,6 @@ function StatRow({
 export function NodeDetailPanel({
   node,
   canActivate,
-  demo,
-  activatedIds,
-  onActivate,
   onClose,
   onLocate,
   onRemove,
@@ -113,16 +100,6 @@ export function NodeDetailPanel({
   React.useEffect(() => setConfirming(false), [node?.id]);
 
   if (!node) return null;
-
-  const activated = activatedIds.has(node.id);
-  // Offer activation only when: the viewer is allowed, the TARGET rank is CRM-
-  // eligible (consultant+), the profile plausibly still needs one, and it wasn't
-  // just activated this session.
-  const showActivate =
-    canActivate &&
-    isCrmEligibleRank(node.rank) &&
-    !node.crm_access &&
-    !activated;
 
   return (
     <aside
@@ -150,12 +127,8 @@ export function NodeDetailPanel({
             </h2>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <RankBadge rank={node.rank} />
-              <Badge
-                variant={node.crm_access || activated ? 'success' : 'secondary'}
-              >
-                {node.crm_access || activated
-                  ? t('crm_active')
-                  : t('crm_inactive')}
+              <Badge variant={node.crm_access ? 'success' : 'secondary'}>
+                {node.crm_access ? t('crm_active') : t('crm_inactive')}
               </Badge>
             </div>
             <div className="mt-2">
@@ -293,23 +266,6 @@ export function NodeDetailPanel({
           <Locate aria-hidden />
           {t('view_node')}
         </Button>
-
-        {activated ? (
-          <div className="flex items-center gap-2 rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-sm text-success">
-            <KeyRound className="h-4 w-4 shrink-0" aria-hidden />
-            <span className="font-medium">{t('activate_crm_done')}</span>
-          </div>
-        ) : showActivate ? (
-          <div className="space-y-1.5">
-            <Button className="w-full" onClick={() => onActivate(node)}>
-              <KeyRound aria-hidden />
-              {t('activate_crm')}
-            </Button>
-            <p className="text-center text-[11px] text-muted-foreground">
-              {demo ? t('activate_crm_demo') : t('activate_crm_hint')}
-            </p>
-          </div>
-        ) : null}
 
         {/* Remove from the tree — only for Team Leader+ (canActivate); hidden for
             the root; blocked when both legs are occupied; else a two-step confirm. */}
