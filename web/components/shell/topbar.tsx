@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { Bell, LogOut, Menu, Settings } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { ScopeSwitcher } from '@/components/scope-switcher';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { RankBadge } from '@/components/ui/rank-badge';
@@ -89,6 +90,9 @@ export function Topbar({ user, unreadCount = 0, onOpenMobileNav }: TopbarProps) 
         <span className="hidden h-6 w-px bg-nav-foreground/15 sm:block" aria-hidden />
 
         <div className="flex items-center gap-0.5">
+        {/* Day / night theme switcher */}
+        <ThemeToggle className="h-9 w-9 text-nav-foreground/70 hover:bg-nav-foreground/10 hover:text-nav-foreground" />
+
         {/* Notifications */}
         <Link
           href="/notifiche"

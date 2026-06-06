@@ -9,23 +9,22 @@
  */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 22% 11%;
+    --background: 240 33% 99%;
+    --foreground: 240 14% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 222 22% 11%;
-    --muted: 220 16% 96%;
-    --muted-foreground: 220 9% 46%;
-    --border: 220 14% 90%;
-    --input: 220 14% 90%;
-    --ring: 222 80% 56%;
-    --primary: 222 80% 56%;
+    --card-foreground: 240 14% 11%;
+    --muted: 240 16% 96%;
+    --muted-foreground: 240 6% 44%;
+    --border: 240 14% 90%;
+    --input: 240 14% 90%;
+    --ring: 250 84% 60%;
+    --primary: 250 84% 60%;
     --primary-foreground: 0 0% 100%;
     --radius: 0.75rem;
 
-    /* Navbar surface — a deep, elegant slate (NOT the raw accent). The accent
-       (--primary) is reserved for buttons / active item / highlights. When an org
-       theme is set it gets tinted with the accent's hue (see lib/theme.ts). */
-    --nav: 222 22% 13%;
+    /* Navbar surface — a fixed deep indigo-slate. The accent (--primary) is
+       reserved for buttons / active item / highlights. */
+    --nav: 250 24% 12%;
     --nav-foreground: 0 0% 98%;
 
     /* Tree node card — a fixed neutral near-black so the people cards stand out
@@ -48,7 +47,7 @@
     --stage-iscrizione: 142 64% 42%;
 
     /* branch identity (Global / Left / Right) */
-    --branch-global: 222 80% 56%;
+    --branch-global: 250 84% 60%;
     --branch-left: 265 70% 58%;
     --branch-right: 170 70% 42%;
 
@@ -79,10 +78,10 @@
     --activity-dormant: 220 9% 60%;
 
     /* ─── Redesign premium tokens (additive, non-breaking) ─────────────────── */
-    --primary-50: 222 90% 97%;
-    --primary-100: 222 88% 93%;
-    --primary-600: 222 80% 48%;
-    --primary-700: 222 80% 40%;
+    --primary-50: 250 100% 97%;
+    --primary-100: 250 95% 93%;
+    --primary-600: 250 80% 53%;
+    --primary-700: 250 76% 45%;
 
     --on-primary: 0 0% 100%;
     --on-success: 0 0% 100%;
@@ -103,19 +102,19 @@
   }
 
   .dark {
-    --background: 222 24% 8%;
-    --foreground: 210 20% 96%;
-    --card: 222 22% 11%;
-    --card-foreground: 210 20% 96%;
-    --muted: 222 16% 17%;
-    --muted-foreground: 217 12% 65%;
-    --border: 222 16% 20%;
-    --input: 222 16% 20%;
-    --ring: 222 90% 66%;
-    --primary: 222 90% 66%;
-    --primary-foreground: 222 47% 11%;
+    --background: 240 16% 7%;
+    --foreground: 240 20% 96%;
+    --card: 240 14% 10%;
+    --card-foreground: 240 20% 96%;
+    --muted: 240 12% 16%;
+    --muted-foreground: 240 8% 64%;
+    --border: 240 12% 18%;
+    --input: 240 12% 18%;
+    --ring: 250 90% 72%;
+    --primary: 250 90% 72%;
+    --primary-foreground: 250 47% 12%;
 
-    --nav: 222 22% 13%;
+    --nav: 240 16% 10%;
     --nav-foreground: 0 0% 98%;
 
     /* Tree node card — a fixed neutral near-black so the people cards stand out
@@ -135,7 +134,7 @@
     --stage-check-soldi: 25 85% 62%;
     --stage-iscrizione: 142 60% 50%;
 
-    --branch-global: 222 90% 66%;
+    --branch-global: 250 90% 72%;
     --branch-left: 265 65% 68%;
     --branch-right: 170 65% 52%;
 
@@ -161,10 +160,10 @@
     --activity-dormant: 217 12% 55%;
 
     /* ─── Redesign premium tokens (dark, additive) ─────────────────────────── */
-    --primary-50: 222 40% 16%;
-    --primary-100: 222 44% 22%;
-    --primary-600: 222 90% 70%;
-    --primary-700: 222 90% 78%;
+    --primary-50: 250 40% 16%;
+    --primary-100: 250 44% 22%;
+    --primary-600: 250 90% 76%;
+    --primary-700: 250 90% 82%;
 
     --on-primary: 222 47% 11%;
     --on-success: 0 0% 100%;
