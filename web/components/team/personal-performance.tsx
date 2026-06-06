@@ -25,15 +25,6 @@ export interface PersonalProspect {
 
 type Preset = 'all' | 'this_month' | 'last_month' | 'last_30' | 'custom';
 
-/** Floor for the date pickers — guards against absurd years (e.g. 3450). */
-const MIN_DATE = '2015-01-01';
-
-/** Keep a YYYY-MM-DD value within [min, max] (ISO strings compare correctly). */
-function clampDay(v: string, min: string, max: string): string {
-  if (!v) return v;
-  return v < min ? min : v > max ? max : v;
-}
-
 /** Resolve a [from, to) millisecond window for the selected period. */
 function rangeFor(
   preset: Preset,
@@ -77,8 +68,6 @@ export function PersonalPerformance({
   const [preset, setPreset] = React.useState<Preset>('all');
   const [from, setFrom] = React.useState('');
   const [to, setTo] = React.useState('');
-  // Upper bound = today (no future cohorts); ISO YYYY-MM-DD.
-  const today = React.useMemo(() => new Date().toISOString().slice(0, 10), []);
 
   const kpis = React.useMemo(() => {
     const { from: lo, to: hi } = rangeFor(preset, from, to);
@@ -141,10 +130,7 @@ export function PersonalPerformance({
             <input
               type="date"
               value={from}
-              min={MIN_DATE}
-              max={to || today}
               onChange={(e) => setFrom(e.target.value)}
-              onBlur={(e) => setFrom(clampDay(e.target.value, MIN_DATE, to || today))}
               className="rounded-md border bg-background px-2 py-1 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </label>
@@ -153,10 +139,7 @@ export function PersonalPerformance({
             <input
               type="date"
               value={to}
-              min={from || MIN_DATE}
-              max={today}
               onChange={(e) => setTo(e.target.value)}
-              onBlur={(e) => setTo(clampDay(e.target.value, from || MIN_DATE, today))}
               className="rounded-md border bg-background px-2 py-1 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </label>
