@@ -48,6 +48,14 @@ export interface ProspectBoardProps {
   demo: boolean;
   contacts: ContactOption[];
   ownerName: string;
+  /**
+   * Owner of prospects created here. On a marketer's profile this is that
+   * marketer's id (so a new prospect belongs to them, not the viewer); omitted
+   * on your own board → defaults to the caller server-side.
+   */
+  ownerMarketerId?: string;
+  /** Profile URL to return to from a prospect's detail (`?from=`). */
+  backHref?: string;
 }
 
 /** Flatten the board into a stage→prospects map for cheap immutable updates. */
@@ -110,6 +118,8 @@ export function ProspectBoard({
   demo,
   contacts,
   ownerName,
+  ownerMarketerId,
+  backHref,
 }: ProspectBoardProps) {
   const router = useRouter();
   const { toast } = useToast();
@@ -353,6 +363,7 @@ export function ProspectBoard({
                 isDraggingActive={activeId !== null}
                 busy={busyId !== null}
                 extraCards={lcByStage[stage]}
+                backHref={backHref}
               />
             );
           })}
@@ -372,6 +383,7 @@ export function ProspectBoard({
         onOpenChange={setSheetOpen}
         contacts={contacts}
         ownerName={ownerName}
+        ownerMarketerId={ownerMarketerId}
         defaultStage={sheetStage}
         onCreated={onCreated}
       />

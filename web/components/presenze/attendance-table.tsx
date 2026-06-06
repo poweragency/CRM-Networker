@@ -212,7 +212,7 @@ export function AttendanceTable({
                   key={c.id}
                   className={cn(
                     'group/call overflow-hidden rounded-xl border bg-card shadow-card transition-shadow duration-base ease-standard hover:shadow-card-hover',
-                    full && 'ring-1 ring-success/30 shadow-glow-success',
+                    full && 'ring-1 ring-warning/40 shadow-glow-warning',
                   )}
                 >
                   {/* Call header: identity + live gauge + XP bar. */}
@@ -221,7 +221,7 @@ export function AttendanceTable({
                     <div
                       className={cn(
                         'pointer-events-none absolute inset-0 bg-gradient-to-br to-transparent',
-                        full ? 'from-success/[0.08]' : 'from-primary/[0.05]',
+                        full ? 'from-warning/[0.10]' : 'from-success/[0.05]',
                       )}
                       aria-hidden
                     />
@@ -229,8 +229,8 @@ export function AttendanceTable({
                       className={cn(
                         'relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1',
                         full
-                          ? 'bg-success/12 text-success ring-success/25'
-                          : 'bg-primary/10 text-primary ring-primary/20',
+                          ? 'bg-warning/15 text-warning ring-warning/30'
+                          : 'bg-success/12 text-success ring-success/25',
                       )}
                       aria-hidden
                     >
@@ -250,7 +250,7 @@ export function AttendanceTable({
                           </span>
                         )}
                         {full && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-success/12 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-success animate-pop">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-warning animate-pop">
                             <Sparkles className="h-3 w-3" aria-hidden />
                             100%
                           </span>
@@ -260,12 +260,12 @@ export function AttendanceTable({
                       <div className="mt-2 flex items-center gap-3">
                         <ProgressMeter
                           value={pct}
-                          gradient={full ? 'from-success to-success' : 'from-primary to-info'}
+                          gradient={full ? 'from-warning to-warning' : 'from-success to-success'}
                           heightClass="h-2"
                           className="max-w-md flex-1"
                         />
                         <span className="shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">
-                          <span className={cn(full ? 'text-success' : 'text-foreground')}>
+                          <span className={cn(full ? 'text-warning' : 'text-foreground')}>
                             {presentCount}
                           </span>
                           /{members.length}

@@ -28,14 +28,27 @@ export const dynamic = 'force-dynamic';
 
 export default async function ProspectDetailPage({
   params,
+  searchParams,
 }: {
   params: { id: string };
+  searchParams?: { from?: string | string[] };
 }) {
   const t = await getTranslations('prospect');
 
   const res = await getProspectById(params.id);
   const prospect = res.data;
   if (!prospect) notFound();
+
+  // Back-link target: where the user came from (a marketer profile's Percorsi
+  // tab), else the owner's profile. The standalone /percorso-prospect board is
+  // gone, so we never link back to it.
+  const fromParam = Array.isArray(searchParams?.from)
+    ? searchParams?.from[0]
+    : searchParams?.from;
+  const backHref =
+    fromParam && fromParam.startsWith('/')
+      ? fromParam
+      : `/team/${prospect.owner_marketer_id}?tab=prospects`;
 
   const ownerRes = await getNode(prospect.owner_marketer_id);
   const ownerName = ownerRes.data?.display_name ?? 'Marketer';
@@ -54,7 +67,7 @@ export default async function ProspectDetailPage({
       <PageHeader
         title={prospect.full_name}
         breadcrumbs={[
-          { label: t('title'), href: '/percorso-prospect' },
+          { label: t('title'), href: backHref },
           { label: prospect.full_name },
         ]}
         actions={

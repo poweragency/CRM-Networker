@@ -38,6 +38,11 @@ export interface NewProspectSheetProps {
   contacts: ContactOption[];
   /** The current user's display name (owner of the optimistic card). */
   ownerName: string;
+  /**
+   * Owner of the new prospect (a marketer's id). On someone else's profile this
+   * is that marketer; omit on your own board → defaults to the caller server-side.
+   */
+  ownerMarketerId?: string;
   /** Pre-select a column (used by the per-column "+" affordance). */
   defaultStage?: ProspectStage;
   /** Push the freshly created prospect into the board state. */
@@ -52,6 +57,7 @@ export function NewProspectSheet({
   onOpenChange,
   contacts,
   ownerName,
+  ownerMarketerId,
   defaultStage = 'conoscitiva',
   onCreated,
 }: NewProspectSheetProps) {
@@ -100,6 +106,7 @@ export function NewProspectSheet({
       contact_id: contactId || null,
       current_stage: stage,
       notes: notes.trim() || null,
+      owner_marketer_id: ownerMarketerId,
     });
 
     setSubmitting(false);

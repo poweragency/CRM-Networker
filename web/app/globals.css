@@ -39,12 +39,12 @@
     --info: 210 90% 56%;
 
     /* funnel stage ramp (6 prospect_stage values, cool → warm) */
-    --stage-conoscitiva: 210 85% 60%;
-    --stage-business-info: 200 80% 52%;
-    --stage-follow-up: 265 70% 60%;
-    --stage-closing: 38 92% 52%;
-    --stage-check-soldi: 25 90% 55%;
-    --stage-iscrizione: 142 64% 42%;
+    --stage-conoscitiva: 214 90% 56%;
+    --stage-business-info: 175 72% 40%;
+    --stage-follow-up: 262 72% 62%;
+    --stage-closing: 40 95% 52%;
+    --stage-check-soldi: 22 90% 55%;
+    --stage-iscrizione: 145 60% 42%;
 
     /* branch identity (Global / Left / Right) */
     --branch-global: 250 84% 60%;
@@ -127,12 +127,12 @@
     --danger: 0 72% 58%;
     --info: 210 90% 62%;
 
-    --stage-conoscitiva: 210 80% 66%;
-    --stage-business-info: 200 75% 60%;
-    --stage-follow-up: 265 65% 68%;
-    --stage-closing: 38 88% 60%;
-    --stage-check-soldi: 25 85% 62%;
-    --stage-iscrizione: 142 60% 50%;
+    --stage-conoscitiva: 214 90% 66%;
+    --stage-business-info: 175 65% 52%;
+    --stage-follow-up: 262 70% 72%;
+    --stage-closing: 40 92% 60%;
+    --stage-check-soldi: 22 88% 62%;
+    --stage-iscrizione: 145 55% 54%;
 
     --branch-global: 250 90% 72%;
     --branch-left: 265 65% 68%;

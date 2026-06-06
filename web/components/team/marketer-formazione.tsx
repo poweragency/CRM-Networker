@@ -97,7 +97,6 @@ export function MarketerFormazione({
       <TrainingArea
         icon={<ListVideo className="h-[18px] w-[18px]" aria-hidden />}
         chip="bg-info/10 text-info"
-        accent="bg-info"
         title={t('formazione_wow')}
         items={FORMAZIONE_CATALOG.wow}
         done={done}
@@ -107,7 +106,6 @@ export function MarketerFormazione({
       <TrainingArea
         icon={<MonitorPlay className="h-[18px] w-[18px]" aria-hidden />}
         chip="bg-primary/10 text-primary"
-        accent="bg-primary"
         title={t('formazione_click')}
         items={FORMAZIONE_CATALOG.click}
         done={done}
@@ -117,7 +115,6 @@ export function MarketerFormazione({
       <TrainingArea
         icon={<BookOpen className="h-[18px] w-[18px]" aria-hidden />}
         chip="bg-warning/10 text-warning"
-        accent="bg-warning"
         title={t('formazione_books')}
         items={FORMAZIONE_CATALOG.books}
         done={done}
@@ -131,7 +128,6 @@ export function MarketerFormazione({
 function TrainingArea({
   icon,
   chip,
-  accent,
   title,
   items,
   done,
@@ -141,8 +137,6 @@ function TrainingArea({
   icon: ReactNode;
   /** Tone classes for the icon chip (bg + text). */
   chip: string;
-  /** Solid tone class for the progress bar fill. */
-  accent: string;
   title: string;
   items: TrainingItem[];
   done: Set<string>;
@@ -154,7 +148,12 @@ function TrainingArea({
   const complete = doneCount === items.length && items.length > 0;
 
   return (
-    <Card className="flex flex-col transition-shadow duration-base ease-standard hover:shadow-card-hover">
+    <Card
+      className={cn(
+        'flex flex-col transition-shadow duration-base ease-standard hover:shadow-card-hover',
+        complete && 'ring-1 ring-warning/40 shadow-glow-warning',
+      )}
+    >
       <CardHeader className="space-y-0 p-4 pb-3">
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="flex items-center gap-2 text-base">
@@ -166,7 +165,7 @@ function TrainingArea({
           <span
             className={cn(
               'rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums',
-              complete ? 'bg-success/12 text-success' : 'bg-muted text-muted-foreground',
+              complete ? 'bg-warning/15 text-warning' : 'bg-muted text-muted-foreground',
             )}
           >
             {doneCount}/{items.length}
@@ -175,7 +174,7 @@ function TrainingArea({
         {/* Progress bar — at-a-glance completion per area. */}
         <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
           <div
-            className={cn('h-full rounded-full transition-all duration-base ease-standard', complete ? 'bg-success' : accent)}
+            className={cn('h-full rounded-full transition-all duration-base ease-standard', complete ? 'bg-warning' : 'bg-success')}
             style={{ width: `${pct}%` }}
             aria-hidden
           />
@@ -196,7 +195,11 @@ function TrainingArea({
                   onClick={() => onToggle(it.id)}
                   className={cn(
                     'flex w-full items-start gap-2.5 rounded-lg border p-2.5 text-left transition-colors',
-                    isDone ? 'border-success/30 bg-success/[0.06]' : 'border-border/70 bg-card/60',
+                    isDone
+                      ? complete
+                        ? 'border-warning/40 bg-warning/[0.08]'
+                        : 'border-success/30 bg-success/[0.06]'
+                      : 'border-border/70 bg-card/60',
                     !readOnly && 'hover:border-ring/50 hover:bg-muted/40',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                     readOnly && 'cursor-default',
@@ -206,7 +209,9 @@ function TrainingArea({
                     className={cn(
                       'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors',
                       isDone
-                        ? 'border-success bg-success text-success-foreground'
+                        ? complete
+                          ? 'border-warning bg-warning text-warning-foreground'
+                          : 'border-success bg-success text-success-foreground'
                         : 'border-input',
                     )}
                     aria-hidden

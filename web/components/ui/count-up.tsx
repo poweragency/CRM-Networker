@@ -56,6 +56,10 @@ export function CountUp({
     };
   }, [value, duration]);
 
-  const text = format ? format(n) : n.toFixed(decimals);
+  // Round to the configured precision BEFORE formatting, so a format() callback
+  // never receives a noisy in-progress float (e.g. 4.999 → "4,999"); with the
+  // default decimals=0 the value ticks up as clean integers 0,1,2,…
+  const shown = Number(n.toFixed(decimals));
+  const text = format ? format(shown) : shown.toFixed(decimals);
   return <span className={cn('tabular-nums', className)}>{text}</span>;
 }

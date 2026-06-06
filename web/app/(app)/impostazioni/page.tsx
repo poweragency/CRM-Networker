@@ -109,7 +109,14 @@ export default async function ImpostazioniPage({
   const whysRow = whysRes.data;
 
   const prospectsPanel = (
-    <ProspectBoard board={board} demo={demo} contacts={[]} ownerName={ownerName} />
+    <ProspectBoard
+      board={board}
+      demo={demo}
+      contacts={[]}
+      ownerName={ownerName}
+      ownerMarketerId={meId}
+      backHref="/impostazioni?tab=prospects"
+    />
   );
   const listaContattiPanel = <ListaContattiManager />;
   const sevenWhysPanel = whysRow ? (

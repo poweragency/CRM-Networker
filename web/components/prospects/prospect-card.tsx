@@ -34,9 +34,11 @@ export const ProspectCardBody = React.forwardRef<
     handle?: React.ReactNode;
     /** Slot for the full-card detail link (omitted on the overlay). */
     link?: React.ReactNode;
+    /** Detail route — renders an explicit, easy-to-hit "open profile" button. */
+    detailHref?: string;
   } & React.HTMLAttributes<HTMLDivElement>
 >(function ProspectCardBody(
-  { prospect, overlay, dragging, handle, link, className, ...props },
+  { prospect, overlay, dragging, handle, link, detailHref, className, ...props },
   ref,
 ) {
   const fromList = Boolean(prospect.listaContattiId);
@@ -88,6 +90,16 @@ export const ProspectCardBody = React.forwardRef<
             <span className="shrink-0 rounded-full bg-info/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-info">
               Lista
             </span>
+          ) : detailHref && !overlay ? (
+            <Link
+              href={detailHref}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+              aria-label={`Apri ${prospect.full_name}`}
+              className="relative z-20 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted/70 text-muted-foreground transition-colors hover:bg-primary/15 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <ArrowUpRight className="h-4 w-4" aria-hidden />
+            </Link>
           ) : (
             <ArrowUpRight
               className="relative z-10 h-3.5 w-3.5 shrink-0 text-muted-foreground/40 opacity-0 transition-all duration-base group-hover/card:translate-x-0.5 group-hover/card:opacity-100 group-hover/card:text-foreground"
@@ -127,10 +139,12 @@ export interface ProspectCardProps {
   prospect: ProspectView;
   /** Disable dragging (e.g. while a stage change is in flight). */
   disabled?: boolean;
+  /** Profile URL to return to — threaded into the detail link as `?from=`. */
+  backHref?: string;
 }
 
 /** Sortable + draggable instance placed inside a column. */
-export function ProspectCard({ prospect, disabled }: ProspectCardProps) {
+export function ProspectCard({ prospect, disabled, backHref }: ProspectCardProps) {
   const {
     attributes,
     listeners,
@@ -149,11 +163,19 @@ export function ProspectCard({ prospect, disabled }: ProspectCardProps) {
     transition,
   };
 
+  // Mirrored Lista contatti cards have no detail route — drag-only.
+  const detailHref = prospect.listaContattiId
+    ? undefined
+    : backHref
+      ? `/percorso-prospect/${prospect.id}?from=${encodeURIComponent(backHref)}`
+      : `/percorso-prospect/${prospect.id}`;
+
   return (
     <ProspectCardBody
       ref={setNodeRef}
       prospect={prospect}
       dragging={isDragging}
+      detailHref={detailHref}
       style={style}
       // Drag from anywhere on the card.
       {...attributes}
@@ -171,14 +193,14 @@ export function ProspectCard({ prospect, disabled }: ProspectCardProps) {
         </span>
       }
       link={
-        // Mirrored Lista contatti cards have no detail route — drag-only.
-        prospect.listaContattiId ? undefined : (
+        detailHref ? (
           <Link
-            href={`/percorso-prospect/${prospect.id}`}
+            href={detailHref}
+            tabIndex={-1}
             className="absolute inset-y-0 left-4 right-0 z-0 rounded-r-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label={`Apri ${prospect.full_name}`}
           />
-        )
+        ) : undefined
       }
     />
   );

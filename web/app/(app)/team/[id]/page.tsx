@@ -127,7 +127,14 @@ export default async function MarketerProfilePage({
   const whysRow = whysRes.data;
 
   const prospectsPanel = (
-    <ProspectBoard board={board} demo={demo} contacts={[]} ownerName={node.display_name} />
+    <ProspectBoard
+      board={board}
+      demo={demo}
+      contacts={[]}
+      ownerName={node.display_name}
+      ownerMarketerId={node.id}
+      backHref={`/team/${node.id}?tab=prospects`}
+    />
   );
 
   const listaContattiPanel = <ListaContattiManager />;

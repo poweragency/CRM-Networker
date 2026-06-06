@@ -31,6 +31,8 @@ export interface BoardColumnProps {
    * shared store; they carry no detail route.
    */
   extraCards?: ProspectView[];
+  /** Profile URL to return to — threaded into each card's detail link. */
+  backHref?: string;
 }
 
 export function BoardColumn({
@@ -38,6 +40,7 @@ export function BoardColumn({
   isDraggingActive,
   busy,
   extraCards = [],
+  backHref,
 }: BoardColumnProps) {
   const { stage, prospects } = column;
   const { setNodeRef, isOver } = useDroppable({
@@ -129,7 +132,7 @@ export function BoardColumn({
           strategy={verticalListSortingStrategy}
         >
           {cards.map((c) => (
-            <ProspectCard key={c.id} prospect={c} disabled={busy} />
+            <ProspectCard key={c.id} prospect={c} disabled={busy} backHref={backHref} />
           ))}
         </SortableContext>
 
