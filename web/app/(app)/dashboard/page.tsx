@@ -7,16 +7,14 @@ import type { TopMarketerEntry } from '@/lib/data/mock/dashboard';
 import { ConfigNotice } from '@/components/config-notice';
 import {
   LeaderboardCard,
-  SpotlightCard,
   type Accent,
 } from '@/components/dashboard/dashboard-leaders';
-import { formatNumber, formatPercent } from '@/lib/utils';
+import { formatPercent } from '@/lib/utils';
 
 /**
  * /dashboard — "migliori marketer del mese" (RSC). A premium competition hub:
- * a hero header with the live monthly context, a Spotlight row (the #1 of each
- * category as a hero card with an animated value + floating crown) and the full
- * per-category leaderboards (champion spotlight + 2/3 podium + value bars). The
+ * a hero header with the live monthly context and the full per-category
+ * leaderboards (champion spotlight + 2/3 podium + value bars). The
  * three categories are chi ha visto più Zoom di team, chi ha fatto più percorsi,
  * e la conversione Business Info → Closing. Rankings are mock/derived for now
  * (see `lib/data/dashboard.ts`); each entry links to the member's profile. Fully
@@ -54,7 +52,6 @@ export default async function DashboardPage() {
     accent: Accent;
     entries: TopMarketerEntry[];
     formatValue: (value: number) => string;
-    spotlightValue: (value: number) => string;
   }> = [
     {
       key: 'zoom',
@@ -64,7 +61,6 @@ export default async function DashboardPage() {
       accent: 'info',
       entries: top.data.zoom,
       formatValue: (n) => t('cat_zoom_unit', { count: n }),
-      spotlightValue: (n) => formatNumber(n),
     },
     {
       key: 'percorsi',
@@ -74,7 +70,6 @@ export default async function DashboardPage() {
       accent: 'primary',
       entries: top.data.percorsi,
       formatValue: (n) => t('cat_percorsi_unit', { count: n }),
-      spotlightValue: (n) => formatNumber(n),
     },
     {
       key: 'conversion',
@@ -84,7 +79,6 @@ export default async function DashboardPage() {
       accent: 'success',
       entries: top.data.conversion,
       formatValue: (n) => formatPercent(n),
-      spotlightValue: (n) => formatPercent(n),
     },
   ];
 
@@ -135,23 +129,7 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {/* Tier 1 — Spotlight: the #1 of each category */}
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        {categories.map((c) => (
-          <SpotlightCard
-            key={c.key}
-            label={c.label}
-            icon={c.icon}
-            accent={c.accent}
-            entry={c.entries[0]}
-            formatValue={c.spotlightValue}
-            youLabel={youLabel}
-            emptyLabel={emptyLabel}
-          />
-        ))}
-      </section>
-
-      {/* Tier 2 — Full leaderboards (champion spotlight + podium + value bars) */}
+      {/* Full leaderboards (champion spotlight + podium + value bars) */}
       <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {categories.map((c) => (
           <LeaderboardCard
