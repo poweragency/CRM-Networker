@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { ChevronRight, MapPin, Network, Search, Users, UserCheck, X } from 'lucide-react';
+import { ChevronRight, MapPin, Search, Users, UserCheck, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Avatar } from '@/components/ui/avatar';
 import { CountUp } from '@/components/ui/count-up';
@@ -59,10 +59,6 @@ export function TeamRoster({ rows }: { rows: TeamMemberRow[] }) {
     () => rows.filter((r) => r.status === 'active').length,
     [rows],
   );
-  const teamTotal = React.useMemo(
-    () => rows.reduce((acc, r) => acc + r.team_size, 0),
-    [rows],
-  );
 
   if (rows.length === 0) {
     return (
@@ -100,7 +96,7 @@ export function TeamRoster({ rows }: { rows: TeamMemberRow[] }) {
       </TopbarSlot>
 
       {/* KPI summary cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <SummaryStat
           icon={Users}
           label={t('stat_members')}
@@ -114,13 +110,6 @@ export function TeamRoster({ rows }: { rows: TeamMemberRow[] }) {
           value={activeCount}
           chip="bg-success/10 text-success"
           bar="from-success/60"
-        />
-        <SummaryStat
-          icon={Network}
-          label={t('stat_team')}
-          value={teamTotal}
-          chip="bg-info/10 text-info"
-          bar="from-info/60"
         />
       </div>
 
