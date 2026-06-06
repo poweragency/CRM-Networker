@@ -1064,6 +1064,7 @@ export interface BottleneckFinding {
 
 /** `notification_type`. */
 export type NotificationType =
+  | 'new_member'
   | 'follow_up_due'
   | 'rank_changed'
   | 'bottleneck_alert'
@@ -1073,6 +1074,7 @@ export type NotificationType =
   | 'system';
 
 export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
+  new_member: 'Nuovo membro',
   follow_up_due: 'Follow-up in scadenza',
   rank_changed: 'Cambio di grado',
   bottleneck_alert: 'Avviso collo di bottiglia',
@@ -1104,6 +1106,8 @@ export function notificationHref(n: AppNotification): string {
   const reportId = typeof p.report_id === 'string' ? p.report_id : null;
   const marketerId = typeof p.marketer_id === 'string' ? p.marketer_id : null;
   switch (n.type) {
+    case 'new_member':
+      return marketerId ? `/team/${marketerId}` : '/genealogia';
     case 'follow_up_due':
       return prospectId ? `/percorso-prospect/${prospectId}` : '/percorso-prospect';
     case 'bottleneck_alert':

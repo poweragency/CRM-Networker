@@ -16,7 +16,6 @@ import {
   Phone,
   Puzzle,
   RefreshCw,
-  StickyNote,
   User,
   X,
   type LucideIcon,
@@ -420,27 +419,6 @@ export function MarketerAnagrafica({
             }
           />
         </Section>
-
-        {/* Note — full width */}
-        <section>
-          <SectionTitle icon={StickyNote} title={t('f_notes')} chip="bg-muted text-muted-foreground" />
-          {editing ? (
-            <textarea
-              id="anagrafica-notes"
-              rows={3}
-              className={cn(fieldCx, 'h-auto py-2')}
-              placeholder={t('f_notes_placeholder')}
-              value={form.notes ?? ''}
-              onChange={(e) => set('notes', e.target.value || null)}
-            />
-          ) : (
-            <div className="rounded-lg border border-border/70 bg-muted/30 px-3 py-2.5">
-              <p className="whitespace-pre-wrap text-sm text-foreground">
-                {v.notes || <span className="text-muted-foreground">{t('not_set')}</span>}
-              </p>
-            </div>
-          )}
-        </section>
       </CardContent>
     </Card>
 

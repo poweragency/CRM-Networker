@@ -14,6 +14,7 @@ import {
   Inbox,
   Mail,
   Medal,
+  UserPlus,
   X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -42,6 +43,7 @@ import {
  */
 
 const TYPE_ICON: Record<NotificationType, LucideIcon> = {
+  new_member: UserPlus,
   follow_up_due: CalendarClock,
   rank_changed: Medal,
   bottleneck_alert: AlertTriangle,
@@ -52,6 +54,7 @@ const TYPE_ICON: Record<NotificationType, LucideIcon> = {
 };
 
 const TYPE_TONE: Record<NotificationType, string> = {
+  new_member: 'bg-primary/10 text-primary',
   follow_up_due: 'bg-warning/15 text-warning',
   rank_changed: 'bg-branch-global/12 text-branch-global',
   bottleneck_alert: 'bg-danger/12 text-danger',

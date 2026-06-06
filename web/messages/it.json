@@ -1166,7 +1166,7 @@
     "file_seven_whys": "7 Perché",
     "file_seven_whys_desc": "Le sette ragioni che guidano il business.",
     "file_wishlist": "100's list",
-    "file_wishlist_desc": "Le 100 cose che vuoi fare, dalle più vicine alle più lontane.",
+    "file_wishlist_desc": "Le 100 cose che vuoi realizzare.",
     "seven_whys_unavailable": "Sette Perché non disponibili",
     "seven_whys_unavailable_body": "Non è stato possibile caricare i Sette Perché di questo profilo.",
     "anagrafica_title": "Anagrafica",
@@ -1231,7 +1231,9 @@
     "error": "Salvataggio non riuscito. Riprova."
   },
   "wishlist": {
-    "near_to_far": "Catalogale dalle più vicine alle più lontane.",
+    "near_to_far": "Le 100 cose che vuoi realizzare.",
+    "progress_label": "Completamento",
+    "achieved": "{done} di {total} realizzati",
     "add": "Aggiungi",
     "item_placeholder": "Es. Comprare uno yacht…",
     "horizon": "Orizzonte",

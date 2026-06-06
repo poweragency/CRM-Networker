@@ -2,28 +2,20 @@
 
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
-import { Check, Plus, Trash2 } from 'lucide-react';
+import { Check, Plus, Trash2, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/crm/toaster';
 import { cn } from '@/lib/utils';
-import {
-  WISHLIST_HORIZON_LABELS,
-  WISHLIST_HORIZON_ORDER,
-  type WishlistHorizon,
-  type WishlistItem,
-} from '@/lib/types/db';
+import type { WishlistItem } from '@/lib/types/db';
 import { saveWishlistAction } from '@/app/(app)/team/[id]/actions';
 
 /**
- * WishlistManager — the editable "100's list" (bucket list): the things a person
- * wants to do/have, catalogued from nearest to furthest (horizon). The viewer can
- * add items (title + horizon), tick them done and remove them; everything saves
- * through the demo-safe action (mock-backed for now). Read-only for a non-owner.
+ * WishlistManager — the editable "100's list" (bucket list): the 100 things a
+ * person wants to do/have. The viewer adds items, ticks them done and removes
+ * them; a completion bar tracks how many goals are achieved. Everything saves
+ * through the demo-safe action. Read-only for a non-owner.
  */
-
-const fieldCx =
-  'flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 
 const MAX_ITEMS = 100;
 
@@ -49,19 +41,11 @@ export function WishlistManager({
 
   const [items, setItems] = React.useState<WishlistItem[]>(initialItems);
   const [title, setTitle] = React.useState('');
-  const [horizon, setHorizon] = React.useState<WishlistHorizon>('vicino');
   const [saving, setSaving] = React.useState(false);
 
-  // Order nearest → furthest (then by insertion within a horizon).
-  const ordered = React.useMemo(
-    () =>
-      [...items].sort(
-        (a, b) =>
-          WISHLIST_HORIZON_ORDER.indexOf(a.horizon) -
-          WISHLIST_HORIZON_ORDER.indexOf(b.horizon),
-      ),
-    [items],
-  );
+  // Completion = realised goals over the whole list (0% on an empty list).
+  const doneCount = items.filter((i) => i.done).length;
+  const pct = items.length ? Math.round((doneCount / items.length) * 100) : 0;
 
   async function persist(next: WishlistItem[]) {
     setItems(next);
@@ -82,7 +66,9 @@ export function WishlistManager({
   function add() {
     const v = title.trim();
     if (!v || items.length >= MAX_ITEMS) return;
-    const next = [...items, { id: newId(items), title: v, horizon, done: false }];
+    // `horizon` is no longer surfaced in the UI; keep a stable default so the
+    // data model (and DB column) stays valid.
+    const next = [...items, { id: newId(items), title: v, horizon: 'vicino' as const, done: false }];
     setTitle('');
     void persist(next);
   }
@@ -97,7 +83,45 @@ export function WishlistManager({
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">{t('near_to_far')}</p>
+      {/* Completion bar — how many goals are realised over the whole list. */}
+      <div className="rounded-xl border border-border/70 bg-gradient-to-br from-primary/[0.06] to-transparent p-4">
+        <div className="mb-2.5 flex items-end justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Trophy className="h-[18px] w-[18px]" aria-hidden />
+            </span>
+            <div>
+              <p className="text-sm font-semibold tracking-tight text-foreground">
+                {t('progress_label')}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {t('achieved', { done: doneCount, total: items.length })}
+              </p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-2xl font-bold tabular-nums leading-none text-foreground">
+              {pct}
+              <span className="text-base font-semibold text-muted-foreground">%</span>
+            </p>
+            <p className="mt-1 text-[11px] font-medium tabular-nums text-muted-foreground">
+              {t('count', { count: items.length })}
+            </p>
+          </div>
+        </div>
+        <div
+          className="h-2.5 w-full overflow-hidden rounded-full bg-muted"
+          role="progressbar"
+          aria-valuenow={pct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-primary/80 to-primary shadow-[0_0_12px_hsl(var(--primary)/0.5)] transition-all duration-500 ease-standard"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      </div>
 
       {!readOnly && (
         <div className="flex flex-col gap-2 sm:flex-row">
@@ -114,18 +138,6 @@ export function WishlistManager({
             maxLength={120}
             aria-label={t('item_placeholder')}
           />
-          <select
-            value={horizon}
-            onChange={(e) => setHorizon(e.target.value as WishlistHorizon)}
-            className={cn(fieldCx, 'sm:w-44')}
-            aria-label={t('horizon')}
-          >
-            {WISHLIST_HORIZON_ORDER.map((h) => (
-              <option key={h} value={h}>
-                {WISHLIST_HORIZON_LABELS[h]}
-              </option>
-            ))}
-          </select>
           <Button onClick={add} disabled={!title.trim() || saving} className="shrink-0">
             <Plus aria-hidden />
             {t('add')}
@@ -133,21 +145,22 @@ export function WishlistManager({
         </div>
       )}
 
-      <p className="text-xs text-muted-foreground">
-        {t('count', { count: items.length })}
-      </p>
-
-      {ordered.length === 0 ? (
+      {items.length === 0 ? (
         <div className="rounded-lg border border-dashed bg-card/40 px-6 py-10 text-center">
           <p className="text-sm font-medium text-foreground">{t('empty_title')}</p>
           <p className="mt-1 text-sm text-muted-foreground">{t('empty_body')}</p>
         </div>
       ) : (
         <ol className="space-y-1.5">
-          {ordered.map((item, i) => (
+          {items.map((item, i) => (
             <li
               key={item.id}
-              className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2"
+              className={cn(
+                'group flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors',
+                item.done
+                  ? 'border-success/30 bg-success/[0.06]'
+                  : 'border-border/70 bg-card hover:border-ring/40',
+              )}
             >
               <span className="w-6 shrink-0 text-center text-xs font-semibold tabular-nums text-muted-foreground">
                 {i + 1}
@@ -160,7 +173,7 @@ export function WishlistManager({
                 onClick={() => toggle(item.id)}
                 aria-label={item.title}
                 className={cn(
-                  'flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors',
+                  'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors',
                   item.done
                     ? 'border-success bg-success text-white'
                     : 'border-input hover:border-ring',
@@ -177,15 +190,12 @@ export function WishlistManager({
               >
                 {item.title}
               </span>
-              <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                {WISHLIST_HORIZON_LABELS[item.horizon]}
-              </span>
               {!readOnly && (
                 <button
                   type="button"
                   onClick={() => remove(item.id)}
                   aria-label={t('delete')}
-                  className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="shrink-0 rounded-md p-1 text-muted-foreground opacity-0 transition-all hover:bg-danger/10 hover:text-danger focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100"
                 >
                   <Trash2 className="h-4 w-4" aria-hidden />
                 </button>
