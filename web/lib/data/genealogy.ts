@@ -152,10 +152,8 @@ interface PersonalFunnel {
   businessInfo: number;
   /** Enrollments (iscrizioni). */
   iscrizioni: number;
-  /** Calls the marketer logged. */
-  calls: number;
 }
-const ZERO_FUNNEL: PersonalFunnel = { prospects: 0, businessInfo: 0, iscrizioni: 0, calls: 0 };
+const ZERO_FUNNEL: PersonalFunnel = { prospects: 0, businessInfo: 0, iscrizioni: 0 };
 const BUSINESS_INFO_IDX = STAGE_ORDER.indexOf('business_info');
 
 /**
@@ -170,7 +168,7 @@ const BUSINESS_INFO_IDX = STAGE_ORDER.indexOf('business_info');
  * concluded) — enrolled, lost and deleted are excluded, so a leader sees how many
  * are genuinely "in ballo". The conversion counters (businessInfo / iscrizioni)
  * still span the full history. Returns raw counts (not a ratio) so they can be
- * summed over a subtree before conversion is computed. Three queries for the whole
+ * summed over a subtree before conversion is computed. Two queries for the whole
  * id set; RLS scopes each to what the caller can see.
  */
 async function fetchPersonalFunnel(
@@ -229,20 +227,6 @@ async function fetchPersonalFunnel(
     /* best-effort */
   }
 
-  // 3. Calls logged.
-  try {
-    const { data } = await supabase
-      .from('calls')
-      .select('marketer_id')
-      .in('marketer_id', ids)
-      .is('deleted_at', null);
-    for (const r of (data ?? []) as { marketer_id: string }[]) {
-      const f = out.get(r.marketer_id);
-      if (f) f.calls += 1;
-    }
-  } catch {
-    /* best-effort */
-  }
   return out;
 }
 
@@ -264,7 +248,6 @@ function stampFunnel(
         ...n.kpis,
         prospects: f.prospects,
         iscrizioni: f.iscrizioni,
-        calls: f.calls,
         conversion_rate: conversionOf(f),
       },
     };
@@ -316,7 +299,6 @@ function aggregateSubtree(
       prospects: base.prospects,
       businessInfo: base.businessInfo,
       iscrizioni: base.iscrizioni,
-      calls: base.calls,
     };
     const kids = childrenByParent.get(id);
     if (kids) {
@@ -326,7 +308,6 @@ function aggregateSubtree(
         a.prospects += ca.prospects;
         a.businessInfo += ca.businessInfo;
         a.iscrizioni += ca.iscrizioni;
-        a.calls += ca.calls;
       }
     }
     agg.set(id, a);

@@ -9,7 +9,6 @@ import {
   Locate,
   PanelLeft,
   PanelRight,
-  Phone,
   Target,
   Trash2,
   TrendingUp,
@@ -231,13 +230,6 @@ export function NodeDetailPanel({
               value={formatNumber(node.kpis.prospects)}
               accent="text-info"
               accentBg="bg-info/12"
-            />
-            <StatRow
-              icon={Phone}
-              label={t('kpi_calls')}
-              value={formatNumber(node.kpis.calls)}
-              accent="text-primary"
-              accentBg="bg-primary/12"
             />
             <StatRow
               icon={UserPlus}
