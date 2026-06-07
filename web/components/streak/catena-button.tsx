@@ -58,6 +58,8 @@ export function CatenaButton({ initial }: { initial: DmoStatus }) {
   const done = status.allDone;
   const doneCount = TASKS.filter((task) => status[task.key]).length;
   const firstUndone = TASKS.findIndex((task) => !status[task.key]);
+  // false only when a configured RPC failed → don't present a fake "0" streak.
+  const loaded = status.ok || status.demo;
 
   const toggle = React.useCallback(
     async (task: (typeof TASKS)[number]) => {
@@ -67,8 +69,9 @@ export function CatenaButton({ initial }: { initial: DmoStatus }) {
       try {
         const res = await toggleDmoTaskAction(task.column, nextVal);
         inflight.current -= 1;
-        // Settle from the server only on the last response (real streak update).
-        if (!res.demo && inflight.current === 0) setStatus(res);
+        // Settle from the server only on the last response AND only if it loaded
+        // (a failed RPC must not wipe the optimistic state back to 0).
+        if (!res.demo && res.ok && inflight.current === 0) setStatus(res);
       } catch {
         inflight.current -= 1;
       }
@@ -81,17 +84,19 @@ export function CatenaButton({ initial }: { initial: DmoStatus }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        title={t('tooltip', { n: status.streak })}
-        aria-label={t('tooltip', { n: status.streak })}
+        title={loaded ? t('tooltip', { n: status.streak }) : t('load_error')}
+        aria-label={loaded ? t('tooltip', { n: status.streak }) : t('load_error')}
         className={cn(
           'group inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-bold tabular-nums transition-all duration-base ease-standard hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-          done
-            ? 'border-warning/50 bg-warning/15 text-warning shadow-[0_0_18px_hsl(var(--warning)/0.5)]'
-            : 'border-danger/50 bg-danger/12 text-danger shadow-[0_0_16px_hsl(var(--danger)/0.45)] animate-glow-pulse',
+          !loaded
+            ? 'border-border/60 bg-muted text-muted-foreground'
+            : done
+              ? 'border-warning/50 bg-warning/15 text-warning shadow-[0_0_18px_hsl(var(--warning)/0.5)]'
+              : 'border-danger/50 bg-danger/12 text-danger shadow-[0_0_16px_hsl(var(--danger)/0.45)] animate-glow-pulse',
         )}
       >
         <Flame className="h-4 w-4 transition-transform group-hover:scale-110" aria-hidden />
-        <span>{status.streak}</span>
+        <span>{loaded ? status.streak : '—'}</span>
         <span className="hidden border-l border-current/20 pl-1.5 text-xs font-semibold uppercase tracking-wide sm:inline">
           {t('button')}
         </span>

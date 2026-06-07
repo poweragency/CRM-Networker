@@ -115,6 +115,9 @@ export function AttendanceTable({
   const callIdSetRef = React.useRef(callIdSet);
   memberIdSetRef.current = memberIdSet;
   callIdSetRef.current = callIdSet;
+  // Cells with an in-flight optimistic write (key `${mid}|${cid}|p` or `|c`), so a
+  // Realtime echo carrying a stale value can't revert what the user just tapped.
+  const pendingRef = React.useRef<Set<string>>(new Set());
 
   React.useEffect(() => {
     if (!supabase) return;
@@ -141,16 +144,21 @@ export function AttendanceTable({
           const removed = payload.eventType === 'DELETE';
           const nextPresent = removed ? false : Boolean(rec.present);
           const nextCam = removed ? false : Boolean(rec.cam);
-          setPresent((prev) =>
-            prev[mid]?.[cid] === nextPresent
-              ? prev
-              : { ...prev, [mid]: { ...(prev[mid] ?? {}), [cid]: nextPresent } },
-          );
-          setCam((prev) =>
-            prev[mid]?.[cid] === nextCam
-              ? prev
-              : { ...prev, [mid]: { ...(prev[mid] ?? {}), [cid]: nextCam } },
-          );
+          // Don't clobber a cell the user is mid-saving (avoids revert flicker).
+          if (!pendingRef.current.has(`${mid}|${cid}|p`)) {
+            setPresent((prev) =>
+              prev[mid]?.[cid] === nextPresent
+                ? prev
+                : { ...prev, [mid]: { ...(prev[mid] ?? {}), [cid]: nextPresent } },
+            );
+          }
+          if (!pendingRef.current.has(`${mid}|${cid}|c`)) {
+            setCam((prev) =>
+              prev[mid]?.[cid] === nextCam
+                ? prev
+                : { ...prev, [mid]: { ...(prev[mid] ?? {}), [cid]: nextCam } },
+            );
+          }
         },
       )
       .subscribe((status) => setLive(status === 'SUBSCRIBED'));
@@ -167,8 +175,15 @@ export function AttendanceTable({
   async function togglePresent(member: AttendanceMember, callId: string) {
     const next = !present[member.id]?.[callId];
     const before = members.filter((m) => present[m.id]?.[callId]).length;
+    const key = `${member.id}|${callId}|p`;
+    pendingRef.current.add(key);
     setPresent((prev) => ({ ...prev, [member.id]: { ...prev[member.id]!, [callId]: next } }));
-    const res = await setZoomAttendanceAction(member.id, date, callId, next);
+    let res: { ok: boolean };
+    try {
+      res = await setZoomAttendanceAction(member.id, date, callId, next);
+    } finally {
+      pendingRef.current.delete(key);
+    }
     if (!res.ok) {
       setPresent((prev) => ({ ...prev, [member.id]: { ...prev[member.id]!, [callId]: !next } }));
       toast({ title: t('error'), variant: 'error' });
@@ -187,8 +202,15 @@ export function AttendanceTable({
 
   async function toggleCam(member: AttendanceMember, callId: string) {
     const next = !cam[member.id]?.[callId];
+    const key = `${member.id}|${callId}|c`;
+    pendingRef.current.add(key);
     setCam((prev) => ({ ...prev, [member.id]: { ...prev[member.id]!, [callId]: next } }));
-    const res = await setZoomCamAction(member.id, date, callId, next);
+    let res: { ok: boolean };
+    try {
+      res = await setZoomCamAction(member.id, date, callId, next);
+    } finally {
+      pendingRef.current.delete(key);
+    }
     if (!res.ok) {
       setCam((prev) => ({ ...prev, [member.id]: { ...prev[member.id]!, [callId]: !next } }));
       toast({ title: t('error'), variant: 'error' });

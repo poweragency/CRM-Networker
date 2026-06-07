@@ -46,6 +46,9 @@ export interface DmoStatus {
   /** Today already counts toward the streak (= all done today). */
   todayRecorded: boolean;
   demo: boolean;
+  /** false ONLY when a configured RPC failed → the UI must not show "streak 0"
+   *  as if real (demo with no env counts as ok: it's a valid empty state). */
+  ok: boolean;
 }
 
 const EMPTY: DmoStatus = {
@@ -58,6 +61,7 @@ const EMPTY: DmoStatus = {
   streak: 0,
   todayRecorded: false,
   demo: true,
+  ok: true,
 };
 
 function mapStatus(row: Record<string, unknown>): DmoStatus {
@@ -71,6 +75,7 @@ function mapStatus(row: Record<string, unknown>): DmoStatus {
     streak: Number(row.streak ?? 0),
     todayRecorded: Boolean(row.today_recorded),
     demo: false,
+    ok: true,
   };
 }
 
@@ -80,11 +85,11 @@ export async function getDmoStatus(): Promise<DmoStatus> {
   try {
     const { data, error } = await supabase.rpc('dmo_status');
     const row = Array.isArray(data) ? data[0] : data;
-    if (error || !row) return { ...EMPTY, demo: false };
+    if (error || !row) return { ...EMPTY, demo: false, ok: false };
     return mapStatus(row as Record<string, unknown>);
   } catch (e) {
     logError('getDmoStatus', e);
-    return { ...EMPTY, demo: false };
+    return { ...EMPTY, demo: false, ok: false };
   }
 }
 
@@ -101,11 +106,11 @@ export async function toggleDmoTask(
       p_value: value,
     });
     const row = Array.isArray(data) ? data[0] : data;
-    if (error || !row) return { ...EMPTY, demo: false };
+    if (error || !row) return { ...EMPTY, demo: false, ok: false };
     return mapStatus(row as Record<string, unknown>);
   } catch (e) {
     logError('toggleDmoTask', e, { column, value });
-    return { ...EMPTY, demo: false };
+    return { ...EMPTY, demo: false, ok: false };
   }
 }
 

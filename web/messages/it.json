@@ -1264,6 +1264,7 @@
     "subtitle_done": "Torna domani e mantieni la streak.",
     "subtitle_pending": "Completa i 5 task di oggi per aggiungere un giorno alla striscia.",
     "tap_hint": "Tocca un task per segnarlo come fatto.",
+    "load_error": "Striscia non disponibile (errore di caricamento)",
     "task_read": "Leggi 10 pagine",
     "task_ig": "Pubblica una storia su Instagram",
     "task_tiktok": "Pubblica un TikTok / reel",
