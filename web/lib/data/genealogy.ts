@@ -184,13 +184,21 @@ async function fetchPersonalFunnel(
   if (ids.length === 0) return out;
 
   // Primary path: the `funnel_counts` RPC aggregates server-side, so the counts are
-  // EXACT regardless of org size (the previous client-side `.in(ids)` reads were
-  // capped by PostgREST's row limit → the tree silently undercounted, esp. Lista-100).
-  // It also owns the single "prospect in ballo" definition (open prospects + Lista-100
-  // entries still in percorso) and this-month's BI/iscrizioni cohort.
+  // EXACT (the old client-side `.in(ids)` reads were capped by PostgREST's row limit →
+  // the tree silently undercounted, esp. Lista-100). It owns the single "prospect in
+  // ballo" definition (open prospects + Lista-100 still in percorso) + this-month's
+  // BI/iscrizioni cohort. The RPC returns ONE row per id, so we CHUNK the id list
+  // (≤500/call) to stay under the same row cap no matter how big the org grows.
   try {
-    const { data, error } = await supabase.rpc('funnel_counts', { p_ids: ids });
-    if (!error && Array.isArray(data)) {
+    const CHUNK = 500;
+    let okAll = true;
+    for (let i = 0; i < ids.length; i += CHUNK) {
+      const slice = ids.slice(i, i + CHUNK);
+      const { data, error } = await supabase.rpc('funnel_counts', { p_ids: slice });
+      if (error || !Array.isArray(data)) {
+        okAll = false;
+        break;
+      }
       for (const r of data as {
         marketer_id: string;
         prospects: number;
@@ -203,14 +211,15 @@ async function fetchPersonalFunnel(
           iscrizioni: Number(r.iscrizioni) || 0,
         });
       }
-      return out;
     }
+    if (okAll) return out;
   } catch {
     /* fall through to the client-side fallback below */
   }
 
-  // Fallback (RPC unavailable): same definition, computed client-side. Subject to the
-  // row cap on very large orgs, but keeps the tree populated rather than empty.
+  // Fallback (RPC unavailable): same definition, computed client-side. Reset first so
+  // a partially-filled map from the RPC attempt can't double-count.
+  for (const id of ids) out.set(id, { ...ZERO_FUNNEL });
   const now = new Date();
   const monthStartMs = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
 
@@ -461,18 +470,32 @@ export async function getSubtree(
     const supabase = createClient();
     if (!supabase) return { data: mockSubtree(rootId, scope), demo: true };
 
-    const { data, error } = await supabase.rpc('get_subtree', {
-      node_id: rootId,
-      max_depth: maxDepth,
-    });
+    // Page the RPC with .range() so a subtree larger than PostgREST's row cap loads
+    // FULLY (each page stays under the cap). PAGE ≤ the platform default (1000) so a
+    // short page reliably signals "no more rows". The closure scan re-runs per page
+    // (deterministic ORDER BY in the function keeps paging consistent).
+    const PAGE = 500;
+    const rows: MarketerRow[] = [];
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase
+        .rpc('get_subtree', { node_id: rootId, max_depth: maxDepth })
+        .range(from, from + PAGE - 1);
+      if (error) {
+        // A hard error on the first page → empty (the real state); mid-paging → keep
+        // what we have rather than dropping the whole tree.
+        if (from === 0) return { data: [], demo: false };
+        break;
+      }
+      const batch = (data ?? []) as MarketerRow[];
+      rows.push(...batch);
+      if (batch.length < PAGE) break;
+    }
 
-    if (error || !Array.isArray(data) || data.length === 0) {
-      // Env IS configured → an empty/failed subtree is the REAL state (the node
-      // has no visible downline). Return empty, never the fake mock tree.
+    if (rows.length === 0) {
+      // Env IS configured → an empty subtree is the REAL state (no visible downline).
       return { data: [], demo: false };
     }
 
-    const rows = data as MarketerRow[];
     const filtered =
       scope === 'GLOBAL'
         ? rows

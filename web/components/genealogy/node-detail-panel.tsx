@@ -124,7 +124,7 @@ export function NodeDetailPanel({
       )}
     >
       {/* Header — a compact identity hero with a subtle accent wash + close. */}
-      <div className="relative overflow-hidden border-b">
+      <div className="relative shrink-0 overflow-hidden border-b">
         <span
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/[0.03] to-transparent"
@@ -152,8 +152,9 @@ export function NodeDetailPanel({
                 </span>
               )}
             </div>
+            {/* Renewal (rinnovo) state — Attivo (green) / Scaduto (red). */}
             <div className="mt-2">
-              <StatusDot kind="activity" value={node.activity} showLabel />
+              <StatusDot value={node.status} showLabel />
             </div>
             {spillover && sponsorName && (
               <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
@@ -172,8 +173,8 @@ export function NodeDetailPanel({
         </div>
       </div>
 
-      {/* Scrollable body */}
-      <div className="flex-1 space-y-4 overflow-y-auto p-4">
+      {/* Scrollable body — min-h-0 lets it shrink so the footer actions stay visible. */}
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
         {/* Binary team */}
         <section className="space-y-2">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -264,8 +265,8 @@ export function NodeDetailPanel({
         </section>
       </div>
 
-      {/* Footer actions */}
-      <div className="space-y-2 border-t bg-muted/30 p-4">
+      {/* Footer actions — shrink-0 so every button stays visible at 100% zoom. */}
+      <div className="shrink-0 space-y-2 border-t bg-muted/30 p-4">
         <Link
           href={`/team/${node.id}`}
           className={cn(

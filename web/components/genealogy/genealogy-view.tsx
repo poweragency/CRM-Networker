@@ -305,7 +305,7 @@ export function GenealogyView({
             side overlay on desktop. The inner panel is h-full + scrolls. */}
         {selectedNode && (
           <div
-            className="glass absolute z-20 shadow-xl ring-1 ring-black/5 animate-fade-in inset-x-0 bottom-0 h-[72dvh] rounded-t-2xl border-t border-border/70 sm:inset-y-0 sm:bottom-auto sm:left-auto sm:right-0 sm:h-auto sm:w-[min(22rem,92vw)] sm:rounded-none sm:border-l sm:border-t-0 sm:animate-slide-in-right"
+            className="glass absolute z-20 shadow-xl ring-1 ring-black/5 animate-fade-in inset-x-0 bottom-0 h-[85dvh] rounded-t-2xl border-t border-border/70 sm:inset-y-0 sm:bottom-auto sm:left-auto sm:right-0 sm:h-auto sm:w-[min(22rem,92vw)] sm:rounded-none sm:border-l sm:border-t-0 sm:animate-slide-in-right"
             role="dialog"
             aria-modal="false"
           >
