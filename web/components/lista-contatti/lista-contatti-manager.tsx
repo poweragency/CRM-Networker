@@ -224,10 +224,15 @@ export function ListaContattiManager() {
       .sort(byName);
   }, [entries, search, statusFilter, rapportoFilter]);
 
-  // Invited (or beyond) contacts → the Percorsi pane, alphabetical by name. From
-  // the full list, so the journey view is stable regardless of the list filters.
+  // Active-funnel contacts → the Percorsi pane, alphabetical by name. From the full
+  // list (stable regardless of list filters). Excludes both 'non_invitato' (not
+  // started) AND 'non_iscritto' (dropped out / deleted from the kanban) — same set
+  // the kanban board shows, so removing a card there also clears it here.
   const percorsi = React.useMemo(
-    () => entries.filter((e) => e.stato !== 'non_invitato').sort(byName),
+    () =>
+      entries
+        .filter((e) => e.stato !== 'non_invitato' && e.stato !== 'non_iscritto')
+        .sort(byName),
     [entries],
   );
 
