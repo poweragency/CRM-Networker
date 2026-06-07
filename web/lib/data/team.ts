@@ -175,9 +175,6 @@ export async function listTeamMembers(): Promise<TeamResult<TeamMemberRow[]>> {
   }
 }
 
-const ROSTER_COLS =
-  'id,first_name,last_name,display_name,rank,status,registration_date,starting_package,phone,city,region';
-
 function rowToTeamMember(r: Record<string, unknown>, team: number): TeamMemberRow {
   return {
     id: String(r.id),
@@ -251,65 +248,44 @@ export async function listTeamMembersPage(
   }
 
   try {
-    const like = search ? `%${search.replace(/[\\%_]/g, (m) => `\\${m}`)}%` : null;
-    const orFilter = like
-      ? `display_name.ilike.${like},city.ilike.${like},region.ilike.${like}`
-      : null;
-
-    // ONE request returns the page rows AND the matching total (count:'exact'),
-    // so there's no separate match-count round-trip.
-    let pageQ = supabase
-      .from('marketers')
-      .select(ROSTER_COLS, { count: 'exact' })
-      .is('deleted_at', null)
-      .neq('id', selfId);
-    if (orFilter) pageQ = pageQ.or(orFilter);
-    const { data, error, count } = await pageQ
-      .order('display_name', { ascending: true })
-      .order('id', { ascending: true })
-      .range(offset, offset + limit - 1);
-    if (error || !data) {
+    // ONE SECURITY DEFINER call returns the page rows + their team_size + the matching
+    // total, with visibility evaluated ONCE (not the per-row RLS that made a whole-org
+    // scan ~700ms). search/load-more never need the org-wide summary totals.
+    const { data, error } = await supabase.rpc('roster_page', {
+      p_search: search,
+      p_offset: offset,
+      p_limit: limit,
+    });
+    if (error || !Array.isArray(data)) {
       return { data: { rows: [], total: 0, totalAll: 0, activeAll: 0 }, demo: false };
     }
+    const rows: TeamMemberRow[] = (data as Record<string, unknown>[]).map((r) => ({
+      id: String(r.id),
+      display_name: (r.display_name as string) ?? '',
+      rank: r.rank as MarketerRank,
+      status: r.status as MarketerStatus,
+      starting_package: (r.starting_package as StartingPackage | null) ?? null,
+      phone: (r.phone as string | null) ?? null,
+      city: (r.city as string | null) ?? null,
+      region: (r.region as string | null) ?? null,
+      registration_date: (r.registration_date as string | null) ?? null,
+      team_size: Number(r.team_size) || 0,
+    }));
+    const total =
+      data.length > 0 ? Number((data[0] as { total: number }).total) || 0 : 0;
 
-    // Org-wide summary totals: only on the first load (search/load-more skip them).
     let totalAll = 0;
     let activeAll = 0;
     if (withTotals) {
-      const [allRes, activeRes] = await Promise.all([
-        supabase
-          .from('marketers')
-          .select('id', { count: 'exact', head: true })
-          .is('deleted_at', null)
-          .neq('id', selfId),
-        supabase
-          .from('marketers')
-          .select('id', { count: 'exact', head: true })
-          .is('deleted_at', null)
-          .neq('id', selfId)
-          .eq('status', 'active'),
-      ]);
-      totalAll = allRes.count ?? 0;
-      activeAll = activeRes.count ?? 0;
+      const { data: s } = await supabase.rpc('team_summary');
+      const row = (Array.isArray(s) ? s[0] : s) as
+        | { total?: number; active?: number }
+        | null;
+      totalAll = Number(row?.total) || 0;
+      activeAll = Number(row?.active) || 0;
     }
 
-    // Team size only for THIS page's rows (≤ limit ids → one RPC call).
-    const ids = (data as Record<string, unknown>[]).map((r) => String(r.id));
-    const sizes = new Map<string, number>();
-    if (ids.length > 0) {
-      const { data: tc } = await supabase.rpc('team_counts', { p_ids: ids });
-      for (const c of (tc as { marketer_id: string; team: number }[] | null) ?? []) {
-        sizes.set(c.marketer_id, Number(c.team) || 0);
-      }
-    }
-
-    const rows = (data as Record<string, unknown>[]).map((r) =>
-      rowToTeamMember(r, sizes.get(String(r.id)) ?? 0),
-    );
-    return {
-      data: { rows, total: count ?? rows.length, totalAll, activeAll },
-      demo: false,
-    };
+    return { data: { rows, total, totalAll, activeAll }, demo: false };
   } catch {
     return { data: { rows: [], total: 0, totalAll: 0, activeAll: 0 }, demo: true };
   }
