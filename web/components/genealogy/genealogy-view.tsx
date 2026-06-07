@@ -25,6 +25,9 @@ import {
   GenealogyCanvas,
   type GenealogyCanvasHandle,
 } from './genealogy-canvas';
+import { GenealogyCanvasCinematic } from './genealogy-canvas-cinematic';
+import { Sparkles, GitBranch } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 /**
  * Client orchestrator for /genealogia. Wires the scope provider (Global | Sinistra
@@ -57,6 +60,18 @@ export function GenealogyView({
   const canvasRef = React.useRef<GenealogyCanvasHandle>(null);
 
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
+
+  // Viewer mode: the lightweight canvas "Cinematic" (default — scales to ~1000
+  // nodes) vs the classic React Flow "Classico". Persisted per device.
+  const [mode, setMode] = React.useState<'cinematic' | 'classic'>('cinematic');
+  React.useEffect(() => {
+    const saved = window.localStorage.getItem('genealogy_view_mode');
+    if (saved === 'classic' || saved === 'cinematic') setMode(saved);
+  }, []);
+  const changeMode = React.useCallback((next: 'cinematic' | 'classic') => {
+    setMode(next);
+    window.localStorage.setItem('genealogy_view_mode', next);
+  }, []);
 
   // The layout root depends on the active scope: GLOBAL → own root; a branch →
   // that leg's child (computed over the cached adjacency).
@@ -148,19 +163,51 @@ export function GenealogyView({
       {/* Full-bleed canvas; the detail panel floats over it as an overlay so the
           tree always uses the whole width (no reserved empty column). */}
       <Card className="relative h-[calc(100dvh-8rem)] min-h-[360px] sm:min-h-[520px] overflow-hidden p-0 shadow-card ring-1 ring-black/5">
-        <GenealogyCanvas
-          ref={canvasRef}
-          nodes={tree.visibleNodes}
-          layoutRootId={layoutRootId}
-          scope={scope}
-          expanded={tree.expanded}
-          selectedId={selectedId}
-          onSelect={handleSelect}
-          onToggle={tree.toggle}
-          hasChildren={tree.hasChildren}
-          addSlotsForId={addSlotsForId}
-          onAddSlot={handleAddSlot}
-        />
+        {/* Viewer-mode toggle — Cinematico (canvas, scala a migliaia) / Classico. */}
+        <div className="absolute left-3 top-3 z-30 inline-flex items-center gap-0.5 rounded-lg border border-border/60 bg-card/85 p-0.5 shadow-lg backdrop-blur">
+          <ModeTab
+            active={mode === 'cinematic'}
+            onClick={() => changeMode('cinematic')}
+            icon={<Sparkles className="h-3.5 w-3.5" aria-hidden />}
+            label={t('view_cinematic')}
+          />
+          <ModeTab
+            active={mode === 'classic'}
+            onClick={() => changeMode('classic')}
+            icon={<GitBranch className="h-3.5 w-3.5" aria-hidden />}
+            label={t('view_classic')}
+          />
+        </div>
+
+        {mode === 'cinematic' ? (
+          <GenealogyCanvasCinematic
+            ref={canvasRef}
+            nodes={tree.visibleNodes}
+            layoutRootId={layoutRootId}
+            scope={scope}
+            expanded={tree.expanded}
+            selectedId={selectedId}
+            onSelect={handleSelect}
+            onToggle={tree.toggle}
+            hasChildren={tree.hasChildren}
+            addSlotsForId={addSlotsForId}
+            onAddSlot={handleAddSlot}
+          />
+        ) : (
+          <GenealogyCanvas
+            ref={canvasRef}
+            nodes={tree.visibleNodes}
+            layoutRootId={layoutRootId}
+            scope={scope}
+            expanded={tree.expanded}
+            selectedId={selectedId}
+            onSelect={handleSelect}
+            onToggle={tree.toggle}
+            hasChildren={tree.hasChildren}
+            addSlotsForId={addSlotsForId}
+            onAddSlot={handleAddSlot}
+          />
+        )}
 
         {/* Detail panel: bottom sheet on mobile (full width, capped height), right-
             side overlay on desktop. The inner panel is h-full + scrolls. */}
@@ -192,5 +239,35 @@ export function GenealogyView({
         onAdded={handleAdded}
       />
     </div>
+  );
+}
+
+/** One segment of the Cinematico / Classico viewer-mode toggle. */
+function ModeTab({
+  active,
+  onClick,
+  icon,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        active
+          ? 'bg-primary text-primary-foreground shadow-sm'
+          : 'text-muted-foreground hover:text-foreground',
+      )}
+    >
+      {icon}
+      <span className="hidden sm:inline">{label}</span>
+    </button>
   );
 }
