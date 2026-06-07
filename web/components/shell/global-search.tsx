@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Search, Loader2, Users, Target, X } from 'lucide-react';
@@ -13,6 +14,11 @@ import type { SearchHit } from '@/lib/data/search';
  * Type a name to find TEAM members and PROSPECTS in one list, each tagged with a
  * "Team" / "Prospect" badge; selecting one navigates to its page. Debounced, RLS
  * scoped server-side, keyboard-navigable, closes on outside click / Escape.
+ *
+ * The results panel is rendered in a PORTAL on document.body (fixed-positioned
+ * under the input) so it always sits ABOVE the page content — the sidebar lives in
+ * a `z-10` stacking context that the content column (also `z-10`, later in the DOM)
+ * would otherwise paint over, clipping the dropdown.
  */
 export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
   const t = useTranslations('globalsearch');
@@ -22,8 +28,13 @@ export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [active, setActive] = React.useState(0);
+  const [mounted, setMounted] = React.useState(false);
+  const [rect, setRect] = React.useState<{ top: number; left: number; width: number } | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
   const reqRef = React.useRef(0);
+
+  React.useEffect(() => setMounted(true), []);
 
   // Debounced search; only the latest request's result is applied (no races).
   React.useEffect(() => {
@@ -50,16 +61,39 @@ export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
     return () => window.clearTimeout(timer);
   }, [query]);
 
-  // Close on outside click.
+  // Close on outside click (ignore the input box AND the portaled dropdown).
   React.useEffect(() => {
     function onDown(e: PointerEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      const target = e.target as Node;
+      if (containerRef.current?.contains(target)) return;
+      if (dropdownRef.current?.contains(target)) return;
+      setOpen(false);
     }
     document.addEventListener('pointerdown', onDown);
     return () => document.removeEventListener('pointerdown', onDown);
   }, []);
+
+  const showDropdown = open && query.trim().length >= 2;
+
+  // Anchor the fixed dropdown under the input; keep it in sync on resize/scroll.
+  const updateRect = React.useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const width = Math.min(Math.max(r.width, 336), window.innerWidth - r.left - 12);
+    setRect({ top: r.bottom + 4, left: r.left, width });
+  }, []);
+
+  React.useEffect(() => {
+    if (!showDropdown) return;
+    updateRect();
+    window.addEventListener('resize', updateRect);
+    window.addEventListener('scroll', updateRect, true);
+    return () => {
+      window.removeEventListener('resize', updateRect);
+      window.removeEventListener('scroll', updateRect, true);
+    };
+  }, [showDropdown, updateRect]);
 
   const go = React.useCallback(
     (hit: SearchHit) => {
@@ -90,8 +124,6 @@ export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
       if (h) go(h);
     }
   }
-
-  const showDropdown = open && query.trim().length >= 2;
 
   return (
     <div ref={containerRef} className="relative">
@@ -130,67 +162,75 @@ export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
         </button>
       ) : null}
 
-      {showDropdown && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-[21rem] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-xl ring-1 ring-black/5">
-          {hits.length === 0 ? (
-            <p className="px-3 py-3 text-xs text-muted-foreground">
-              {loading ? '…' : t('empty')}
-            </p>
-          ) : (
-            <ul className="max-h-[60vh] overflow-y-auto py-1">
-              {hits.map((h, i) => (
-                <li key={`${h.kind}:${h.id}`}>
-                  <button
-                    type="button"
-                    onMouseEnter={() => setActive(i)}
-                    onClick={() => go(h)}
-                    className={cn(
-                      'flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors',
-                      i === active ? 'bg-muted' : 'hover:bg-muted/60',
-                    )}
-                  >
-                    <span
+      {mounted &&
+        showDropdown &&
+        rect &&
+        createPortal(
+          <div
+            ref={dropdownRef}
+            style={{ position: 'fixed', top: rect.top, left: rect.left, width: rect.width }}
+            className="z-[80] overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-2xl ring-1 ring-black/5"
+          >
+            {hits.length === 0 ? (
+              <p className="px-3 py-3 text-xs text-muted-foreground">
+                {loading ? '…' : t('empty')}
+              </p>
+            ) : (
+              <ul className="max-h-[60vh] overflow-y-auto py-1">
+                {hits.map((h, i) => (
+                  <li key={`${h.kind}:${h.id}`}>
+                    <button
+                      type="button"
+                      onMouseEnter={() => setActive(i)}
+                      onClick={() => go(h)}
                       className={cn(
-                        'flex h-7 w-7 shrink-0 items-center justify-center rounded-md',
-                        h.kind === 'team'
-                          ? 'bg-primary/10 text-primary'
-                          : 'bg-warning/12 text-warning',
+                        'flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors',
+                        i === active ? 'bg-muted' : 'hover:bg-muted/60',
                       )}
-                      aria-hidden
                     >
-                      {h.kind === 'team' ? (
-                        <Users className="h-3.5 w-3.5" />
-                      ) : (
-                        <Target className="h-3.5 w-3.5" />
-                      )}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium text-foreground">
-                        {h.name}
+                      <span
+                        className={cn(
+                          'flex h-7 w-7 shrink-0 items-center justify-center rounded-md',
+                          h.kind === 'team'
+                            ? 'bg-primary/10 text-primary'
+                            : 'bg-warning/12 text-warning',
+                        )}
+                        aria-hidden
+                      >
+                        {h.kind === 'team' ? (
+                          <Users className="h-3.5 w-3.5" />
+                        ) : (
+                          <Target className="h-3.5 w-3.5" />
+                        )}
                       </span>
-                      {h.subtitle && (
-                        <span className="block truncate text-[11px] text-muted-foreground">
-                          {h.subtitle}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-foreground">
+                          {h.name}
                         </span>
-                      )}
-                    </span>
-                    <span
-                      className={cn(
-                        'shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
-                        h.kind === 'team'
-                          ? 'bg-primary/10 text-primary'
-                          : 'bg-warning/12 text-warning',
-                      )}
-                    >
-                      {h.kind === 'team' ? t('team') : t('prospect')}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
+                        {h.subtitle && (
+                          <span className="block truncate text-[11px] text-muted-foreground">
+                            {h.subtitle}
+                          </span>
+                        )}
+                      </span>
+                      <span
+                        className={cn(
+                          'shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                          h.kind === 'team'
+                            ? 'bg-primary/10 text-primary'
+                            : 'bg-warning/12 text-warning',
+                        )}
+                      >
+                        {h.kind === 'team' ? t('team') : t('prospect')}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
