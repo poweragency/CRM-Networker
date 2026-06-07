@@ -319,6 +319,18 @@ export function AttendanceTable({
     [members, needle],
   );
 
+  // Render a WINDOW of the matches, not all of them: with a big team the grid is
+  // hundreds of cards PER call, so painting every match on each keystroke is what
+  // made search lag. The filter still runs over everyone; we just draw the first N
+  // (reset on a new query, "mostra altri" to extend).
+  const GRID_PAGE = 60;
+  const [gridLimit, setGridLimit] = React.useState(GRID_PAGE);
+  React.useEffect(() => setGridLimit(GRID_PAGE), [needle]);
+  const pagedMembers = React.useMemo(
+    () => shownMembers.slice(0, gridLimit),
+    [shownMembers, gridLimit],
+  );
+
   const showOverview = members.length > 0 && calls.length > 0;
 
   return (
@@ -514,8 +526,9 @@ export function AttendanceTable({
                       {t('search_empty')}
                     </p>
                   ) : (
+                  <>
                   <div className="grid gap-2 p-4 [grid-template-columns:repeat(auto-fill,minmax(14rem,1fr))]">
-                    {shownMembers.map((m) => {
+                    {pagedMembers.map((m) => {
                       const isPresent = present[m.id]?.[c.id] ?? false;
                       const camOn = cam[m.id]?.[c.id] ?? false;
                       return (
@@ -580,6 +593,21 @@ export function AttendanceTable({
                       );
                     })}
                   </div>
+                  {shownMembers.length > gridLimit && (
+                    <div className="flex items-center justify-center gap-3 px-4 pb-4">
+                      <span className="text-xs text-muted-foreground">
+                        {pagedMembers.length} / {shownMembers.length}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setGridLimit((l) => l + 100)}
+                        className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        {t('show_more')}
+                      </button>
+                    </div>
+                  )}
+                  </>
                   )}
                 </section>
               );
