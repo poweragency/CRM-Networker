@@ -113,7 +113,7 @@ async function fetchTeamCounts(
   // so the result never hits the row cap — even the org root (whose closure has one
   // row per descendant) can't truncate, since the count happens inside SQL.
   try {
-    const CHUNK = 500;
+    const CHUNK = 5000;
     let okAll = true;
     for (let i = 0; i < ids.length; i += CHUNK) {
       const slice = ids.slice(i, i + CHUNK);
@@ -219,9 +219,9 @@ async function fetchPersonalFunnel(
   // It owns the single "prospect in ballo" definition — OPEN prospects in the kanban
   // funnel only (Lista-100 entries are pre-funnel contacts, not counted) — plus this
   // month's BI/iscrizioni cohort. The RPC returns ONE row per id, so we CHUNK the id
-  // list (≤500/call) to stay under the same row cap no matter how big the org grows.
+  // list (≤5000/call, well under the 50k row cap) to stay safe at any org size.
   try {
-    const CHUNK = 500;
+    const CHUNK = 5000;
     let okAll = true;
     for (let i = 0; i < ids.length; i += CHUNK) {
       const slice = ids.slice(i, i + CHUNK);

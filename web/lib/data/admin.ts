@@ -118,7 +118,7 @@ export async function listMarketers(
     try {
       const ids = rows.map((r) => r.id);
       const sizes = new Map<string, number>();
-      const CHUNK = 500;
+      const CHUNK = 5000;
       for (let i = 0; i < ids.length; i += CHUNK) {
         const { data: tc, error } = await supabase.rpc('team_counts', {
           p_ids: ids.slice(i, i + CHUNK),
