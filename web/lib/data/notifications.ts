@@ -2,7 +2,6 @@ import 'server-only';
 import { getClient, getOwnerContext } from '@/lib/data/crm-shared';
 import { logError } from '@/lib/log';
 import type { AppNotification, NotificationType } from '@/lib/types/db';
-import { listUpcomingBirthdays } from '@/lib/data/team';
 
 /**
  * Notifications data access (server-only). The inbox is reduced to TWO event kinds,
@@ -43,93 +42,53 @@ function localDateKey(d: Date): string {
   ).padStart(2, '0')}`;
 }
 
-/**
- * The caller's STRICT descendant marketer ids (closure depth >= 1) — the people the
- * caller is an upline of. Empty in pure demo mode (no env).
- */
-async function descendantIds(): Promise<Set<string>> {
-  const ids = new Set<string>();
-  const supabase = getClient();
-  if (!supabase) return ids;
-  try {
-    const { marketerId } = await getOwnerContext();
-    if (!marketerId) return ids;
-    const { data } = await supabase
-      .from('marketer_tree_closure')
-      .select('descendant_id')
-      .eq('ancestor_id', marketerId)
-      .gte('depth', 1);
-    for (const r of (data ?? []) as { descendant_id: string }[]) {
-      ids.add(r.descendant_id);
-    }
-  } catch {
-    /* best-effort: no team → no notifications */
-  }
-  return ids;
+/** One row of the server-computed notification feed (downline-scoped, capped). */
+interface FeedRow {
+  kind: 'new_member' | 'birthday';
+  marketer_id: string;
+  display_name: string | null;
+  created_at: string;
 }
 
-/** Birthday notifications — ONLY today's, ONLY for the caller's downline. */
-async function birthdayNotifications(
-  now: Date,
-  team: Set<string>,
-): Promise<AppNotification[]> {
-  if (team.size === 0) return [];
+/** Today's-birthday + recent-join feed for the caller's downline — ONE definer RPC
+ *  (closure-scoped, capped) instead of scanning every marketer. */
+async function notificationFeed(now: Date): Promise<AppNotification[]> {
+  const supabase = getClient();
+  if (!supabase) return [];
   try {
-    const { data } = await listUpcomingBirthdays(0, now); // 0 days = today only
-    const createdAt = now.toISOString();
+    const { data } = await supabase.rpc('team_notification_feed', {
+      p_new_days: NEW_MEMBER_WINDOW_DAYS,
+    });
     const dk = localDateKey(now);
-    return data
-      .filter((b) => b.daysUntil === 0 && team.has(b.id))
-      .map((b) => ({
-        // Per-day key so dismissing today's birthday doesn't suppress next year's.
-        id: `bday-${b.id}-${dk}`,
-        type: 'birthday' as NotificationType,
-        title_it: `🎂 Oggi è il compleanno di ${b.display_name}!`,
-        body_it: 'Un membro del tuo team compie gli anni oggi. Fagli gli auguri!',
-        payload: { marketer_id: b.id },
-        read_at: null,
-        created_at: createdAt,
-        deleted_at: null,
-      }));
-  } catch {
-    return [];
-  }
-}
-
-/** New-member notifications — people recently added to the caller's downline. */
-async function newMemberNotifications(
-  now: Date,
-  team: Set<string>,
-): Promise<AppNotification[]> {
-  const supabase = getClient();
-  if (!supabase || team.size === 0) return [];
-  try {
-    const cutoff = new Date(
-      now.getTime() - NEW_MEMBER_WINDOW_DAYS * 86_400_000,
-    ).toISOString();
-    const { data } = await supabase
-      .from('marketers')
-      .select('id,display_name,first_name,last_name,created_at')
-      .in('id', Array.from(team))
-      .is('deleted_at', null)
-      .gte('created_at', cutoff)
-      .order('created_at', { ascending: false });
-    return ((data ?? []) as Record<string, unknown>[]).map((r) => {
-      const name =
-        (r.display_name as string | null) ??
-        `${r.first_name ?? ''} ${r.last_name ?? ''}`.trim();
+    const createdAt = now.toISOString();
+    return ((data ?? []) as FeedRow[]).map((r) => {
+      const name = (r.display_name ?? '').trim() || 'Un membro del team';
+      if (r.kind === 'birthday') {
+        return {
+          // Per-day key so dismissing today's birthday doesn't suppress next year's.
+          id: `bday-${r.marketer_id}-${dk}`,
+          type: 'birthday' as NotificationType,
+          title_it: `🎂 Oggi è il compleanno di ${name}!`,
+          body_it: 'Un membro del tuo team compie gli anni oggi. Fagli gli auguri!',
+          payload: { marketer_id: r.marketer_id },
+          read_at: null,
+          created_at: createdAt,
+          deleted_at: null,
+        };
+      }
       return {
-        id: `newmember-${String(r.id)}`,
+        id: `newmember-${r.marketer_id}`,
         type: 'new_member' as NotificationType,
         title_it: `👥 Nuovo membro nel team: ${name}`,
         body_it: 'Una nuova persona è entrata a far parte del tuo team.',
-        payload: { marketer_id: String(r.id) },
+        payload: { marketer_id: r.marketer_id },
         read_at: null,
-        created_at: String(r.created_at),
+        created_at: r.created_at,
         deleted_at: null,
       };
     });
-  } catch {
+  } catch (e) {
+    logError('listNotifications.feed', e);
     return [];
   }
 }
@@ -142,12 +101,7 @@ export async function listNotifications(
   if (!supabase) return { data: [], unread: 0, demo: true };
 
   const now = new Date();
-  const team = await descendantIds();
-  const [birthdays, newMembers] = await Promise.all([
-    birthdayNotifications(now, team),
-    newMemberNotifications(now, team),
-  ]);
-  let data = [...newMembers, ...birthdays];
+  let data = await notificationFeed(now);
 
   // Apply persisted state: drop dismissed, stamp read_at from notification_state.
   try {
