@@ -21,12 +21,15 @@ export interface GenealogySearchProps {
   onSearch: (q: string) => Promise<TreeNode[]>;
   onPick: (node: TreeNode) => void;
   className?: string;
+  /** Debounce before searching. 0 for an in-memory (client) source = instant. */
+  debounceMs?: number;
 }
 
 export function GenealogySearch({
   onSearch,
   onPick,
   className,
+  debounceMs = 220,
 }: GenealogySearchProps) {
   const t = useTranslations('genealogia');
   const tc = useTranslations('common');
@@ -58,9 +61,9 @@ export function GenealogySearch({
       setActive(0);
       setOpen(true);
       setLoading(false);
-    }, 220);
+    }, debounceMs);
     return () => window.clearTimeout(handle);
-  }, [query, onSearch]);
+  }, [query, onSearch, debounceMs]);
 
   // Outside click closes the popover.
   React.useEffect(() => {

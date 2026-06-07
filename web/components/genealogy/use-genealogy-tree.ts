@@ -51,6 +51,8 @@ export interface UseGenealogyTree {
   /** Look a node up in the loaded cache. */
   getNode: (id: string) => TreeNode | undefined;
   search: (q: string) => Promise<TreeNode[]>;
+  /** Instant client-side name filter over the loaded cache (no server round-trip). */
+  searchLocal: (q: string) => TreeNode[];
   /** Insert a freshly created child under a parent leg (add-from-tree). */
   addChild: (parentId: string, leg: PlacementLeg, node: TreeNode) => void;
   /** Remove a node, reattaching its single child into its slot under the parent. */
@@ -261,6 +263,22 @@ export function useGenealogyTree({
     return res.nodes;
   }, []);
 
+  // Instant search: the whole org is already in the cache, so filter it on the
+  // client (no server round-trip) — the box feels immediate at every keystroke.
+  const searchLocal = React.useCallback(
+    (q: string): TreeNode[] => {
+      const needle = q.trim().toLowerCase();
+      if (!needle) return [];
+      const out: TreeNode[] = [];
+      for (const n of cache.values()) {
+        if (n.display_name.toLowerCase().includes(needle)) out.push(n);
+      }
+      out.sort((a, b) => a.display_name.localeCompare(b.display_name, 'it'));
+      return out.slice(0, 20);
+    },
+    [cache],
+  );
+
   // Insert a freshly created child into the cache and bump the parent's counts /
   // slot flags, then keep the parent expanded so the new node shows immediately.
   const addChild = React.useCallback(
@@ -353,6 +371,7 @@ export function useGenealogyTree({
     reload,
     getNode,
     search,
+    searchLocal,
     addChild,
     removeNode,
   };

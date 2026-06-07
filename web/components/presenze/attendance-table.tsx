@@ -305,11 +305,19 @@ export function AttendanceTable({
   );
   const dayPct = totalSlots ? Math.round((filledSlots / totalSlots) * 100) : 0;
 
-  // Name filter applied to the per-call grids (totals/gauges stay full-day).
-  const needle = query.trim().toLowerCase();
-  const shownMembers = needle
-    ? members.filter((m) => m.display_name.toLowerCase().includes(needle))
-    : members;
+  // Name filter applied to the per-call grids (totals/gauges stay full-day). The
+  // query is DEFERRED: the input updates instantly while the heavy grid re-render
+  // (hundreds of cards per call) runs at low priority — so typing never lags. Memoized
+  // so realtime echoes don't re-run the filter.
+  const deferredQuery = React.useDeferredValue(query);
+  const needle = deferredQuery.trim().toLowerCase();
+  const shownMembers = React.useMemo(
+    () =>
+      needle
+        ? members.filter((m) => m.display_name.toLowerCase().includes(needle))
+        : members,
+    [members, needle],
+  );
 
   const showOverview = members.length > 0 && calls.length > 0;
 
