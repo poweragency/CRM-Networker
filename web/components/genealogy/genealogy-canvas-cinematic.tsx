@@ -144,6 +144,13 @@ function rankColor(rank: MarketerRank, pal: Palette): string {
   return key ? hsl(pal[key], 1) : 'rgba(255,255,255,0.55)';
 }
 
+/** Rank color as a raw "H S% L%" triplet (so callers can apply their own alpha).
+ *  cliente/no_rank fall back to a neutral grey. */
+function rankTriplet(rank: MarketerRank, pal: Palette): string {
+  const key = RANK_COLOR_KEY[rank];
+  return key ? pal[key] : '0 0% 70%';
+}
+
 function readPalette(el: HTMLElement): Palette {
   const cs = getComputedStyle(el);
   const out = {} as Palette;
@@ -493,24 +500,23 @@ function CinematicInner(
       const dimFactor = dimSpilloverRef.current && isSpill && !isSel ? 0.4 : 1;
 
       if (mode === 'dot') {
+        // Zoomed-out dots carry the RANK color so a leader spots who's where.
+        const rt = rankTriplet(n.rank, pal);
         const r = Math.max(2.5, Math.min(9, 7 * zoom)) * (isSel ? 1.5 : 1);
         if (isSel) {
-          ctx.shadowColor = hsl(accent, 0.9);
+          ctx.shadowColor = hsl(rt, 0.9);
           ctx.shadowBlur = 18;
         }
         ctx.beginPath();
         ctx.arc(sx + sw / 2, sy + sh / 2, r, 0, Math.PI * 2);
-        ctx.fillStyle = hsl(isSpill ? pal.info : accent, depthFade);
+        ctx.fillStyle = hsl(rt, depthFade);
         ctx.globalAlpha = depthFade * dimFactor;
         ctx.fill();
         ctx.globalAlpha = 1;
         ctx.shadowBlur = 0;
-        if (isSel || prestige || isSpill) {
+        if (isSel) {
           ctx.lineWidth = 2;
-          ctx.strokeStyle = hsl(
-            isSpill ? pal.info : prestige ? pal.warning : pal.primary,
-            0.95,
-          );
+          ctx.strokeStyle = 'rgba(255,255,255,0.95)';
           ctx.stroke();
         }
         continue;

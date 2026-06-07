@@ -483,13 +483,14 @@ export function stageIndex(stage: ProspectStage): number {
   return STAGE_ORDER.indexOf(stage) + 1;
 }
 
-/** `prospect_outcome` — funnel result. */
-export type ProspectOutcome = 'open' | 'enrolled' | 'lost';
+/** `prospect_outcome` — funnel result. A prospect is either still in progress
+ *  (`open`) or enrolled (`enrolled`). There is NO "lost" state: losing a prospect
+ *  means deleting it. */
+export type ProspectOutcome = 'open' | 'enrolled';
 
 export const PROSPECT_OUTCOME_LABELS: Record<ProspectOutcome, string> = {
   open: 'In corso',
   enrolled: 'Iscritto',
-  lost: 'Perso',
 };
 
 export const PROSPECT_OUTCOME_TONE: Record<
@@ -498,7 +499,6 @@ export const PROSPECT_OUTCOME_TONE: Record<
 > = {
   open: 'default',
   enrolled: 'success',
-  lost: 'danger',
 };
 
 /** A row of `prospects` (current stage denormalized; history in events). */

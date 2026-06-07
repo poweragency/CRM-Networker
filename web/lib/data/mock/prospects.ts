@@ -50,7 +50,7 @@ function buildProspect(s: Seed): Prospect {
   // Spread the elapsed age across the stages reached so far.
   const perStage = s.ageDays / (stageIdx + 1);
   const sinceDays = perStage; // time in the current (latest) stage
-  const enrolled = s.outcome === 'enrolled' || s.outcome === 'lost';
+  const enrolled = s.outcome === 'enrolled';
   return {
     id: s.id,
     org_id: DEMO_ORG_ID,

@@ -14,6 +14,7 @@ import {
   Check,
   X,
   Radio,
+  Search,
   Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -98,6 +99,8 @@ export function AttendanceTable({
   const [cam, setCam] = React.useState<Flags>(() => seed(members, (m) => m.cam));
   // Live (Realtime) connection indicator.
   const [live, setLive] = React.useState(false);
+  // Live name filter: typing hides everyone who doesn't match.
+  const [query, setQuery] = React.useState('');
 
   React.useEffect(() => {
     setPresent(seed(members, (m) => m.present));
@@ -238,6 +241,12 @@ export function AttendanceTable({
   );
   const dayPct = totalSlots ? Math.round((filledSlots / totalSlots) * 100) : 0;
 
+  // Name filter applied to the per-call grids (totals/gauges stay full-day).
+  const needle = query.trim().toLowerCase();
+  const shownMembers = needle
+    ? members.filter((m) => m.display_name.toLowerCase().includes(needle))
+    : members;
+
   const showOverview = members.length > 0 && calls.length > 0;
 
   return (
@@ -270,6 +279,31 @@ export function AttendanceTable({
           </Button>
         )}
         <div className="ml-auto flex items-center gap-2">
+          {/* Live name filter — typing hides everyone who doesn't match. */}
+          <div className="relative">
+            <Search
+              className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden
+            />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t('search_placeholder')}
+              aria-label={t('search_placeholder')}
+              className="h-9 w-40 rounded-md border border-input bg-background pl-8 pr-7 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-52"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery('')}
+                aria-label="×"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" aria-hidden />
+              </button>
+            )}
+          </div>
           {live && (
             <span
               className="inline-flex items-center gap-1 rounded-full bg-success/12 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-success ring-1 ring-success/25"
@@ -399,8 +433,13 @@ export function AttendanceTable({
                   </header>
 
                   {/* Member grid: each cell = name + presence/cam toggles. */}
+                  {shownMembers.length === 0 ? (
+                    <p className="px-4 py-6 text-center text-sm text-muted-foreground">
+                      {t('search_empty')}
+                    </p>
+                  ) : (
                   <div className="grid gap-2 p-4 [grid-template-columns:repeat(auto-fill,minmax(14rem,1fr))]">
-                    {members.map((m) => {
+                    {shownMembers.map((m) => {
                       const isPresent = present[m.id]?.[c.id] ?? false;
                       const camOn = cam[m.id]?.[c.id] ?? false;
                       return (
@@ -465,6 +504,7 @@ export function AttendanceTable({
                       );
                     })}
                   </div>
+                  )}
                 </section>
               );
             })}
