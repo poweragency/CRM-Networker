@@ -497,7 +497,9 @@ export async function getSubtree(
   rootId: string,
   scope: BranchScope,
   maxDepth = TREE_LOAD_DEPTH,
+  opts: { funnel?: boolean } = {},
 ): Promise<GenealogyResult<TreeNode[]>> {
+  const withFunnel = opts.funnel !== false;
   if (!isSupabaseConfigured) {
     return { data: mockSubtree(rootId, scope), demo: true };
   }
@@ -505,25 +507,41 @@ export async function getSubtree(
     const supabase = createClient();
     if (!supabase) return { data: mockSubtree(rootId, scope), demo: true };
 
-    // Page the RPC with .range() so a subtree larger than PostgREST's row cap loads
-    // FULLY (each page stays under the cap). PAGE ≤ the platform default (1000) so a
-    // short page reliably signals "no more rows". The closure scan re-runs per page
-    // (deterministic ORDER BY in the function keeps paging consistent).
-    const PAGE = 500;
+    // The `get_subtree` RPC returns a TABLE → PostgREST RE-RUNS the whole function for
+    // every .range() page. So instead of blind paging (which re-scanned 3× for a
+    // 1000-node org), we read the authoritative subtree size from the closure (cheap,
+    // indexed) and request exactly that many rows in ONE call. Only if the platform
+    // row cap truncates the response (subtree > cap) do we fetch the remainder.
+    let total = 0;
+    try {
+      const { count } = await supabase
+        .from('marketer_tree_closure')
+        .select('descendant_id', { count: 'exact', head: true })
+        .eq('ancestor_id', rootId);
+      total = count ?? 0;
+    } catch {
+      /* total stays 0 → fall back to incremental short-page detection */
+    }
+
     const rows: MarketerRow[] = [];
-    for (let from = 0; ; from += PAGE) {
+    for (;;) {
+      const want = total > 0 ? total - rows.length : 1000;
+      if (want <= 0) break;
       const { data, error } = await supabase
         .rpc('get_subtree', { node_id: rootId, max_depth: maxDepth })
-        .range(from, from + PAGE - 1);
+        .range(rows.length, rows.length + want - 1);
       if (error) {
-        // A hard error on the first page → empty (the real state); mid-paging → keep
-        // what we have rather than dropping the whole tree.
-        if (from === 0) return { data: [], demo: false };
+        if (rows.length === 0) return { data: [], demo: false };
         break;
       }
       const batch = (data ?? []) as MarketerRow[];
       rows.push(...batch);
-      if (batch.length < PAGE) break;
+      if (batch.length === 0) break;
+      if (total > 0) {
+        if (rows.length >= total) break;
+      } else if (batch.length < want) {
+        break; // unknown total → a short page means we're done
+      }
     }
 
     if (rows.length === 0) {
@@ -536,10 +554,14 @@ export async function getSubtree(
         ? rows
         : rows.filter((r) => r.id === rootId || r.branch_leg === scope);
 
+    const nodes = filtered.map(toTreeNode);
+    // Funnel KPIs are only needed by the tree viewer/profile. Callers that just need
+    // the member list (e.g. Presenze) pass funnel:false to skip the extra aggregation.
+    if (!withFunnel) return { data: nodes, demo: false };
+
     // get_subtree already returns team sizes; enrich with the funnel KPIs the RPC
     // doesn't compute. Each node shows its WHOLE-SUBTREE roll-up (team prospects +
     // team-wide conversion), so the tree reads as a leader's overview.
-    const nodes = filtered.map(toTreeNode);
     const personal = await fetchPersonalFunnel(supabase, nodes.map((n) => n.id));
     const agg = aggregateSubtree(nodes, personal);
     return { data: stampFunnel(nodes, agg), demo: false };

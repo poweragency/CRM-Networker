@@ -1,6 +1,6 @@
 import 'server-only';
 import { fetchAllRows, getClient, getOwnerContext } from '@/lib/data/crm-shared';
-import { getSubtree } from '@/lib/data/genealogy';
+import { getSubtree, TREE_LOAD_DEPTH } from '@/lib/data/genealogy';
 import {
   weekdayOf,
   type AttendanceMember,
@@ -66,7 +66,9 @@ const byTimeThenTitle = (a: ZoomCallDef, b: ZoomCallDef) =>
 /** Attendance for the viewer's subtree on a given day (ISO `YYYY-MM-DD`). */
 export async function getZoomAttendance(date: string): Promise<AttendanceResult> {
   const { marketerId, demo } = await getOwnerContext();
-  const sub = await getSubtree(marketerId, 'GLOBAL');
+  // Presenze only needs the member list (id/name/rank/status) — skip the funnel
+  // roll-up (funnel:false) so the day view doesn't pay for KPI aggregation.
+  const sub = await getSubtree(marketerId, 'GLOBAL', TREE_LOAD_DEPTH, { funnel: false });
   const supabase = getClient();
   const wd = weekdayOf(date);
 
