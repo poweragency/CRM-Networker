@@ -144,32 +144,36 @@ function withCounts(
 
 /** Raw (un-rated) funnel counts for ONE marketer — summable across a subtree. */
 interface PersonalFunnel {
-  /** Prospects still "in ballo" — open funnel + Lista-100 entries in percorso that
-   *  aren't concluded. Excludes enrolled/lost AND deleted (the headline count). */
+  /** Prospects still "in ballo" RIGHT NOW — open funnel + Lista-100 entries in
+   *  percorso that aren't concluded. A live snapshot (NOT monthly): excludes
+   *  enrolled/lost AND deleted. */
   prospects: number;
-  /** How many reached Business Info, EVER (the conversion denominator — counts
-   *  open + enrolled + lost, so the rate reflects the full history). */
+  /** Reached Business Info among THIS MONTH's intake (the monthly conversion
+   *  denominator — prospects entered this month, stage >= business_info). */
   businessInfo: number;
-  /** Enrollments (iscrizioni). */
+  /** Enrollments THIS MONTH (prospects entered this month, stage iscrizione). */
   iscrizioni: number;
 }
 const ZERO_FUNNEL: PersonalFunnel = { prospects: 0, businessInfo: 0, iscrizioni: 0 };
 const BUSINESS_INFO_IDX = STAGE_ORDER.indexOf('business_info');
 
 /**
- * Per-marketer PERSONAL funnel counts (audit: these were hardcoded to 0). A
- * prospect "in ballo" comes from TWO sources, both counted:
- *   1. the `prospects` table (the Percorso Prospect kanban), and
- *   2. `lista_contatti_entries.percorso >= 1` — Lista-100 contacts moved into the
- *      funnel (percorso 1..5 = Business Info → Iscrizione). These are NOT in the
- *      prospects table (promote creates a contact, not a prospect), so the old
- *      count silently missed them.
- * The headline `prospects` count includes ONLY active prospects (open / not yet
- * concluded) — enrolled, lost and deleted are excluded, so a leader sees how many
- * are genuinely "in ballo". The conversion counters (businessInfo / iscrizioni)
- * still span the full history. Returns raw counts (not a ratio) so they can be
- * summed over a subtree before conversion is computed. Two queries for the whole
- * id set; RLS scopes each to what the caller can see.
+ * Per-marketer PERSONAL funnel counts (audit: these were hardcoded to 0).
+ *
+ * `prospects` = how many are "in ballo" right now — a LIVE snapshot from two
+ * sources: the `prospects` table (open only) + `lista_contatti_entries` with
+ * percorso 1..4 not concluded (Lista-100 contacts in the funnel; they're not in
+ * the prospects table since promote makes a contact). Excludes enrolled/lost/
+ * deleted. NOT time-scoped — an open prospect stays "in ballo".
+ *
+ * `iscrizioni` + `businessInfo` are MONTHLY (reset on the 1st): they count only
+ * prospects whose `entered_funnel_at` is in the current month (same cohort the
+ * dashboard uses), so the conversion = monthly iscritti / monthly business-info.
+ * Lista-100 entries have no reliable funnel-entry date, so they feed only the
+ * live "in ballo" count, not the monthly metrics.
+ *
+ * Returns raw counts so they can be summed over a subtree before the rate is
+ * computed. Two queries for the whole id set; RLS scopes each to the caller.
  */
 async function fetchPersonalFunnel(
   supabase: SupabaseServerClient,
@@ -179,30 +183,40 @@ async function fetchPersonalFunnel(
   for (const id of ids) out.set(id, { ...ZERO_FUNNEL });
   if (ids.length === 0) return out;
 
-  // 1. Prospects table (kanban pipeline). Only `open` ones count as "in ballo".
+  // Current-month boundary (local, matching the dashboard's monthly cohort).
+  const now = new Date();
+  const monthStartMs = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+  // 1. Prospects table. `open` → live "in ballo"; THIS MONTH's intake → monthly
+  //    business-info / iscrizioni (the conversion is monthly).
   try {
     const { data } = await supabase
       .from('prospects')
-      .select('owner_marketer_id, current_stage, outcome')
+      .select('owner_marketer_id, current_stage, outcome, entered_funnel_at')
       .in('owner_marketer_id', ids)
       .is('deleted_at', null);
     for (const r of (data ?? []) as {
       owner_marketer_id: string;
       current_stage: ProspectStage;
       outcome: ProspectOutcome;
+      entered_funnel_at: string;
     }[]) {
       const f = out.get(r.owner_marketer_id);
       if (!f) continue;
-      if (r.outcome === 'open') f.prospects += 1; // exclude enrolled/lost
-      if (STAGE_ORDER.indexOf(r.current_stage) >= BUSINESS_INFO_IDX) f.businessInfo += 1;
-      if (r.current_stage === 'iscrizione') f.iscrizioni += 1;
+      if (r.outcome === 'open') f.prospects += 1; // live snapshot (any date)
+      const enteredThisMonth =
+        new Date(r.entered_funnel_at).getTime() >= monthStartMs;
+      if (enteredThisMonth) {
+        if (STAGE_ORDER.indexOf(r.current_stage) >= BUSINESS_INFO_IDX) f.businessInfo += 1;
+        if (r.current_stage === 'iscrizione') f.iscrizioni += 1;
+      }
     }
   } catch {
     /* best-effort */
   }
 
-  // 2. Lista-100 entries in percorso (percorso 1..5 = Business Info → Iscrizione).
-  // "In ballo" excludes the concluded ones (iscritto / non iscritto / percorso 5).
+  // 2. Lista-100 entries in percorso → only the live "in ballo" snapshot (no
+  //    reliable funnel-entry date, so they don't feed the monthly metrics).
   try {
     const { data } = await supabase
       .from('lista_contatti_entries')
@@ -220,8 +234,6 @@ async function fetchPersonalFunnel(
       const concluded =
         r.percorso >= 5 || r.stato === 'iscritto' || r.stato === 'non_iscritto';
       if (!concluded) f.prospects += 1; // still in ballo
-      f.businessInfo += 1; // percorso >= 1 → already reached Business Info
-      if (r.percorso >= 5 || r.stato === 'iscritto') f.iscrizioni += 1; // enrolled
     }
   } catch {
     /* best-effort */

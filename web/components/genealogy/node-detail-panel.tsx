@@ -233,14 +233,14 @@ export function NodeDetailPanel({
             />
             <StatRow
               icon={UserPlus}
-              label={t('kpi_iscrizioni')}
+              label={`${t('kpi_iscrizioni')} (mese)`}
               value={formatNumber(node.kpis.iscrizioni)}
               accent="text-success"
               accentBg="bg-success/12"
             />
             <StatRow
               icon={TrendingUp}
-              label={t('kpi_conversion')}
+              label={`${t('kpi_conversion')} (mese)`}
               value={formatPercent(node.kpis.conversion_rate)}
               accent="text-warning"
               accentBg="bg-warning/12"
