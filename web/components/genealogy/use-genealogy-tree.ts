@@ -228,10 +228,23 @@ export function useGenealogyTree({
     if (!needle) return [];
     const res = await searchMarketersAction(needle);
     if (res.demo) setDemo(true);
-    // Fold results into the cache so a jump can resolve without a second fetch.
-    mergeNodes(res.nodes);
+    // Search results are identity-only (team counts + KPIs are 0). Fold them in
+    // WITHOUT clobbering a node already loaded with real data — only add ones not
+    // yet cached (an out-of-window hit), so picking a person never zeroes their
+    // card. revealNode reloads the full subtree if a hit's ancestors are missing.
+    setCache((prev) => {
+      let changed = false;
+      const next = new Map(prev);
+      for (const n of res.nodes) {
+        if (!next.has(n.id)) {
+          next.set(n.id, n);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
     return res.nodes;
-  }, [mergeNodes]);
+  }, []);
 
   // Insert a freshly created child into the cache and bump the parent's counts /
   // slot flags, then keep the parent expanded so the new node shows immediately.
