@@ -26,10 +26,16 @@ import { EmptyState } from '@/components/crm/empty-state';
 import { useToast } from '@/components/crm/toaster';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
-import type { AttendanceMember, ZoomCallDef } from '@/lib/data/attendance-shared';
+import type {
+  AttendanceMember,
+  AttendanceSummary,
+  ZoomCallDef,
+} from '@/lib/data/attendance-shared';
 import { CompletionRing } from '@/components/presenze/completion-ring';
 import {
-  getZoomDayAction,
+  getAttendancePageAction,
+  getAttendanceSummaryAction,
+  getAttendanceViewAction,
   setZoomAttendanceAction,
   setZoomCamAction,
 } from '@/app/(app)/presenze/actions';
@@ -42,10 +48,10 @@ import {
  * show. Present + cam toggles are optimistic and persisted; a call hitting 100%
  * of the team fires an achievement (confetti).
  *
- * The redesign layers an overview hero (aggregate rings + day leaderboard) over
- * per-call "challenge" cards — all derived purely from the present/cam flags, no
- * new data. The per-member grid preserves the exact columns: name + Present +
- * Cam toggles (no cam-rate here — that lives only in the dashboard leaderboard).
+ * SCALE: the grid PAGES through members (server search + "mostra altri") instead
+ * of holding the whole subtree, and the day-wide gauges read a server-computed
+ * SUMMARY (X/total present, day %, 100% achievement) so they stay exact even
+ * though the client only holds a page of people.
  */
 
 function shiftDay(iso: string, delta: number): string {
@@ -61,8 +67,7 @@ function seed(members: AttendanceMember[], pick: (m: AttendanceMember) => Record
   return Object.fromEntries(members.map((m) => [m.id, { ...pick(m) }]));
 }
 
-/** Add ONLY missing members to the flags, preserving live marks (never wipes). Used
- *  when the `members` prop gets a new reference without an actual day change. */
+/** Add ONLY new members to the flags (load-more append), preserving live marks. */
 function mergeSeed(
   prev: Flags,
   members: AttendanceMember[],
@@ -77,20 +82,6 @@ function mergeSeed(
     }
   }
   return changed ? next : prev;
-}
-
-/** Build member→call flags from a flat `${mid}|${cid}` map (a day-switch payload). */
-function seedFromFlat(
-  members: AttendanceMember[],
-  calls: ZoomCallDef[],
-  flat: Record<string, boolean>,
-): Flags {
-  return Object.fromEntries(
-    members.map((m) => [
-      m.id,
-      Object.fromEntries(calls.map((c) => [c.id, flat[`${m.id}|${c.id}`] ?? false])),
-    ]),
-  );
 }
 
 /**
@@ -116,44 +107,92 @@ function callTone(ratio: number): {
 export function AttendanceTable({
   date: initialDate,
   calls: initialCalls,
-  members,
+  members: initialMembers,
+  total: initialTotal,
+  summary: initialSummary,
+  pageSize,
   today,
 }: {
   date: string;
   calls: ZoomCallDef[];
   members: AttendanceMember[];
+  total: number;
+  summary: AttendanceSummary;
+  pageSize: number;
   today: string;
 }) {
   const t = useTranslations('presenze');
   const { toast } = useToast();
 
-  // Day + calls are CLIENT state: switching day refetches only the day's payload
-  // (calls + attendance) and never reloads the team — so it's instant. The team
-  // (`members`) is loaded once by the server and stays put.
+  // Day + calls are CLIENT state: switching day refetches the day's page +
+  // summary (NOT the whole team) and syncs the URL via history.
   const [date, setDate] = React.useState(initialDate);
   const [calls, setCalls] = React.useState<ZoomCallDef[]>(initialCalls);
   const [dayLoading, setDayLoading] = React.useState(false);
+  const dateRef = React.useRef(date);
+  dateRef.current = date;
 
-  const [present, setPresent] = React.useState<Flags>(() => seed(members, (m) => m.present));
-  const [cam, setCam] = React.useState<Flags>(() => seed(members, (m) => m.cam));
-  // Live (Realtime) connection indicator.
+  // Members are SERVER-PAGINATED: a page at a time, search + "mostra altri" fetch
+  // more. `total` = members matching the current search.
+  const [members, setMembers] = React.useState<AttendanceMember[]>(initialMembers);
+  const [total, setTotal] = React.useState(initialTotal);
+  // Day-wide counters (whole subtree) — the denominator of every gauge.
+  const [summary, setSummary] = React.useState<AttendanceSummary>(initialSummary);
+
+  const [present, setPresent] = React.useState<Flags>(() => seed(initialMembers, (m) => m.present));
+  const [cam, setCam] = React.useState<Flags>(() => seed(initialMembers, (m) => m.cam));
   const [live, setLive] = React.useState(false);
-  // Live name filter: typing hides everyone who doesn't match.
   const [query, setQuery] = React.useState('');
+  const [searching, setSearching] = React.useState(false);
+  const [loadingMore, setLoadingMore] = React.useState(false);
 
-  // Only ADD members that aren't already tracked — never re-seed (which would wipe
-  // marks the user just made, since `members` carries the INITIAL day's flags while
-  // the day is now managed client-side via `go`). The day's own values come from the
-  // useState initializer (mount) and from `go` (day switch).
+  const reqRef = React.useRef(0);
+  const firstRun = React.useRef(true);
+
+  // ── Debounced SERVER search: typing fetches the matching first page. ──
   React.useEffect(() => {
-    setPresent((prev) => mergeSeed(prev, members, (m) => m.present));
-    setCam((prev) => mergeSeed(prev, members, (m) => m.cam));
-  }, [members]);
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
+    const needle = query.trim();
+    const id = ++reqRef.current;
+    setSearching(true);
+    const timer = window.setTimeout(
+      async () => {
+        try {
+          const res = await getAttendancePageAction(dateRef.current, needle, 0, pageSize);
+          if (reqRef.current !== id) return;
+          setMembers(res.members);
+          setTotal(res.total);
+          setPresent(seed(res.members, (m) => m.present));
+          setCam(seed(res.members, (m) => m.cam));
+        } finally {
+          if (reqRef.current === id) setSearching(false);
+        }
+      },
+      needle ? 160 : 0,
+    );
+    return () => window.clearTimeout(timer);
+  }, [query, pageSize]);
+
+  const loadMore = React.useCallback(async () => {
+    setLoadingMore(true);
+    try {
+      const res = await getAttendancePageAction(dateRef.current, query.trim(), members.length, pageSize);
+      setMembers((prev) => [...prev, ...res.members]);
+      setTotal(res.total);
+      setPresent((prev) => mergeSeed(prev, res.members, (m) => m.present));
+      setCam((prev) => mergeSeed(prev, res.members, (m) => m.cam));
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [query, members.length, pageSize]);
 
   // ── Realtime: reflect everyone else's check-ins live (no manual refresh). ──
-  // A leader watching at the start of a Zoom sees presences/cams appear as the
-  // team taps them. RLS on zoom_attendance scopes the stream to the viewer's
-  // subtree, and we double-guard client-side against the loaded members/calls.
+  // RLS on zoom_attendance scopes the stream to the viewer's subtree. We update
+  // the cell only when the member is on the loaded page; the gauges are kept exact
+  // by a debounced refetch of the server summary (works for off-page members too).
   const supabase = React.useMemo(() => createClient(), []);
   const memberIdSet = React.useMemo(() => new Set(members.map((m) => m.id)), [members]);
   const callIdSet = React.useMemo(() => new Set(calls.map((c) => c.id)), [calls]);
@@ -161,9 +200,17 @@ export function AttendanceTable({
   const callIdSetRef = React.useRef(callIdSet);
   memberIdSetRef.current = memberIdSet;
   callIdSetRef.current = callIdSet;
-  // Cells with an in-flight optimistic write (key `${mid}|${cid}|p` or `|c`), so a
-  // Realtime echo carrying a stale value can't revert what the user just tapped.
   const pendingRef = React.useRef<Set<string>>(new Set());
+  const summaryTimerRef = React.useRef<number | null>(null);
+
+  const refetchSummary = React.useCallback(() => {
+    if (summaryTimerRef.current) window.clearTimeout(summaryTimerRef.current);
+    const forDate = dateRef.current;
+    summaryTimerRef.current = window.setTimeout(async () => {
+      const s = await getAttendanceSummaryAction(forDate);
+      if (dateRef.current === forDate) setSummary(s);
+    }, 400);
+  }, []);
 
   React.useEffect(() => {
     if (!supabase) return;
@@ -185,26 +232,29 @@ export function AttendanceTable({
           ) as { marketer_id?: string; call_id?: string | null; present?: boolean; cam?: boolean };
           const mid = rec?.marketer_id;
           const cid = rec?.call_id ?? undefined;
-          if (!mid || !cid) return;
-          if (!memberIdSetRef.current.has(mid) || !callIdSetRef.current.has(cid)) return;
+          if (!mid || !cid || !callIdSetRef.current.has(cid)) return;
           const removed = payload.eventType === 'DELETE';
           const nextPresent = removed ? false : Boolean(rec.present);
           const nextCam = removed ? false : Boolean(rec.cam);
-          // Don't clobber a cell the user is mid-saving (avoids revert flicker).
-          if (!pendingRef.current.has(`${mid}|${cid}|p`)) {
-            setPresent((prev) =>
-              prev[mid]?.[cid] === nextPresent
-                ? prev
-                : { ...prev, [mid]: { ...(prev[mid] ?? {}), [cid]: nextPresent } },
-            );
+          // Update the visible cell only when the member is on the loaded page.
+          if (memberIdSetRef.current.has(mid)) {
+            if (!pendingRef.current.has(`${mid}|${cid}|p`)) {
+              setPresent((prev) =>
+                prev[mid]?.[cid] === nextPresent
+                  ? prev
+                  : { ...prev, [mid]: { ...(prev[mid] ?? {}), [cid]: nextPresent } },
+              );
+            }
+            if (!pendingRef.current.has(`${mid}|${cid}|c`)) {
+              setCam((prev) =>
+                prev[mid]?.[cid] === nextCam
+                  ? prev
+                  : { ...prev, [mid]: { ...(prev[mid] ?? {}), [cid]: nextCam } },
+              );
+            }
           }
-          if (!pendingRef.current.has(`${mid}|${cid}|c`)) {
-            setCam((prev) =>
-              prev[mid]?.[cid] === nextCam
-                ? prev
-                : { ...prev, [mid]: { ...(prev[mid] ?? {}), [cid]: nextCam } },
-            );
-          }
+          // Keep the day-wide gauges exact (also for off-page members).
+          refetchSummary();
         },
       )
       .subscribe((status) => setLive(status === 'SUBSCRIBED'));
@@ -212,21 +262,22 @@ export function AttendanceTable({
       setLive(false);
       supabase.removeChannel(channel);
     };
-  }, [supabase, date]);
+  }, [supabase, date, refetchSummary]);
 
-  // Switch day WITHOUT a server round-trip for the team: fetch only the day's
-  // calls + attendance, reseed the flags, and sync the URL via history (no Next
-  // navigation, so the heavy subtree load doesn't re-run).
+  // Switch day: refetch the day's first page + summary (NOT the whole team).
   const go = React.useCallback(
     async (nextDate: string) => {
       if (nextDate === date || dayLoading) return;
       setDayLoading(true);
       try {
-        const res = await getZoomDayAction(nextDate);
+        const res = await getAttendanceViewAction(nextDate, query.trim(), pageSize);
         setDate(nextDate);
         setCalls(res.calls);
-        setPresent(seedFromFlat(members, res.calls, res.present));
-        setCam(seedFromFlat(members, res.calls, res.cam));
+        setMembers(res.members);
+        setTotal(res.total);
+        setSummary(res.summary);
+        setPresent(seed(res.members, (m) => m.present));
+        setCam(seed(res.members, (m) => m.cam));
         if (typeof window !== 'undefined') {
           window.history.replaceState(null, '', `/presenze?date=${nextDate}`);
         }
@@ -236,15 +287,20 @@ export function AttendanceTable({
         setDayLoading(false);
       }
     },
-    [date, dayLoading, members, t, toast],
+    [date, dayLoading, query, pageSize, t, toast],
   );
 
   async function togglePresent(member: AttendanceMember, callId: string) {
     const next = !present[member.id]?.[callId];
-    const before = members.filter((m) => present[m.id]?.[callId]).length;
     const key = `${member.id}|${callId}|p`;
     pendingRef.current.add(key);
-    setPresent((prev) => ({ ...prev, [member.id]: { ...prev[member.id]!, [callId]: next } }));
+    setPresent((prev) => ({ ...prev, [member.id]: { ...prev[member.id], [callId]: next } }));
+    // Optimistic gauge: bump the day-wide count for this call.
+    const before = summary.presentCounts[callId] ?? 0;
+    setSummary((prev) => ({
+      ...prev,
+      presentCounts: { ...prev.presentCounts, [callId]: Math.max(0, (prev.presentCounts[callId] ?? 0) + (next ? 1 : -1)) },
+    }));
     let res: { ok: boolean };
     try {
       res = await setZoomAttendanceAction(member.id, date, callId, next);
@@ -252,12 +308,17 @@ export function AttendanceTable({
       pendingRef.current.delete(key);
     }
     if (!res.ok) {
-      setPresent((prev) => ({ ...prev, [member.id]: { ...prev[member.id]!, [callId]: !next } }));
+      setPresent((prev) => ({ ...prev, [member.id]: { ...prev[member.id], [callId]: !next } }));
+      setSummary((prev) => ({
+        ...prev,
+        presentCounts: { ...prev.presentCounts, [callId]: Math.max(0, (prev.presentCounts[callId] ?? 0) + (next ? -1 : 1)) },
+      }));
       toast({ title: t('error'), variant: 'error' });
       return;
     }
+    // Whole team present for this call → achievement.
     const after = before + (next ? 1 : -1);
-    if (next && members.length > 0 && after === members.length) {
+    if (next && summary.totalMembers > 0 && after === summary.totalMembers) {
       const call = calls.find((c) => c.id === callId);
       toast({
         title: t('full_house_title'),
@@ -271,7 +332,11 @@ export function AttendanceTable({
     const next = !cam[member.id]?.[callId];
     const key = `${member.id}|${callId}|c`;
     pendingRef.current.add(key);
-    setCam((prev) => ({ ...prev, [member.id]: { ...prev[member.id]!, [callId]: next } }));
+    setCam((prev) => ({ ...prev, [member.id]: { ...prev[member.id], [callId]: next } }));
+    setSummary((prev) => ({
+      ...prev,
+      camCounts: { ...prev.camCounts, [callId]: Math.max(0, (prev.camCounts[callId] ?? 0) + (next ? 1 : -1)) },
+    }));
     let res: { ok: boolean };
     try {
       res = await setZoomCamAction(member.id, date, callId, next);
@@ -279,7 +344,11 @@ export function AttendanceTable({
       pendingRef.current.delete(key);
     }
     if (!res.ok) {
-      setCam((prev) => ({ ...prev, [member.id]: { ...prev[member.id]!, [callId]: !next } }));
+      setCam((prev) => ({ ...prev, [member.id]: { ...prev[member.id], [callId]: !next } }));
+      setSummary((prev) => ({
+        ...prev,
+        camCounts: { ...prev.camCounts, [callId]: Math.max(0, (prev.camCounts[callId] ?? 0) + (next ? -1 : 1)) },
+      }));
       toast({ title: t('error'), variant: 'error' });
     }
   }
@@ -293,45 +362,15 @@ export function AttendanceTable({
 
   const isToday = date === today;
 
-  // ── Day-wide aggregates (derived only from the live present/cam flags). ────
-  const totalSlots = members.length * calls.length;
-  const filledSlots = members.reduce(
-    (acc, m) => acc + calls.filter((c) => present[m.id]?.[c.id]).length,
-    0,
-  );
-  const filledCams = members.reduce(
-    (acc, m) => acc + calls.filter((c) => cam[m.id]?.[c.id]).length,
-    0,
-  );
+  // ── Day-wide aggregates (from the SERVER summary, whole subtree). ──────────
+  const totalMembers = summary.totalMembers;
+  const totalSlots = totalMembers * calls.length;
+  const filledSlots = calls.reduce((acc, c) => acc + (summary.presentCounts[c.id] ?? 0), 0);
+  const filledCams = calls.reduce((acc, c) => acc + (summary.camCounts[c.id] ?? 0), 0);
   const dayPct = totalSlots ? Math.round((filledSlots / totalSlots) * 100) : 0;
 
-  // Name filter applied to the per-call grids (totals/gauges stay full-day). The
-  // query is DEFERRED: the input updates instantly while the heavy grid re-render
-  // (hundreds of cards per call) runs at low priority — so typing never lags. Memoized
-  // so realtime echoes don't re-run the filter.
-  const deferredQuery = React.useDeferredValue(query);
-  const needle = deferredQuery.trim().toLowerCase();
-  const shownMembers = React.useMemo(
-    () =>
-      needle
-        ? members.filter((m) => m.display_name.toLowerCase().includes(needle))
-        : members,
-    [members, needle],
-  );
-
-  // Render a WINDOW of the matches, not all of them: with a big team the grid is
-  // hundreds of cards PER call, so painting every match on each keystroke is what
-  // made search lag. The filter still runs over everyone; we just draw the first N
-  // (reset on a new query, "mostra altri" to extend).
-  const GRID_PAGE = 60;
-  const [gridLimit, setGridLimit] = React.useState(GRID_PAGE);
-  React.useEffect(() => setGridLimit(GRID_PAGE), [needle]);
-  const pagedMembers = React.useMemo(
-    () => shownMembers.slice(0, gridLimit),
-    [shownMembers, gridLimit],
-  );
-
-  const showOverview = members.length > 0 && calls.length > 0;
+  const showOverview = totalMembers > 0 && calls.length > 0;
+  const searchEmpty = members.length === 0 && query.trim().length > 0;
 
   return (
     <div className="space-y-5">
@@ -367,7 +406,7 @@ export function AttendanceTable({
           </Button>
         )}
         <div className="ml-auto flex items-center gap-2">
-          {/* Live name filter — typing hides everyone who doesn't match. */}
+          {/* Server name search — typing fetches the matching first page. */}
           <div className="relative">
             <Search
               className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
@@ -381,7 +420,12 @@ export function AttendanceTable({
               aria-label={t('search_placeholder')}
               className="h-9 w-40 rounded-md border border-input bg-background pl-8 pr-7 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-52"
             />
-            {query && (
+            {searching ? (
+              <Loader2
+                className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground"
+                aria-hidden
+              />
+            ) : query ? (
               <button
                 type="button"
                 onClick={() => setQuery('')}
@@ -390,7 +434,7 @@ export function AttendanceTable({
               >
                 <X className="h-3.5 w-3.5" aria-hidden />
               </button>
-            )}
+            ) : null}
           </div>
           {live && (
             <span
@@ -409,9 +453,6 @@ export function AttendanceTable({
             defaultValue={date}
             onChange={(e) => {
               const v = e.target.value;
-              // Navigate ONLY on a complete date (4-digit year ≥ 1000). While the
-              // user types the year digit-by-digit (0002 → 0020 → 0202 → 2026) each
-              // intermediate value is < 1000, so the page no longer jumps away.
               if (v && Number(v.slice(0, 4)) >= 1000 && v !== date) go(v);
             }}
             className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -420,7 +461,7 @@ export function AttendanceTable({
         </div>
       </div>
 
-      {members.length === 0 ? (
+      {totalMembers === 0 ? (
         <EmptyState
           icon={<CalendarDays />}
           title={t('empty_title')}
@@ -444,175 +485,175 @@ export function AttendanceTable({
             />
           )}
 
-          {/* ── Per-call challenge cards ──────────────────────────────────── */}
-          <div className="space-y-5">
-            {calls.map((c) => {
-              const presentCount = members.filter((m) => present[m.id]?.[c.id]).length;
-              const ratio = members.length ? presentCount / members.length : 0;
-              const pct = Math.round(ratio * 100);
-              const full = members.length > 0 && presentCount === members.length;
-              const tone = callTone(ratio);
-              return (
-                <section
-                  key={c.id}
-                  className={cn(
-                    'group/call overflow-hidden rounded-xl border bg-card shadow-card transition-shadow duration-base ease-standard hover:shadow-card-hover',
-                    full && 'ring-1 ring-warning/40 shadow-glow-warning',
-                  )}
-                >
-                  {/* Call header: identity + live gauge + XP bar. */}
-                  <header className="relative flex flex-wrap items-center gap-4 border-b border-border/70 p-4">
-                    {/* faint accent wash behind the header */}
-                    <div
+          {searchEmpty ? (
+            <div className="rounded-xl border border-border/70 bg-card py-10 text-center text-sm text-muted-foreground shadow-card">
+              {t('search_empty')}
+            </div>
+          ) : (
+            <>
+              {/* ── Per-call challenge cards ──────────────────────────────── */}
+              <div className="space-y-5">
+                {calls.map((c) => {
+                  const presentCount = summary.presentCounts[c.id] ?? 0;
+                  const ratio = totalMembers ? presentCount / totalMembers : 0;
+                  const pct = Math.round(ratio * 100);
+                  const full = totalMembers > 0 && presentCount >= totalMembers;
+                  const tone = callTone(ratio);
+                  return (
+                    <section
+                      key={c.id}
                       className={cn(
-                        'pointer-events-none absolute inset-0 bg-gradient-to-br to-transparent',
-                        tone.wash,
+                        'group/call overflow-hidden rounded-xl border bg-card shadow-card transition-shadow duration-base ease-standard hover:shadow-card-hover',
+                        full && 'ring-1 ring-warning/40 shadow-glow-warning',
                       )}
-                      aria-hidden
-                    />
-                    <span
-                      className={cn(
-                        'relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1',
-                        tone.chipBg,
-                        tone.text,
-                        tone.ring,
-                      )}
-                      aria-hidden
                     >
-                      <Radio className="h-5 w-5" />
-                    </span>
-                    <div className="relative min-w-0 flex-1">
-                      <h2 className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm font-semibold tracking-tight text-foreground">
-                        <span className="truncate">{c.title}</span>
-                        {c.start_time && (
-                          <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-muted-foreground">
-                            {c.start_time}
-                          </span>
-                        )}
-                        {full && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-warning animate-pop">
-                            <Sparkles className="h-3 w-3" aria-hidden />
-                            100%
-                          </span>
-                        )}
-                      </h2>
-                      {/* XP-style attendance bar */}
-                      <div className="mt-2 flex items-center gap-3">
-                        <ProgressMeter
-                          value={pct}
-                          gradient={tone.bar}
-                          heightClass="h-2"
-                          className="max-w-md flex-1"
-                        />
-                        <span className="shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">
-                          <span className={tone.text}>
-                            {presentCount}
-                          </span>
-                          /{members.length}
-                        </span>
-                      </div>
-                    </div>
-                    <CompletionRing
-                      present={presentCount}
-                      total={members.length}
-                      size={64}
-                      className="relative"
-                    />
-                  </header>
-
-                  {/* Member grid: each cell = name + presence/cam toggles. */}
-                  {shownMembers.length === 0 ? (
-                    <p className="px-4 py-6 text-center text-sm text-muted-foreground">
-                      {t('search_empty')}
-                    </p>
-                  ) : (
-                  <>
-                  <div className="grid gap-2 p-4 [grid-template-columns:repeat(auto-fill,minmax(14rem,1fr))]">
-                    {pagedMembers.map((m) => {
-                      const isPresent = present[m.id]?.[c.id] ?? false;
-                      const camOn = cam[m.id]?.[c.id] ?? false;
-                      return (
+                      {/* Call header: identity + live gauge + XP bar. */}
+                      <header className="relative flex flex-wrap items-center gap-4 border-b border-border/70 p-4">
                         <div
-                          key={m.id}
                           className={cn(
-                            'group/cell flex flex-col gap-2 rounded-lg border p-2.5 transition-[box-shadow,transform,border-color] duration-base ease-standard hover:-translate-y-px hover:shadow-sm',
-                            isPresent
-                              ? full
-                                ? 'border-warning/40 bg-warning/[0.06]'
-                                : 'border-success/30 bg-success/[0.04]'
-                              : 'border-border bg-background hover:border-border',
+                            'pointer-events-none absolute inset-0 bg-gradient-to-br to-transparent',
+                            tone.wash,
                           )}
+                          aria-hidden
+                        />
+                        <span
+                          className={cn(
+                            'relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1',
+                            tone.chipBg,
+                            tone.text,
+                            tone.ring,
+                          )}
+                          aria-hidden
                         >
-                          <div className="flex items-center gap-2">
-                            <Avatar
-                              name={m.display_name}
-                              size="sm"
-                              className={cn(
-                                'ring-1 transition-shadow',
-                                isPresent ? (full ? 'ring-warning/30' : 'ring-success/30') : 'ring-border',
-                              )}
+                          <Radio className="h-5 w-5" />
+                        </span>
+                        <div className="relative min-w-0 flex-1">
+                          <h2 className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm font-semibold tracking-tight text-foreground">
+                            <span className="truncate">{c.title}</span>
+                            {c.start_time && (
+                              <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-muted-foreground">
+                                {c.start_time}
+                              </span>
+                            )}
+                            {full && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-warning animate-pop">
+                                <Sparkles className="h-3 w-3" aria-hidden />
+                                100%
+                              </span>
+                            )}
+                          </h2>
+                          {/* XP-style attendance bar */}
+                          <div className="mt-2 flex items-center gap-3">
+                            <ProgressMeter
+                              value={pct}
+                              gradient={tone.bar}
+                              heightClass="h-2"
+                              className="max-w-md flex-1"
                             />
-                            <div className="min-w-0 flex-1">
-                              <Link
-                                href={`/team/${m.id}`}
-                                title={m.display_name}
-                                className="block truncate text-xs font-semibold text-foreground transition-colors hover:text-primary"
-                              >
-                                {m.display_name}
-                              </Link>
-                              <RankBadge
-                                rank={m.rank}
-                                variant="dot"
-                                className="mt-0.5 truncate text-[10px] text-muted-foreground"
-                              />
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <ToggleChip
-                              checked={isPresent}
-                              checkedTone={full ? 'warning' : 'success'}
-                              onClick={() => togglePresent(m, c.id)}
-                              ariaLabel={`${m.display_name} — ${c.title} — ${isPresent ? t('present') : t('absent')}`}
-                              onIcon={Check}
-                              offIcon={X}
-                              onLabel={t('present')}
-                              offLabel={t('absent')}
-                            />
-                            <ToggleChip
-                              checked={camOn}
-                              checkedTone={full ? 'warning' : 'success'}
-                              onClick={() => toggleCam(m, c.id)}
-                              ariaLabel={`${m.display_name} — ${camOn ? t('cam_on') : t('cam_off')}`}
-                              onIcon={Video}
-                              offIcon={VideoOff}
-                              onLabel={t('cam_on')}
-                              offLabel={t('cam_off')}
-                            />
+                            <span className="shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">
+                              <span className={tone.text}>{presentCount}</span>/{totalMembers}
+                            </span>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                  {shownMembers.length > gridLimit && (
-                    <div className="flex items-center justify-center gap-3 px-4 pb-4">
-                      <span className="text-xs text-muted-foreground">
-                        {pagedMembers.length} / {shownMembers.length}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setGridLimit((l) => l + 100)}
-                        className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        {t('show_more')}
-                      </button>
-                    </div>
-                  )}
-                  </>
-                  )}
-                </section>
-              );
-            })}
-          </div>
+                        <CompletionRing
+                          present={presentCount}
+                          total={totalMembers}
+                          size={64}
+                          className="relative"
+                        />
+                      </header>
+
+                      {/* Member grid: each cell = name + presence/cam toggles. */}
+                      <div className="grid gap-2 p-4 [grid-template-columns:repeat(auto-fill,minmax(14rem,1fr))]">
+                        {members.map((m) => {
+                          const isPresent = present[m.id]?.[c.id] ?? false;
+                          const camOn = cam[m.id]?.[c.id] ?? false;
+                          return (
+                            <div
+                              key={m.id}
+                              className={cn(
+                                'group/cell flex flex-col gap-2 rounded-lg border p-2.5 transition-[box-shadow,transform,border-color] duration-base ease-standard hover:-translate-y-px hover:shadow-sm',
+                                isPresent
+                                  ? full
+                                    ? 'border-warning/40 bg-warning/[0.06]'
+                                    : 'border-success/30 bg-success/[0.04]'
+                                  : 'border-border bg-background hover:border-border',
+                              )}
+                            >
+                              <div className="flex items-center gap-2">
+                                <Avatar
+                                  name={m.display_name}
+                                  size="sm"
+                                  className={cn(
+                                    'ring-1 transition-shadow',
+                                    isPresent ? (full ? 'ring-warning/30' : 'ring-success/30') : 'ring-border',
+                                  )}
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <Link
+                                    href={`/team/${m.id}`}
+                                    title={m.display_name}
+                                    className="block truncate text-xs font-semibold text-foreground transition-colors hover:text-primary"
+                                  >
+                                    {m.display_name}
+                                  </Link>
+                                  <RankBadge
+                                    rank={m.rank}
+                                    variant="dot"
+                                    className="mt-0.5 truncate text-[10px] text-muted-foreground"
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <ToggleChip
+                                  checked={isPresent}
+                                  checkedTone={full ? 'warning' : 'success'}
+                                  onClick={() => togglePresent(m, c.id)}
+                                  ariaLabel={`${m.display_name} — ${c.title} — ${isPresent ? t('present') : t('absent')}`}
+                                  onIcon={Check}
+                                  offIcon={X}
+                                  onLabel={t('present')}
+                                  offLabel={t('absent')}
+                                />
+                                <ToggleChip
+                                  checked={camOn}
+                                  checkedTone={full ? 'warning' : 'success'}
+                                  onClick={() => toggleCam(m, c.id)}
+                                  ariaLabel={`${m.display_name} — ${camOn ? t('cam_on') : t('cam_off')}`}
+                                  onIcon={Video}
+                                  offIcon={VideoOff}
+                                  onLabel={t('cam_on')}
+                                  offLabel={t('cam_off')}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </section>
+                  );
+                })}
+              </div>
+
+              {/* One "mostra altri" for the whole grid (members are shared across calls). */}
+              {members.length < total && (
+                <div className="flex items-center justify-center gap-3 pt-1">
+                  <span className="text-xs text-muted-foreground">
+                    {members.length} / {total}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={loadMore}
+                    disabled={loadingMore}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+                  >
+                    {loadingMore && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}
+                    {t('show_more')}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
         </>
       )}
     </div>
@@ -677,7 +718,6 @@ function DayPulse({
 }) {
   return (
     <div className="surface-grid relative overflow-hidden rounded-xl border bg-card p-5 shadow-card">
-      {/* drifting accent aurora behind the gauge */}
       <div
         className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-primary/10 blur-3xl animate-aurora"
         aria-hidden
@@ -688,7 +728,6 @@ function DayPulse({
           <CountUp value={dayPct} />
           <span className="text-lg font-semibold text-muted-foreground">%</span>
         </span>
-        {/* Presenze + cam attive — the two figures that matter for the day. */}
         <div className="flex flex-1 flex-wrap items-center gap-2">
           <MiniStat icon={UserCheck} value={filledSlots} label="Presenze" accent="text-success" />
           <MiniStat icon={Video} value={cams} label="Cam attive" accent="text-info" />

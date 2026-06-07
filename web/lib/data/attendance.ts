@@ -1,9 +1,10 @@
 import 'server-only';
-import { fetchAllRows, getClient, getOwnerContext } from '@/lib/data/crm-shared';
+import { getClient, getOwnerContext } from '@/lib/data/crm-shared';
 import { getSubtree, TREE_LOAD_DEPTH } from '@/lib/data/genealogy';
 import {
   weekdayOf,
   type AttendanceMember,
+  type AttendanceSummary,
   type ZoomCallDef,
 } from '@/lib/data/attendance-shared';
 
@@ -13,14 +14,29 @@ import {
  * visible to them (org-wide, or team calls of their upline co-admins — RLS
  * enforced), and marks present + cam per person (their visible subtree) against
  * each call id. Demo-safe: no env → the 3 historical calls + deterministic data.
+ *
+ * SCALE: the grid PAGES through members (attendance_page RPC) instead of loading
+ * the whole subtree, and the day-wide gauges are computed server-side
+ * (attendance_summary RPC) so they stay exact while the client holds only a page.
  */
 
-export type { AttendanceMember, ZoomCallDef };
+export type { AttendanceMember, AttendanceSummary, ZoomCallDef };
 
-export interface AttendanceResult {
+export interface AttendanceViewResult {
   date: string;
   calls: ZoomCallDef[];
+  /** A page of members (with their present/cam for the day). */
   members: AttendanceMember[];
+  /** Count of members MATCHING the search (the grid paginates within this). */
+  total: number;
+  /** Day-wide counters over the WHOLE subtree (denominator of the gauges). */
+  summary: AttendanceSummary;
+  demo: boolean;
+}
+
+export interface AttendancePageResult {
+  members: AttendanceMember[];
+  total: number;
   demo: boolean;
 }
 
@@ -63,163 +79,166 @@ const byTimeThenTitle = (a: ZoomCallDef, b: ZoomCallDef) =>
   (a.start_time ?? '').localeCompare(b.start_time ?? '') ||
   a.title.localeCompare(b.title, 'it');
 
-/** Attendance for the viewer's subtree on a given day (ISO `YYYY-MM-DD`). */
-export async function getZoomAttendance(date: string): Promise<AttendanceResult> {
-  const { marketerId, demo } = await getOwnerContext();
-  // Presenze only needs the member list (id/name/rank/status) — skip the funnel
-  // roll-up (funnel:false) so the day view doesn't pay for KPI aggregation.
-  const sub = await getSubtree(marketerId, 'GLOBAL', TREE_LOAD_DEPTH, { funnel: false });
-  const supabase = getClient();
-  const wd = weekdayOf(date);
+const CALL_COLS =
+  'id,title,weekday,start_time,scope,team_branch,created_by, creator:created_by(display_name)';
 
-  // Demo mode (no env): the 3 fixed calls + deterministic/in-memory attendance.
-  if (!supabase) {
-    const calls = DEMO_CALLS.filter((c) => c.weekday === wd);
-    const members = sub.data
-      .map((n) => ({
-        id: n.id,
-        display_name: n.display_name,
-        rank: n.rank,
-        status: n.status,
-        present: Object.fromEntries(
-          calls.map((c) => {
-            const k = keyOf(n.id, date, c.id);
-            return [c.id, presentOverrides.has(k) ? presentOverrides.get(k)! : defaultPresent(n.id, date, c.id)];
-          }),
-        ),
-        cam: Object.fromEntries(calls.map((c) => [c.id, camOverrides.get(keyOf(n.id, date, c.id)) ?? false])),
-      }))
-      .sort((a, b) => a.display_name.localeCompare(b.display_name, 'it'));
-    return { date, calls, members, demo: true };
-  }
+type SupabaseClient = NonNullable<ReturnType<typeof getClient>>;
 
-  // Visible calls scheduled on this weekday (RLS scopes org/team visibility).
-  let calls: ZoomCallDef[] = [];
+/** Visible calls scheduled on a date's weekday (RLS scopes org/team visibility). */
+async function fetchCalls(supabase: SupabaseClient, date: string): Promise<ZoomCallDef[]> {
   try {
     const { data } = await supabase
       .from('zoom_calls')
-      .select('id,title,weekday,start_time,scope,team_branch,created_by, creator:created_by(display_name)')
-      .eq('weekday', wd)
+      .select(CALL_COLS)
+      .eq('weekday', weekdayOf(date))
       .eq('active', true);
-    calls = ((data as Record<string, unknown>[] | null) ?? []).map(mapCallRow).sort(byTimeThenTitle);
+    return ((data as Record<string, unknown>[] | null) ?? []).map(mapCallRow).sort(byTimeThenTitle);
   } catch {
-    calls = [];
+    return [];
   }
+}
 
-  // Persisted present + cam for the day, keyed by `${marketer_id}|${call_id}`.
-  const present = new Map<string, boolean>();
-  const camera = new Map<string, boolean>();
-  try {
-    // NO `.in(ids)`: with a big team that filter became a ~40KB URL and the request
-    // failed → the saved attendance never loaded (everyone showed absent, and marks
-    // appeared to reset). RLS already scopes zoom_attendance to the caller's subtree,
-    // so a plain day query returns exactly the right rows. Paginated for the row cap.
-    const data = await fetchAllRows<{
-      marketer_id: string;
-      call_id: string | null;
-      present: boolean;
-      cam: boolean;
-    }>((from, to) =>
-      supabase
-        .from('zoom_attendance')
-        .select('marketer_id,call_id,present,cam')
-        .eq('call_date', date)
-        .range(from, to),
-    );
-    for (const r of data ?? []) {
-      if (!r.call_id) continue;
-      present.set(`${r.marketer_id}|${r.call_id}`, r.present);
-      camera.set(`${r.marketer_id}|${r.call_id}`, r.cam);
-    }
-  } catch {
-    /* leave defaults */
-  }
+/** attendance_page row → AttendanceMember (present/cam come as sparse jsonb maps). */
+function rowToMember(r: Record<string, unknown>): AttendanceMember {
+  return {
+    id: String(r.id),
+    display_name: (r.display_name as string) ?? '',
+    rank: r.rank as AttendanceMember['rank'],
+    status: r.status as AttendanceMember['status'],
+    present: (r.present as Record<string, boolean>) ?? {},
+    cam: (r.cam as Record<string, boolean>) ?? {},
+  };
+}
 
-  const members: AttendanceMember[] = sub.data
+// ── Demo helpers (no env) ────────────────────────────────────────────────────
+async function demoMembers(
+  marketerId: string,
+  date: string,
+  calls: ZoomCallDef[],
+): Promise<AttendanceMember[]> {
+  const sub = await getSubtree(marketerId, 'GLOBAL', TREE_LOAD_DEPTH, { funnel: false });
+  return sub.data
     .map((n) => ({
       id: n.id,
       display_name: n.display_name,
       rank: n.rank,
       status: n.status,
-      present: Object.fromEntries(calls.map((c) => [c.id, present.get(`${n.id}|${c.id}`) ?? false])),
-      cam: Object.fromEntries(calls.map((c) => [c.id, camera.get(`${n.id}|${c.id}`) ?? false])),
+      present: Object.fromEntries(
+        calls.map((c) => {
+          const k = keyOf(n.id, date, c.id);
+          return [c.id, presentOverrides.has(k) ? presentOverrides.get(k)! : defaultPresent(n.id, date, c.id)];
+        }),
+      ),
+      cam: Object.fromEntries(calls.map((c) => [c.id, camOverrides.get(keyOf(n.id, date, c.id)) ?? false])),
     }))
     .sort((a, b) => a.display_name.localeCompare(b.display_name, 'it'));
-
-  return { date, calls, members, demo: false };
 }
 
-export interface ZoomDayResult {
-  calls: ZoomCallDef[];
-  /** present flags keyed `${marketer_id}|${call_id}` (only cells with a row). */
-  present: Record<string, boolean>;
-  cam: Record<string, boolean>;
-  demo: boolean;
+function summarize(members: AttendanceMember[], calls: ZoomCallDef[]): AttendanceSummary {
+  const presentCounts: Record<string, number> = {};
+  const camCounts: Record<string, number> = {};
+  for (const c of calls) {
+    presentCounts[c.id] = members.filter((m) => m.present[c.id]).length;
+    camCounts[c.id] = members.filter((m) => m.cam[c.id]).length;
+  }
+  return { totalMembers: members.length, presentCounts, camCounts };
+}
+
+function filterMembers(all: AttendanceMember[], search: string): AttendanceMember[] {
+  const needle = search.trim().toLowerCase();
+  return needle ? all.filter((m) => m.display_name.toLowerCase().includes(needle)) : all;
 }
 
 /**
- * Per-day calls + attendance ONLY (no member list). The Presenze table loads the
- * team once, then switches day with THIS — so a day change no longer re-runs the
- * subtree load. Attendance is RLS-scoped to the caller's subtree (no id filter
- * needed) and paginated so a big team's day isn't truncated by the row cap.
+ * The Presenze view for a day: visible calls, a PAGE of members (with present/cam),
+ * the match count, and the day-wide summary. The summary is computed over the whole
+ * subtree server-side, so the gauges (X/total, 100%, day %) stay exact while the
+ * grid holds only a page.
  */
-export async function getZoomDay(date: string): Promise<ZoomDayResult> {
-  const { demo } = await getOwnerContext();
+export async function getAttendanceView(
+  date: string,
+  opts: { search?: string; offset?: number; limit?: number } = {},
+): Promise<AttendanceViewResult> {
+  const { marketerId } = await getOwnerContext();
   const supabase = getClient();
-  const wd = weekdayOf(date);
+  const { search = '', offset = 0, limit = 100 } = opts;
 
   if (!supabase) {
-    const calls = DEMO_CALLS.filter((c) => c.weekday === wd);
-    const present: Record<string, boolean> = {};
-    const cam: Record<string, boolean> = {};
-    for (const [k, v] of presentOverrides) {
-      const [id, d, cid] = k.split('|');
-      if (d === date && id && cid) present[`${id}|${cid}`] = v;
-    }
-    for (const [k, v] of camOverrides) {
-      const [id, d, cid] = k.split('|');
-      if (d === date && id && cid) cam[`${id}|${cid}`] = v;
-    }
-    return { calls, present, cam, demo: true };
+    const calls = DEMO_CALLS.filter((c) => c.weekday === weekdayOf(date));
+    const all = await demoMembers(marketerId, date, calls);
+    const matched = filterMembers(all, search);
+    return {
+      date,
+      calls,
+      members: matched.slice(offset, offset + limit),
+      total: matched.length,
+      summary: summarize(all, calls),
+      demo: true,
+    };
   }
 
-  let calls: ZoomCallDef[] = [];
+  const [calls, page, summary] = await Promise.all([
+    fetchCalls(supabase, date),
+    getAttendancePage(date, { search, offset, limit }),
+    getAttendanceSummary(date),
+  ]);
+  return { date, calls, members: page.members, total: page.total, summary, demo: false };
+}
+
+/** Just a page of members (with present/cam) + the match count — search / load-more. */
+export async function getAttendancePage(
+  date: string,
+  opts: { search?: string; offset?: number; limit?: number } = {},
+): Promise<AttendancePageResult> {
+  const { marketerId } = await getOwnerContext();
+  const supabase = getClient();
+  const { search = '', offset = 0, limit = 100 } = opts;
+
+  if (!supabase) {
+    const calls = DEMO_CALLS.filter((c) => c.weekday === weekdayOf(date));
+    const matched = filterMembers(await demoMembers(marketerId, date, calls), search);
+    return { members: matched.slice(offset, offset + limit), total: matched.length, demo: true };
+  }
   try {
-    const { data } = await supabase
-      .from('zoom_calls')
-      .select('id,title,weekday,start_time,scope,team_branch,created_by, creator:created_by(display_name)')
-      .eq('weekday', wd)
-      .eq('active', true);
-    calls = ((data as Record<string, unknown>[] | null) ?? []).map(mapCallRow).sort(byTimeThenTitle);
+    const { data } = await supabase.rpc('attendance_page', {
+      p_date: date,
+      p_search: search,
+      p_offset: offset,
+      p_limit: limit,
+    });
+    const rows = (data as Record<string, unknown>[] | null) ?? [];
+    return {
+      members: rows.map(rowToMember),
+      total: rows.length > 0 ? Number(rows[0]!.total) || 0 : 0,
+      demo: false,
+    };
   } catch {
-    calls = [];
+    return { members: [], total: 0, demo: false };
   }
+}
 
-  const present: Record<string, boolean> = {};
-  const cam: Record<string, boolean> = {};
+/** Day-wide counters over the WHOLE visible subtree (gauges + 100% achievement). */
+export async function getAttendanceSummary(date: string): Promise<AttendanceSummary> {
+  const { marketerId } = await getOwnerContext();
+  const supabase = getClient();
+
+  if (!supabase) {
+    const calls = DEMO_CALLS.filter((c) => c.weekday === weekdayOf(date));
+    return summarize(await demoMembers(marketerId, date, calls), calls);
+  }
   try {
-    const rows = await fetchAllRows<{
-      marketer_id: string;
-      call_id: string | null;
-      present: boolean;
-      cam: boolean;
-    }>((from, to) =>
-      supabase
-        .from('zoom_attendance')
-        .select('marketer_id,call_id,present,cam')
-        .eq('call_date', date)
-        .range(from, to),
-    );
-    for (const r of rows ?? []) {
-      if (!r.call_id) continue;
-      present[`${r.marketer_id}|${r.call_id}`] = r.present;
-      cam[`${r.marketer_id}|${r.call_id}`] = r.cam;
-    }
+    const { data } = await supabase.rpc('attendance_summary', { p_date: date });
+    const row = (Array.isArray(data) ? data[0] : data) as
+      | { total_members?: number; present_counts?: Record<string, number>; cam_counts?: Record<string, number> }
+      | null;
+    return {
+      totalMembers: Number(row?.total_members) || 0,
+      presentCounts: row?.present_counts ?? {},
+      camCounts: row?.cam_counts ?? {},
+    };
   } catch {
-    /* leave empty */
+    return { totalMembers: 0, presentCounts: {}, camCounts: {} };
   }
-
-  return { calls, present, cam, demo: false };
 }
 
 export interface SetAttendanceResult {

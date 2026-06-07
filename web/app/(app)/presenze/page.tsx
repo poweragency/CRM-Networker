@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { Video } from 'lucide-react';
-import { getZoomAttendance } from '@/lib/data/attendance';
+import { getAttendanceView } from '@/lib/data/attendance';
 import { ConfigNotice } from '@/components/config-notice';
 import { PageHeader } from '@/components/crm/page-header';
 import { AttendanceTable } from '@/components/presenze/attendance-table';
@@ -37,7 +37,12 @@ export default async function PresenzePage({
   const param = one(searchParams?.date);
   const date = param && ISO_DAY.test(param) ? param : today;
 
-  const { calls, members, demo } = await getZoomAttendance(date);
+  // First page of members + day-wide summary. Real teams are small (5-20 people →
+  // one page); large subtrees page/search server-side instead of shipping 10k rows.
+  const PAGE_SIZE = 100;
+  const { calls, members, total, summary, demo } = await getAttendanceView(date, {
+    limit: PAGE_SIZE,
+  });
 
   return (
     <div className="animate-fade-in space-y-5">
@@ -48,7 +53,15 @@ export default async function PresenzePage({
         icon={<Video className="text-primary" />}
         className="mb-0"
       />
-      <AttendanceTable date={date} calls={calls} members={members} today={today} />
+      <AttendanceTable
+        date={date}
+        calls={calls}
+        members={members}
+        total={total}
+        summary={summary}
+        pageSize={PAGE_SIZE}
+        today={today}
+      />
     </div>
   );
 }

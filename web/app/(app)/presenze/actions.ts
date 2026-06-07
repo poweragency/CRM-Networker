@@ -1,11 +1,15 @@
 'use server';
 
 import {
-  getZoomDay,
+  getAttendancePage,
+  getAttendanceSummary,
+  getAttendanceView,
   setZoomAttendance,
   setZoomCam,
-  type ZoomDayResult,
+  type AttendancePageResult,
+  type AttendanceViewResult,
 } from '@/lib/data/attendance';
+import type { AttendanceSummary } from '@/lib/data/attendance-shared';
 
 /**
  * Server Actions backing the Presenze Zoom table. Delegate to the demo-safe
@@ -34,7 +38,26 @@ export async function setZoomCamAction(
   return setZoomCam(marketerId, date, callId, cam);
 }
 
-/** Fast day switch: just the day's calls + attendance (no team reload). */
-export async function getZoomDayAction(date: string): Promise<ZoomDayResult> {
-  return getZoomDay(date);
+/** Day switch: calls + first page of members + day-wide summary for the new day. */
+export async function getAttendanceViewAction(
+  date: string,
+  search = '',
+  limit = 100,
+): Promise<AttendanceViewResult> {
+  return getAttendanceView(date, { search, offset: 0, limit });
+}
+
+/** Search / load-more: a page of members + the match count (no summary reload). */
+export async function getAttendancePageAction(
+  date: string,
+  search: string,
+  offset: number,
+  limit: number,
+): Promise<AttendancePageResult> {
+  return getAttendancePage(date, { search, offset, limit });
+}
+
+/** Realtime refetch of the day-wide counters (keeps gauges exact after echoes). */
+export async function getAttendanceSummaryAction(date: string): Promise<AttendanceSummary> {
+  return getAttendanceSummary(date);
 }

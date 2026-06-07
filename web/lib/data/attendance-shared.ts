@@ -52,3 +52,17 @@ export interface AttendanceMember {
   /** cam flag per call id. */
   cam: Record<string, boolean>;
 }
+
+/**
+ * Day-wide counters computed server-side over the WHOLE visible subtree, so the
+ * gauges (X/total present, 100% achievement, day %) stay exact even though the
+ * grid only holds a page of members.
+ */
+export interface AttendanceSummary {
+  /** Total visible members (the denominator of every gauge). */
+  totalMembers: number;
+  /** present count per call id. */
+  presentCounts: Record<string, number>;
+  /** cam count per call id. */
+  camCounts: Record<string, number>;
+}
