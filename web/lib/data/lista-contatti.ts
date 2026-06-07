@@ -18,7 +18,7 @@ import { demoId } from '@/lib/data/mock/_shared';
  */
 
 const SELECT =
-  'id,org_id,owner_marketer_id,position,full_name,phone,relationship,rating,rapporto,stato,percorso,contacted,promoted_contact_id,notes,created_at,updated_at,deleted_at';
+  'id,org_id,owner_marketer_id,position,full_name,phone,relationship,rating,rapporto,stato,percorso,contacted,promoted_contact_id,iscritto_at,notes,created_at,updated_at,deleted_at';
 
 /**
  * List Lista contatti entries ordered by position. Defaults to the caller's own list;
@@ -67,6 +67,8 @@ export interface ListaContattiInput {
   stato?: ListaContattiStatus;
   /** Percorso phase reached (0..5). */
   percorso?: number;
+  /** Enrollment timestamp (usually stamped server-side from `stato`). */
+  iscritto_at?: string | null;
   position?: number;
   contacted?: boolean;
   notes?: string | null;
@@ -94,6 +96,7 @@ export async function createListaContatti(
     percorso: input.percorso ?? 0,
     contacted: input.contacted ?? false,
     promoted_contact_id: null,
+    iscritto_at: input.iscritto_at ?? (input.stato === 'iscritto' ? nowIso() : null),
     notes: input.notes ?? null,
     created_at: nowIso(),
     updated_at: nowIso(),
@@ -147,15 +150,23 @@ export async function updateListaContatti(
   patch: Partial<ListaContattiInput>,
 ): Promise<MutationResult<ListaContattiEntry | null>> {
   const supabase = getClient();
+  // Keep iscritto_at authoritative: stamp it when the entry becomes 'iscritto',
+  // clear it when it leaves that state (so the monthly reset has a clean anchor).
+  const withStamp: Partial<ListaContattiInput> = { ...patch };
+  if (patch.stato === 'iscritto') {
+    withStamp.iscritto_at = patch.iscritto_at ?? nowIso();
+  } else if (patch.stato !== undefined) {
+    withStamp.iscritto_at = null;
+  }
   const existing = MOCK_LISTA_CONTATTI.find((e) => e.id === id) ?? null;
   const merged = existing
-    ? ({ ...existing, ...patch, updated_at: nowIso() } as ListaContattiEntry)
+    ? ({ ...existing, ...withStamp, updated_at: nowIso() } as ListaContattiEntry)
     : null;
   if (!supabase) return { data: merged, demo: true, ok: true };
   try {
     const { data, error } = await supabase
       .from('lista_contatti_entries')
-      .update({ ...patch, updated_at: nowIso() })
+      .update({ ...withStamp, updated_at: nowIso() })
       .eq('id', id)
       .select(SELECT)
       .maybeSingle();

@@ -33,10 +33,8 @@ export interface BoardColumnProps {
   extraCards?: ProspectView[];
   /** Profile URL to return to — threaded into each card's detail link. */
   backHref?: string;
-  /** Confirm + delete a (real) prospect. */
+  /** Delete a card (real prospect → soft-delete; Lista mirror → flagged non iscritto). */
   onRequestDelete?: (prospect: ProspectView) => void;
-  /** Confirm + mark a (real) prospect as enrolled (leaves the board). */
-  onRequestEnroll?: (prospect: ProspectView) => void;
 }
 
 export function BoardColumn({
@@ -46,7 +44,6 @@ export function BoardColumn({
   extraCards = [],
   backHref,
   onRequestDelete,
-  onRequestEnroll,
 }: BoardColumnProps) {
   const { stage, prospects } = column;
   const { setNodeRef, isOver } = useDroppable({
@@ -144,7 +141,6 @@ export function BoardColumn({
               disabled={busy}
               backHref={backHref}
               onRequestDelete={onRequestDelete}
-              onRequestEnroll={onRequestEnroll}
             />
           ))}
         </SortableContext>

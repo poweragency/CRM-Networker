@@ -4,7 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ArrowUpRight, BadgeCheck, GripVertical, Trash2 } from 'lucide-react';
+import { ArrowUpRight, GripVertical, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar } from '@/components/ui/avatar';
 import { StatusPill } from '@/components/crm/status-pill';
@@ -36,13 +36,11 @@ export const ProspectCardBody = React.forwardRef<
     link?: React.ReactNode;
     /** Detail route — renders an explicit, easy-to-hit "open profile" button. */
     detailHref?: string;
-    /** Delete handler — renders a trash button (omitted on the overlay / list cards). */
+    /** Delete handler — renders a trash button (omitted on the overlay). */
     onDelete?: () => void;
-    /** Enroll handler — renders an "iscritto" button (real prospects only). */
-    onEnroll?: () => void;
   } & React.HTMLAttributes<HTMLDivElement>
 >(function ProspectCardBody(
-  { prospect, overlay, dragging, handle, link, detailHref, onDelete, onEnroll, className, ...props },
+  { prospect, overlay, dragging, handle, link, detailHref, onDelete, className, ...props },
   ref,
 ) {
   const fromList = Boolean(prospect.listaContattiId);
@@ -85,17 +83,25 @@ export const ProspectCardBody = React.forwardRef<
       {link}
 
       <div className="relative min-w-0 space-y-2.5">
-        {/* Name + (for mirrored Lista contatti cards) a small source badge */}
+        {/* Name + actions. Real prospects: open + delete. Mirrored Lista contatti
+            cards: a "Lista" badge + delete (→ flagged non iscritto). Enrollment is
+            done by dragging the card into the "Iscritto" column (no button). */}
         <div className="flex items-start justify-between gap-2">
           <p className="truncate text-sm font-semibold leading-snug tracking-tight text-foreground">
             {prospect.full_name}
           </p>
-          {fromList ? (
-            <span className="shrink-0 rounded-full bg-info/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-info">
-              Lista
-            </span>
-          ) : !overlay ? (
+          {overlay ? (
+            <ArrowUpRight
+              className="relative z-10 h-3.5 w-3.5 shrink-0 text-muted-foreground/40 opacity-0 transition-all duration-base group-hover/card:translate-x-0.5 group-hover/card:opacity-100 group-hover/card:text-foreground"
+              aria-hidden
+            />
+          ) : (
             <div className="relative z-20 flex shrink-0 items-center gap-1">
+              {fromList && (
+                <span className="rounded-full bg-info/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-info">
+                  Lista
+                </span>
+              )}
               {detailHref && (
                 <Link
                   href={detailHref}
@@ -106,22 +112,6 @@ export const ProspectCardBody = React.forwardRef<
                 >
                   <ArrowUpRight className="h-4 w-4" aria-hidden />
                 </Link>
-              )}
-              {onEnroll && (
-                <button
-                  type="button"
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    onEnroll();
-                  }}
-                  aria-label={`Segna ${prospect.full_name} come iscritto`}
-                  title="Iscritto"
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-muted/70 text-muted-foreground transition-colors hover:bg-success/15 hover:text-success focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <BadgeCheck className="h-4 w-4" aria-hidden />
-                </button>
               )}
               {onDelete && (
                 <button
@@ -139,11 +129,6 @@ export const ProspectCardBody = React.forwardRef<
                 </button>
               )}
             </div>
-          ) : (
-            <ArrowUpRight
-              className="relative z-10 h-3.5 w-3.5 shrink-0 text-muted-foreground/40 opacity-0 transition-all duration-base group-hover/card:translate-x-0.5 group-hover/card:opacity-100 group-hover/card:text-foreground"
-              aria-hidden
-            />
           )}
         </div>
 
@@ -180,10 +165,9 @@ export interface ProspectCardProps {
   disabled?: boolean;
   /** Profile URL to return to — threaded into the detail link as `?from=`. */
   backHref?: string;
-  /** Ask the board to confirm + delete this prospect (real prospects only). */
+  /** Ask the board to delete this card (real prospect → soft-delete; Lista mirror →
+   *  flagged "non iscritto" and removed from the board). */
   onRequestDelete?: (prospect: ProspectView) => void;
-  /** Ask the board to confirm + mark this prospect as enrolled (real prospects only). */
-  onRequestEnroll?: (prospect: ProspectView) => void;
 }
 
 /** Sortable + draggable instance placed inside a column. */
@@ -192,7 +176,6 @@ export function ProspectCard({
   disabled,
   backHref,
   onRequestDelete,
-  onRequestEnroll,
 }: ProspectCardProps) {
   const {
     attributes,
@@ -225,16 +208,7 @@ export function ProspectCard({
       prospect={prospect}
       dragging={isDragging}
       detailHref={detailHref}
-      onDelete={
-        onRequestDelete && !prospect.listaContattiId
-          ? () => onRequestDelete(prospect)
-          : undefined
-      }
-      onEnroll={
-        onRequestEnroll && !prospect.listaContattiId
-          ? () => onRequestEnroll(prospect)
-          : undefined
-      }
+      onDelete={onRequestDelete ? () => onRequestDelete(prospect) : undefined}
       style={style}
       // Drag from anywhere on the card.
       {...attributes}

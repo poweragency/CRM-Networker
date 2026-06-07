@@ -87,6 +87,7 @@ export const MOCK_LISTA_CONTATTI: ListaContattiEntry[] = SEEDS.map((s) => {
     percorso: seedPercorso(stato, s.rating),
     contacted: s.contacted,
     promoted_contact_id: s.promoted ?? null,
+    iscritto_at: stato === 'iscritto' ? daysAgo(3) : null,
     notes: s.notes ?? null,
     created_at: daysAgo(50 - s.position),
     updated_at: daysAgo(5),

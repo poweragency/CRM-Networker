@@ -66,14 +66,29 @@ export interface ProspectBoardProps {
 /** Flatten the board into a stage→prospects map for cheap immutable updates. */
 type StageMap = Record<ProspectStage, ProspectView[]>;
 
-// Kanban columns = every funnel stage EXCEPT iscrizione. Enrolling completes the
-// journey, so an enrolled person leaves the board (still counted in KPIs/podi).
-const BOARD_STAGES = STAGE_ORDER.filter((s) => s !== 'iscrizione');
+// Kanban columns = EVERY funnel stage, including the final "Iscritto" one.
+// Enrolling = dragging a card into it; enrolled cards stay there for the CURRENT
+// month only (they drop off on the 1st — see lcByStage + listProspectBoard).
+const BOARD_STAGES = STAGE_ORDER;
+// "In funnel" tally for the header excludes the completed (Iscritto) column.
+const FUNNEL_STAGES = STAGE_ORDER.filter((s) => s !== 'iscrizione');
 
 function toStageMap(board: BoardView): StageMap {
   const map = {} as StageMap;
   for (const stage of STAGE_ORDER) map[stage] = [];
-  for (const col of board.columns) map[col.stage] = [...col.prospects];
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  for (const col of board.columns) {
+    if (col.stage === 'iscrizione') {
+      // Monthly reset: only THIS month's enrollments stay in the Iscritto column.
+      map[col.stage] = col.prospects.filter((p) => {
+        const at = p.closed_at ? new Date(p.closed_at).getTime() : null;
+        return at === null || at >= monthStart;
+      });
+    } else {
+      map[col.stage] = [...col.prospects];
+    }
+  }
   return map;
 }
 
@@ -137,11 +152,24 @@ export function ProspectBoard({
     const map = {} as Record<ProspectStage, ProspectView[]>;
     for (const s of STAGE_ORDER) map[s] = [];
     if (listaStore) {
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
       for (const e of listaStore.entries) {
-        if (e.stato === 'non_invitato') continue;
-        // No funnel phase done yet (percorso 0 = conoscitiva, che con la lista
-        // contatti si salta) → non compare nel kanban finché non parte la prima
-        // fase (business info). Vedi i contatti invitati nella tab Lista contatti.
+        if (e.stato === 'iscritto') {
+          // Enrolled contacts: the "Iscritto" column, CURRENT month only (they
+          // drop off on the 1st). iscritto_at missing → treat as just-enrolled.
+          const at = e.iscritto_at ? new Date(e.iscritto_at).getTime() : null;
+          if (at !== null && at < monthStart) continue;
+          map.iscrizione.push({
+            ...listaContattiToCard(e, ownerName),
+            current_stage: 'iscrizione',
+            outcome: 'enrolled',
+          });
+          continue;
+        }
+        // Only invited contacts that started the percorso appear; non_invitato /
+        // non_iscritto (deleted from the board) never show.
+        if (e.stato !== 'invitato') continue;
         if ((e.percorso ?? 0) < 1) continue;
         const card = listaContattiToCard(e, ownerName);
         map[card.current_stage].push(card);
@@ -160,7 +188,6 @@ export function ProspectBoard({
   const [sheetStage, setSheetStage] =
     React.useState<ProspectStage>('conoscitiva');
   const [deleteTarget, setDeleteTarget] = React.useState<ProspectView | null>(null);
-  const [enrollTarget, setEnrollTarget] = React.useState<ProspectView | null>(null);
 
   // Re-sync when the server sends fresh data (e.g. after router.refresh()).
   React.useEffect(() => {
@@ -244,14 +271,33 @@ export function ProspectBoard({
       ? (overId as ProspectStage)
       : (findStageOf(stageMap, overId) ?? findStageOf(lcByStage, overId));
 
-    // Lista contatti card → update its `percorso` via the shared store; the card
-    // then re-derives into the destination column (optimistic, no server prospect).
+    // Lista contatti card → update the entry via the shared store (no server
+    // prospect). Dropping into "Iscritto" flags it iscritto (counts this month);
+    // dropping elsewhere sets the percorso (and un-enrolls if it was iscritto).
     if (id.startsWith('lc-')) {
       if (destStage && listaStore) {
         const entry = listaStore.entries.find((x) => x.id === id.slice(3));
-        const target = STAGE_ORDER.indexOf(destStage);
-        if (entry && (entry.percorso ?? 0) !== target) {
-          void listaStore.setField(entry, { percorso: target });
+        if (entry) {
+          if (destStage === 'iscrizione') {
+            if (entry.stato !== 'iscritto') {
+              void listaStore.setField(entry, {
+                stato: 'iscritto',
+                percorso: 5,
+                iscritto_at: new Date().toISOString(),
+              });
+            }
+          } else {
+            const target = STAGE_ORDER.indexOf(destStage);
+            if (entry.stato === 'iscritto') {
+              void listaStore.setField(entry, {
+                stato: 'invitato',
+                percorso: target,
+                iscritto_at: null,
+              });
+            } else if ((entry.percorso ?? 0) !== target) {
+              void listaStore.setField(entry, { percorso: target });
+            }
+          }
         }
       }
       return;
@@ -317,6 +363,16 @@ export function ProspectBoard({
   async function handleDelete() {
     const target = deleteTarget;
     if (!target) return;
+    // Lista mirror → flag the contact "non iscritto"; the entry stays in the Lista,
+    // it just leaves the board. Real prospect → soft-delete.
+    if (target.listaContattiId) {
+      if (listaStore) {
+        const entry = listaStore.entries.find((x) => x.id === target.listaContattiId);
+        if (entry) void listaStore.setField(entry, { stato: 'non_iscritto' });
+      }
+      toast({ title: 'Contatto segnato come non iscritto', variant: 'success' });
+      return;
+    }
     const res = await deleteProspectAction(target.id);
     if (!res.ok) {
       toast({ title: 'Operazione non riuscita. Riprova.', variant: 'error' });
@@ -332,36 +388,12 @@ export function ProspectBoard({
     toast({ title: 'Prospect eliminato', variant: 'success' });
   }
 
-  async function handleEnroll() {
-    const target = enrollTarget;
-    if (!target) return;
-    // Enrolling = move to the 'iscrizione' stage → the funnel completes and the
-    // prospect leaves the board (iscrizione isn't a column).
-    const res = await changeStageAction(target.id, 'iscrizione');
-    if (!res.ok) {
-      toast({ title: 'Operazione non riuscita. Riprova.', variant: 'error' });
-      return;
-    }
-    setStageMap((prev) => {
-      const next = {} as StageMap;
-      for (const stage of STAGE_ORDER) {
-        next[stage] = prev[stage].filter((p) => p.id !== target.id);
-      }
-      return next;
-    });
-    toast({
-      title: 'Prospect iscritto! 🎉',
-      description: res.demo ? 'Simulato in modalità demo.' : undefined,
-      variant: 'achievement',
-    });
-  }
-
   function openSheet(stage: ProspectStage = 'conoscitiva') {
     setSheetStage(stage);
     setSheetOpen(true);
   }
 
-  const total = BOARD_STAGES.reduce(
+  const total = FUNNEL_STAGES.reduce(
     (acc, s) => acc + stageMap[s].length + lcByStage[s].length,
     0,
   );
@@ -419,7 +451,6 @@ export function ProspectBoard({
                 extraCards={lcByStage[stage]}
                 backHref={backHref}
                 onRequestDelete={setDeleteTarget}
-                onRequestEnroll={setEnrollTarget}
               />
             );
           })}
@@ -449,31 +480,18 @@ export function ProspectBoard({
         onOpenChange={(o) => {
           if (!o) setDeleteTarget(null);
         }}
-        title="Elimina prospect"
+        title={deleteTarget?.listaContattiId ? 'Rimuovi dal percorso' : 'Elimina prospect'}
         description={
           deleteTarget
-            ? `Vuoi eliminare “${deleteTarget.full_name}” dal percorso? L'azione non è reversibile.`
+            ? deleteTarget.listaContattiId
+              ? `Segnare “${deleteTarget.full_name}” come NON iscritto? Esce dal percorso ma resta nella Lista contatti.`
+              : `Vuoi eliminare “${deleteTarget.full_name}” dal percorso? L'azione non è reversibile.`
             : undefined
         }
-        confirmLabel="Elimina"
+        confirmLabel={deleteTarget?.listaContattiId ? 'Non iscritto' : 'Elimina'}
         onConfirm={handleDelete}
       />
 
-      <ConfirmDialog
-        open={enrollTarget !== null}
-        onOpenChange={(o) => {
-          if (!o) setEnrollTarget(null);
-        }}
-        title="Segna come iscritto"
-        description={
-          enrollTarget
-            ? `Confermi che “${enrollTarget.full_name}” si è iscritto? Uscirà dal percorso (kanban).`
-            : undefined
-        }
-        confirmLabel="Iscritto"
-        destructive={false}
-        onConfirm={handleEnroll}
-      />
     </div>
   );
 }

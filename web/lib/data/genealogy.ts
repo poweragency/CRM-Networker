@@ -257,7 +257,7 @@ async function fetchPersonalFunnel(
   try {
     const { data } = await supabase
       .from('prospects')
-      .select('owner_marketer_id, current_stage, outcome, entered_funnel_at')
+      .select('owner_marketer_id, current_stage, outcome, entered_funnel_at, closed_at')
       .in('owner_marketer_id', ids)
       .is('deleted_at', null);
     for (const r of (data ?? []) as {
@@ -265,24 +265,66 @@ async function fetchPersonalFunnel(
       current_stage: ProspectStage;
       outcome: ProspectOutcome;
       entered_funnel_at: string;
+      closed_at: string | null;
     }[]) {
       const f = out.get(r.owner_marketer_id);
       if (!f) continue;
       if (r.outcome === 'open') f.prospects += 1; // live snapshot (any date)
       const enteredThisMonth =
         new Date(r.entered_funnel_at).getTime() >= monthStartMs;
-      if (enteredThisMonth) {
-        if (STAGE_ORDER.indexOf(r.current_stage) >= BUSINESS_INFO_IDX) f.businessInfo += 1;
-        if (r.current_stage === 'iscrizione') f.iscrizioni += 1;
+      if (enteredThisMonth && STAGE_ORDER.indexOf(r.current_stage) >= BUSINESS_INFO_IDX) {
+        f.businessInfo += 1;
+      }
+      // Iscritti = ENROLLED THIS MONTH (closed_at), matching the kanban column.
+      if (
+        r.outcome === 'enrolled' &&
+        r.closed_at &&
+        new Date(r.closed_at).getTime() >= monthStartMs
+      ) {
+        f.iscrizioni += 1;
       }
     }
   } catch {
     /* best-effort */
   }
 
-  // NOTE: Lista-100 entries are PRE-funnel contacts (not in the kanban), so they are
-  // NOT counted as "in ballo" — only open prospects in the kanban count. Mirrors the
-  // `funnel_counts` RPC (migration 0062).
+  // Lista contatti contribute to the monthly funnel too: iscritti (stato 'iscritto'
+  // this month) and BI-reached (invited + entered this month). "In ballo" stays
+  // prospect-only (Lista-100 are pre-funnel). Mirrors the funnel_counts RPC (0067).
+  try {
+    const { data } = await supabase
+      .from('lista_contatti_entries')
+      .select('owner_marketer_id, stato, percorso, iscritto_at, created_at')
+      .in('owner_marketer_id', ids)
+      .is('deleted_at', null);
+    for (const r of (data ?? []) as {
+      owner_marketer_id: string;
+      stato: string;
+      percorso: number | null;
+      iscritto_at: string | null;
+      created_at: string;
+    }[]) {
+      const f = out.get(r.owner_marketer_id);
+      if (!f) continue;
+      const createdThisMonth = new Date(r.created_at).getTime() >= monthStartMs;
+      if (
+        createdThisMonth &&
+        (r.percorso ?? 0) >= 1 &&
+        (r.stato === 'invitato' || r.stato === 'iscritto')
+      ) {
+        f.businessInfo += 1;
+      }
+      if (
+        r.stato === 'iscritto' &&
+        r.iscritto_at &&
+        new Date(r.iscritto_at).getTime() >= monthStartMs
+      ) {
+        f.iscrizioni += 1;
+      }
+    }
+  } catch {
+    /* best-effort */
+  }
 
   return out;
 }

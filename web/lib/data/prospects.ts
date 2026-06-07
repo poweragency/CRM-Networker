@@ -238,8 +238,8 @@ export async function changeStage(
     id: prospectId,
     current_stage: toStage,
     current_stage_since: nowIso(),
-    outcome: isEnrollment ? 'enrolled' : current.outcome,
-    closed_at: isEnrollment ? nowIso() : current.closed_at,
+    outcome: isEnrollment ? 'enrolled' : 'open',
+    closed_at: isEnrollment ? nowIso() : null,
     updated_at: nowIso(),
   };
   const simulatedEvent: ProspectJourneyEvent = {
@@ -269,10 +269,11 @@ export async function changeStage(
       p_prospect_id: prospectId,
       p_new_stage: toStage,
       p_notes: notes ?? null,
-      // Reaching the terminal stage MUST stamp the enrollment outcome (+closed_at);
-      // the RPC leaves outcome='open' when p_outcome is null. Without this the
-      // whole funnel/conversion fact base is wrong.
-      p_outcome: isEnrollment ? 'enrolled' : null,
+      // Reaching the terminal stage stamps the enrollment outcome (+closed_at);
+      // moving to ANY earlier stage forces outcome back to 'open' (clears closed_at),
+      // so dragging a card out of "Iscritto" cleanly un-enrolls it. (The RPC does
+      // COALESCE(p_outcome, outcome), so a null here would KEEP a stale 'enrolled'.)
+      p_outcome: isEnrollment ? 'enrolled' : 'open',
     });
     if (error) {
       logError('changeStage', error, { prospectId, toStage });

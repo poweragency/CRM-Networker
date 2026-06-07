@@ -716,6 +716,8 @@ export interface ListaContattiEntry {
   percorso: number;
   contacted: boolean;
   promoted_contact_id: string | null;
+  /** When the entry was marked 'iscritto' — the monthly-reset anchor (null otherwise). */
+  iscritto_at: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
