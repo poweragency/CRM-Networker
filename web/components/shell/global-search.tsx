@@ -80,7 +80,8 @@ export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
     const el = containerRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
-    const width = Math.min(Math.max(r.width, 336), window.innerWidth - r.left - 12);
+    // Match the input width so the panel sits neatly inside the menu (no overflow).
+    const width = Math.min(r.width, window.innerWidth - r.left - 12);
     setRect({ top: r.bottom + 4, left: r.left, width });
   }, []);
 
@@ -207,21 +208,9 @@ export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
                         <span className="block truncate text-sm font-medium text-foreground">
                           {h.name}
                         </span>
-                        {h.subtitle && (
-                          <span className="block truncate text-[11px] text-muted-foreground">
-                            {h.subtitle}
-                          </span>
-                        )}
-                      </span>
-                      <span
-                        className={cn(
-                          'shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
-                          h.kind === 'team'
-                            ? 'bg-primary/10 text-primary'
-                            : 'bg-warning/12 text-warning',
-                        )}
-                      >
-                        {h.kind === 'team' ? t('team') : t('prospect')}
+                        <span className="block truncate text-[11px] text-muted-foreground">
+                          {h.kind === 'prospect' ? t('prospect') : h.subtitle}
+                        </span>
                       </span>
                     </button>
                   </li>
