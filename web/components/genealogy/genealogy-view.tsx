@@ -192,6 +192,17 @@ export function GenealogyView({
     [t, toast, tree],
   );
 
+  // Esc closes the node detail panel (the one overlay here that isn't a Modal).
+  // Skip while the add-member dialog is open — its own Modal handles Esc first.
+  React.useEffect(() => {
+    if (!selectedId) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape' && addTarget === null) setSelectedId(null);
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [selectedId, addTarget]);
+
   return (
     <div className="space-y-3">
       {/* Marketer search lives in the top navbar (only while this screen is up). */}
