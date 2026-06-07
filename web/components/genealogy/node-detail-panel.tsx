@@ -40,6 +40,8 @@ export interface NodeDetailPanelProps {
   canActivate: boolean;
   /** This node is SPILLOVER for the viewer (recruited from outside your line). */
   spillover?: boolean;
+  /** This node is the viewer's own root (so neither badge is shown). */
+  isRoot?: boolean;
   /** Display name of who actually recruited this person (their sponsor). */
   sponsorName?: string | null;
   onClose: () => void;
@@ -96,6 +98,7 @@ export function NodeDetailPanel({
   node,
   canActivate,
   spillover = false,
+  isRoot = false,
   sponsorName = null,
   onClose,
   onLocate,
@@ -138,9 +141,14 @@ export function NodeDetailPanel({
             </h2>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <RankBadge rank={node.rank} />
-              {spillover && (
+              {!isRoot && spillover && (
                 <span className="inline-flex items-center rounded-full border border-dashed border-info/50 bg-info/12 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-info">
                   {t('spillover')}
+                </span>
+              )}
+              {!isRoot && !spillover && (
+                <span className="inline-flex items-center rounded-full border border-success/40 bg-success/12 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-success">
+                  {t('organic')}
                 </span>
               )}
             </div>

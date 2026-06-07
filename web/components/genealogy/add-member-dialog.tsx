@@ -31,10 +31,32 @@ import {
  * node back so the canvas can insert it under (parentId, leg) immediately.
  */
 
-/** Where the new member goes: in an empty leg BELOW a parent, or ABOVE a node. */
+/** A selectable sponsor — the placement's upline chain (closest first). */
+export interface SponsorOption {
+  id: string;
+  name: string;
+  rank: MarketerRank;
+}
+
+/**
+ * Where the new member goes: in an empty leg BELOW a parent, or ABOVE a node.
+ * `sponsorOptions` is the upline chain valid as sponsor (closest first); the first
+ * entry is the default (organic). Picking a higher one makes the member spillover.
+ */
 export type AddMemberTarget =
-  | { mode: 'below'; parentId: string; leg: PlacementLeg; parentName: string }
-  | { mode: 'above'; targetId: string; targetName: string };
+  | {
+      mode: 'below';
+      parentId: string;
+      leg: PlacementLeg;
+      parentName: string;
+      sponsorOptions: SponsorOption[];
+    }
+  | {
+      mode: 'above';
+      targetId: string;
+      targetName: string;
+      sponsorOptions: SponsorOption[];
+    };
 
 export interface AddMemberDialogProps {
   open: boolean;
@@ -64,6 +86,10 @@ export function AddMemberDialog({
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
+  // Sponsor: defaults to the closest upline (organic); searchable among the chain.
+  const sponsorOptions = target?.sponsorOptions ?? [];
+  const [sponsorId, setSponsorId] = React.useState('');
+  const [sponsorQuery, setSponsorQuery] = React.useState('');
 
   // Reset the form each time the dialog opens.
   React.useEffect(() => {
@@ -77,7 +103,10 @@ export function AddMemberDialog({
       setPassword('');
       setError(null);
       setSaving(false);
+      setSponsorId(target?.sponsorOptions[0]?.id ?? '');
+      setSponsorQuery('');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const legLabel =
@@ -114,6 +143,7 @@ export function AddMemberDialog({
             rank,
             pack: pack || null,
             click,
+            sponsorId: sponsorId || null,
             email: mail,
             password,
           })
@@ -125,6 +155,7 @@ export function AddMemberDialog({
             rank,
             pack: pack || null,
             click,
+            sponsorId: sponsorId || null,
             email: mail,
             password,
           });
@@ -252,6 +283,81 @@ export function AddMemberDialog({
             ))}
           </select>
         </div>
+
+        {/* Sponsor — chi ha portato la persona. Solo upline della posizione (catena
+            diretta sopra il nuovo nodo); ricerca da tastiera. Default = genitore
+            (genealogico); scegliere un upline più in alto = spillover. */}
+        {sponsorOptions.length > 0 && (
+          <div>
+            <Label htmlFor="am-sponsor-search" className="mb-1.5 block">
+              {t('add_sponsor')}
+            </Label>
+            <input
+              id="am-sponsor-search"
+              type="text"
+              value={sponsorQuery}
+              onChange={(e) => setSponsorQuery(e.target.value)}
+              placeholder={t('add_sponsor_search')}
+              autoComplete="off"
+              className={cn(fieldCx, 'mb-1.5')}
+            />
+            <div
+              role="radiogroup"
+              aria-label={t('add_sponsor')}
+              className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-border/70 bg-muted/20 p-1"
+            >
+              {sponsorOptions
+                .filter((o) =>
+                  o.name.toLowerCase().includes(sponsorQuery.trim().toLowerCase()),
+                )
+                .map((o, idx) => {
+                  const selected = o.id === sponsorId;
+                  const isDefault = sponsorOptions[0]?.id === o.id;
+                  return (
+                    <button
+                      key={o.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      onClick={() => setSponsorId(o.id)}
+                      className={cn(
+                        'flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-2 text-left text-sm transition-colors duration-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                        selected
+                          ? 'bg-primary/12 ring-1 ring-primary/40'
+                          : 'hover:bg-muted/60',
+                      )}
+                    >
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span
+                          className={cn(
+                            'h-2 w-2 shrink-0 rounded-full',
+                            selected ? 'bg-primary' : 'bg-muted-foreground/40',
+                          )}
+                          aria-hidden
+                        />
+                        <span className="truncate font-medium text-foreground">
+                          {o.name}
+                        </span>
+                        <span className="shrink-0 text-[11px] text-muted-foreground">
+                          {RANK_LABELS[o.rank]}
+                        </span>
+                      </span>
+                      {isDefault && (
+                        <span className="shrink-0 rounded-full bg-success/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-success">
+                          {t('add_sponsor_direct')}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+            </div>
+            {sponsorId && sponsorId !== sponsorOptions[0]?.id && (
+              <p className="mt-1.5 text-[11px] leading-snug text-info">
+                {t('add_sponsor_spillover')}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Account di accesso — creato subito per la persona. */}
         <div className="space-y-3 rounded-lg border border-border/70 bg-muted/20 p-3">

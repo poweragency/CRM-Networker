@@ -183,12 +183,37 @@ async function fetchPersonalFunnel(
   for (const id of ids) out.set(id, { ...ZERO_FUNNEL });
   if (ids.length === 0) return out;
 
-  // Current-month boundary (local, matching the dashboard's monthly cohort).
+  // Primary path: the `funnel_counts` RPC aggregates server-side, so the counts are
+  // EXACT regardless of org size (the previous client-side `.in(ids)` reads were
+  // capped by PostgREST's row limit → the tree silently undercounted, esp. Lista-100).
+  // It also owns the single "prospect in ballo" definition (open prospects + Lista-100
+  // entries still in percorso) and this-month's BI/iscrizioni cohort.
+  try {
+    const { data, error } = await supabase.rpc('funnel_counts', { p_ids: ids });
+    if (!error && Array.isArray(data)) {
+      for (const r of data as {
+        marketer_id: string;
+        prospects: number;
+        business_info: number;
+        iscrizioni: number;
+      }[]) {
+        out.set(r.marketer_id, {
+          prospects: Number(r.prospects) || 0,
+          businessInfo: Number(r.business_info) || 0,
+          iscrizioni: Number(r.iscrizioni) || 0,
+        });
+      }
+      return out;
+    }
+  } catch {
+    /* fall through to the client-side fallback below */
+  }
+
+  // Fallback (RPC unavailable): same definition, computed client-side. Subject to the
+  // row cap on very large orgs, but keeps the tree populated rather than empty.
   const now = new Date();
   const monthStartMs = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
 
-  // 1. Prospects table. `open` → live "in ballo"; THIS MONTH's intake → monthly
-  //    business-info / iscrizioni (the conversion is monthly).
   try {
     const { data } = await supabase
       .from('prospects')
@@ -215,8 +240,6 @@ async function fetchPersonalFunnel(
     /* best-effort */
   }
 
-  // 2. Lista-100 entries in percorso → only the live "in ballo" snapshot (no
-  //    reliable funnel-entry date, so they don't feed the monthly metrics).
   try {
     const { data } = await supabase
       .from('lista_contatti_entries')
@@ -492,7 +515,14 @@ export const getNode = cache(async function getNode(
     if (error || !data) return { data: null, demo: false };
     const node = toTreeNode(data);
     const counts = await fetchTeamCounts(supabase, [node.id]);
-    return { data: withCounts([node], counts)[0], demo: false };
+    // Stamp the PERSONAL funnel (prospect in ballo + monthly BI/iscrizioni) so the
+    // /team/[id] profile shows the SAME "prospect" number the tree shows for this
+    // node's personal value — both flow through `funnel_counts` (one definition).
+    const personal = await fetchPersonalFunnel(supabase, [node.id]);
+    return {
+      data: stampFunnel(withCounts([node], counts), personal)[0],
+      demo: false,
+    };
   } catch {
     return { data: null, demo: false };
   }

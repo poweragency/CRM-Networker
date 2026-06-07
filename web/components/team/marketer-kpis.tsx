@@ -1,21 +1,29 @@
 import { getTranslations } from 'next-intl/server';
-import { PanelLeft, PanelRight, Users } from 'lucide-react';
+import { PanelLeft, PanelRight, Target, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CountUp } from '@/components/ui/count-up';
 import type { TreeNode } from '@/lib/types/db';
 
 /**
- * MarketerKpis — the marketer's team structure (team / left / right — genealogy
- * aggregates) for the "Produzione" section, rendered as three premium stat cards
- * with branch-tinted icon chips, large tallying numbers and a hover lift. The
- * personal funnel KPIs live in the dedicated "Performance" modal (see
- * {@link PerformanceModal}), not inline.
+ * MarketerKpis — the marketer's headline numbers for the "Produzione" section:
+ * "Prospect (in ballo)" — their LIVE active prospects (open funnel + Lista-100 in
+ * percorso), the SAME figure the genealogy tree shows for this person — followed by
+ * the binary team structure (team / left / right). Rendered as premium stat cards
+ * with tinted icon chips, large tallying numbers and a hover lift. The funnel
+ * STEP-conversion trends live in the dedicated "Performance" modal.
  */
 export async function MarketerKpis({ node }: { node: TreeNode }) {
   const tg = await getTranslations('genealogia');
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <HeroStat
+        icon={Target}
+        label={tg('kpi_prospects_live')}
+        value={node.kpis.prospects}
+        chip="bg-info/10 text-info"
+        bar="from-info/60"
+      />
       <HeroStat
         icon={Users}
         label={tg('team_size')}

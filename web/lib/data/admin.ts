@@ -217,6 +217,35 @@ export async function createMarketer(
   }
 }
 
+/**
+ * True if `candidateId` is an ancestor of `nodeId` (or, with includeSelf, the node
+ * itself) in the binary tree. Used to constrain sponsor choice to the UPLINE of a
+ * placement — a sponsor must sit above the new position, never crossline. Reads the
+ * closure table (RLS-scoped); demo (no client) returns true so it never blocks.
+ */
+export async function isUpline(
+  candidateId: string,
+  nodeId: string,
+  includeSelf: boolean,
+): Promise<boolean> {
+  const supabase = getClient();
+  if (!supabase) return true;
+  try {
+    let q = supabase
+      .from('marketer_tree_closure')
+      .select('depth')
+      .eq('ancestor_id', candidateId)
+      .eq('descendant_id', nodeId)
+      .limit(1);
+    if (!includeSelf) q = q.gt('depth', 0);
+    const { data, error } = await q;
+    if (error) return false;
+    return (data?.length ?? 0) > 0;
+  } catch {
+    return false;
+  }
+}
+
 export interface InsertAboveInput {
   /** The existing node the new marketer is inserted ABOVE. */
   targetId: string;

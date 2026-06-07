@@ -358,11 +358,13 @@ function CinematicInner(
   const onAddSlotRef = React.useRef(onAddSlot);
   const spilloverRef = React.useRef<ReadonlySet<string> | undefined>(spilloverIds);
   const dimSpilloverRef = React.useRef<boolean>(dimSpillover ?? false);
+  const layoutRootRef = React.useRef<string>(layoutRootId);
   selectedRef.current = selectedId;
   onSelectRef.current = onSelect;
   onAddSlotRef.current = onAddSlot;
   spilloverRef.current = spilloverIds;
   dimSpilloverRef.current = dimSpillover ?? false;
+  layoutRootRef.current = layoutRootId;
 
   const data = React.useMemo(
     () => buildData(nodes, layoutRootId, addSlotsForId),
@@ -535,10 +537,16 @@ function CinematicInner(
         ctx.shadowColor = hsl(accent, 0.8);
         ctx.shadowBlur = 26;
       }
-      // Card body (dark glass).
+      // Card body (dark glass). Spillover gets a faint info-blue wash so it reads as
+      // a different colour from organic (genealogico) cards at a glance.
       roundRect(ctx, sx, sy, sw, sh, S(14));
       ctx.fillStyle = isSel ? 'rgba(24,27,38,0.96)' : 'rgba(17,19,27,0.92)';
       ctx.fill();
+      if (isSpill) {
+        roundRect(ctx, sx, sy, sw, sh, S(14));
+        ctx.fillStyle = hsl(pal.info, 0.12);
+        ctx.fill();
+      }
       ctx.shadowBlur = 0;
 
       // Top sheen — card mode only (a per-node gradient; skipped when many chips
@@ -598,12 +606,25 @@ function CinematicInner(
       ctx.textAlign = 'left';
       ctx.fillStyle = 'rgba(255,255,255,0.96)';
       ctx.font = `600 ${S(15)}px ui-sans-serif, system-ui, sans-serif`;
-      ctx.fillText(fitText(ctx, n.display_name, S(180)), L(60), T(28));
+      ctx.fillText(fitText(ctx, n.display_name, S(150)), L(60), T(28));
+
+      // Genealogy marker in the overview (chip mode): a small dot — green organic
+      // (genealogico), blue spillover — so the distinction reads before the full
+      // card resolves. Skipped on the view's own root (the "you" reference point).
+      if (mode === 'chip' && n.id !== layoutRootRef.current) {
+        ctx.beginPath();
+        ctx.arc(L(NODE_WIDTH - 14), T(14), S(5), 0, Math.PI * 2);
+        ctx.fillStyle = hsl(isSpill ? pal.info : pal.success, 0.95);
+        ctx.fill();
+      }
 
       if (mode === 'card') {
-        // Spillover tag (top-right) — recruited from outside your line.
-        if (isSpill) {
-          const tag = t('spillover').toUpperCase();
+        // Genealogy tag (top-right): GENEALOGICO (green) when the person's sponsor
+        // chain reaches the viewer, SPILLOVER (blue) when recruited from outside the
+        // line. Skipped on the view's own root.
+        if (n.id !== layoutRootRef.current) {
+          const tag = (isSpill ? t('spillover') : t('organic')).toUpperCase();
+          const tagColor = isSpill ? pal.info : pal.success;
           ctx.font = `700 ${S(8)}px ui-sans-serif, system-ui, sans-serif`;
           ctx.textAlign = 'left';
           ctx.textBaseline = 'middle';
@@ -613,9 +634,9 @@ function CinematicInner(
           const tagX = L(NODE_WIDTH - 12) - tagW;
           const tagY = T(9);
           roundRect(ctx, tagX, tagY, tagW, tagH, tagH / 2);
-          ctx.fillStyle = hsl(pal.info, 0.18);
+          ctx.fillStyle = hsl(tagColor, 0.18);
           ctx.fill();
-          ctx.fillStyle = hsl(pal.info, 1);
+          ctx.fillStyle = hsl(tagColor, 1);
           ctx.fillText(tag, tagX + padX, tagY + tagH / 2);
         }
 

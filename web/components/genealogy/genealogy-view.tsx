@@ -19,6 +19,7 @@ import { removeMarketerAction } from '@/app/(app)/genealogia/actions';
 import {
   AddMemberDialog,
   type AddMemberTarget,
+  type SponsorOption,
 } from './add-member-dialog';
 import {
   GenealogyCanvasCinematic,
@@ -135,6 +136,24 @@ export function GenealogyView({
     setSelectedId(node.id);
   }, []);
 
+  // The upline chain valid as sponsor for a placement under `startId` — the node
+  // itself then its ancestors up to the root (closest first). Constrains sponsor
+  // choice to the direct upline (no crossline). Walks the cached parent adjacency.
+  const uplineChain = React.useCallback(
+    (startId: string | null): SponsorOption[] => {
+      const out: SponsorOption[] = [];
+      const seen = new Set<string>();
+      let cur = startId ? tree.getNode(startId) : null;
+      while (cur && !seen.has(cur.id)) {
+        seen.add(cur.id);
+        out.push({ id: cur.id, name: cur.display_name, rank: cur.rank });
+        cur = cur.parent_id ? tree.getNode(cur.parent_id) ?? null : null;
+      }
+      return out;
+    },
+    [tree],
+  );
+
   const handleAddSlot = React.useCallback(
     (parentId: string, leg: PlacementLeg) => {
       const parent = tree.getNode(parentId);
@@ -143,19 +162,27 @@ export function GenealogyView({
         parentId,
         leg,
         parentName: parent?.display_name ?? '',
+        // Sponsor candidates = the placement parent + its upline chain.
+        sponsorOptions: uplineChain(parentId),
       });
     },
-    [tree],
+    [tree, uplineChain],
   );
 
-  // Open the dialog in "insert above" mode for the selected node.
-  const handleInsertAbove = React.useCallback((node: TreeNode) => {
-    setAddTarget({
-      mode: 'above',
-      targetId: node.id,
-      targetName: node.display_name,
-    });
-  }, []);
+  // Open the dialog in "insert above" mode for the selected node. The new node takes
+  // the target's slot under the target's current parent, so the valid sponsors are
+  // the target's parent + its upline chain (i.e. the target's ancestors).
+  const handleInsertAbove = React.useCallback(
+    (node: TreeNode) => {
+      setAddTarget({
+        mode: 'above',
+        targetId: node.id,
+        targetName: node.display_name,
+        sponsorOptions: uplineChain(node.parent_id),
+      });
+    },
+    [uplineChain],
+  );
 
   const handleAdded = React.useCallback(
     async (node: TreeNode) => {
@@ -286,6 +313,7 @@ export function GenealogyView({
               node={selectedNode}
               canActivate={canActivate}
               spillover={selectedSpillover}
+              isRoot={selectedNode.id === rootId}
               sponsorName={sponsorName}
               onClose={() => setSelectedId(null)}
               onLocate={handleLocate}

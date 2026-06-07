@@ -7,7 +7,12 @@ import {
   TREE_LOAD_DEPTH,
 } from '@/lib/data/genealogy';
 import { updateMarketerExtra } from '@/lib/data/team';
-import { createMarketer, insertMarketerAbove, removeMarketer } from '@/lib/data/admin';
+import {
+  createMarketer,
+  insertMarketerAbove,
+  isUpline,
+  removeMarketer,
+} from '@/lib/data/admin';
 import { activateCrmAccess, revokeAccountForMarketer } from '@/lib/data/account';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { addRuntimeNode, nextRuntimeId } from '@/lib/data/mock/runtime';
@@ -72,6 +77,10 @@ export interface AddMemberInput {
   pack: StartingPackage | null;
   /** "click" — accesso alla piattaforma aziendale. */
   click: boolean;
+  /** Chosen sponsor (who recruited them). Must be an upline of the placement; when
+   *  it differs from the placement parent the new member is SPILLOVER. Defaults to
+   *  the parent (organic) when omitted/invalid. */
+  sponsorId?: string | null;
   /** Login created up-front for the new member (auth user + membership). */
   email: string;
   password: string;
@@ -106,12 +115,22 @@ export async function addMarketerAction(
   // the parent. Anagrafica extras (pacchetto/click) have no DB columns yet, so
   // they remain in the in-memory override store.
   if (isSupabaseConfigured) {
+    // Sponsor = chosen recruiter. Constrained to the placement's UPLINE (the parent
+    // or one of its ancestors) so it can never be crossline; falls back to the
+    // parent (organic) when omitted or invalid. A sponsor above the parent = spillover.
+    let sponsorId = input.parentId;
+    if (input.sponsorId && input.sponsorId !== input.parentId) {
+      if (await isUpline(input.sponsorId, input.parentId, true)) {
+        sponsorId = input.sponsorId;
+      }
+    }
+
     const res = await createMarketer({
       firstName: input.firstName,
       lastName: input.lastName,
       parentId: input.parentId,
       leg: input.leg,
-      sponsorId: input.parentId,
+      sponsorId,
       rank: input.rank,
       status: 'active',
     });
@@ -157,7 +176,7 @@ export async function addMarketerAction(
       display_name: display,
       parent_id: input.parentId,
       leg: input.leg,
-      sponsor_id: input.parentId,
+      sponsor_id: sponsorId,
       rank: input.rank,
       status: 'active',
       team_size: 0,
@@ -181,7 +200,7 @@ export async function addMarketerAction(
     display_name: display,
     parent_id: input.parentId,
     leg: input.leg,
-    sponsor_id: input.parentId,
+    sponsor_id: input.sponsorId ?? input.parentId,
     rank: input.rank,
     status: 'active',
     team_size: 0,
@@ -210,6 +229,9 @@ export interface AddAboveInput {
   rank: MarketerRank;
   pack: StartingPackage | null;
   click: boolean;
+  /** Chosen sponsor — must be an upline of the target (an ancestor); defaults to the
+   *  target's current parent (the slot the new node takes) when omitted/invalid. */
+  sponsorId?: string | null;
   email: string;
   password: string;
 }
@@ -228,12 +250,20 @@ export async function addMarketerAboveAction(
     return { node: null, demo: true, ok: false, error: 'service_missing' };
   }
 
+  // Sponsor must be an UPLINE of the target (a strict ancestor) — the new node takes
+  // the target's slot, so its valid sponsors are exactly the target's ancestors.
+  // Invalid/omitted → null, and the RPC defaults it to the target's current parent.
+  let sponsorId: string | null = null;
+  if (input.sponsorId && (await isUpline(input.sponsorId, input.targetId, false))) {
+    sponsorId = input.sponsorId;
+  }
+
   const res = await insertMarketerAbove({
     targetId: input.targetId,
     firstName: input.firstName,
     lastName: input.lastName,
     rank: input.rank,
-    sponsorId: null,
+    sponsorId,
   });
   if (!res.ok || !res.id) return { node: null, demo: false, ok: false };
 
@@ -269,7 +299,7 @@ export async function addMarketerAboveAction(
     display_name: `${input.firstName} ${input.lastName}`.trim(),
     parent_id: null,
     leg: null,
-    sponsor_id: null,
+    sponsor_id: sponsorId,
     rank: input.rank,
     status: 'active',
     team_size: 0,
