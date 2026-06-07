@@ -88,7 +88,11 @@ export interface SaveIdentityResult {
  */
 export async function saveMarketerIdentityAction(
   id: string,
-  patch: { rank?: MarketerRank; status?: MarketerStatus },
+  patch: {
+    rank?: MarketerRank;
+    status?: MarketerStatus;
+    registration_date?: string | null;
+  },
 ): Promise<SaveIdentityResult> {
   const { claims } = await getCurrentClaims();
   if (claims.marketer_id === id) {

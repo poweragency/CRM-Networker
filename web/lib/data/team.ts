@@ -296,16 +296,23 @@ export interface UpdateIdentityResult {
  */
 export async function updateMarketerIdentity(
   id: string,
-  patch: { rank?: MarketerRank; status?: MarketerStatus },
+  patch: {
+    rank?: MarketerRank;
+    status?: MarketerStatus;
+    /** Enrollment date (YYYY-MM-DD) — editable for a downline. */
+    registration_date?: string | null;
+  },
 ): Promise<UpdateIdentityResult> {
   const supabase = getClient();
   if (!supabase) {
-    setMarketerIdentity(id, patch);
+    setMarketerIdentity(id, { rank: patch.rank, status: patch.status });
     return { ok: true, demo: true };
   }
   const update: Record<string, unknown> = {};
   if (patch.rank !== undefined) update.rank = patch.rank;
   if (patch.status !== undefined) update.status = patch.status;
+  if (patch.registration_date !== undefined)
+    update.registration_date = patch.registration_date;
   if (Object.keys(update).length === 0) return { ok: true, demo: false };
   try {
     const { data: rows, error } = await supabase

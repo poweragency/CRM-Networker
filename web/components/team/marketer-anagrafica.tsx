@@ -27,7 +27,6 @@ import { Badge } from '@/components/ui/badge';
 import { RankBadge } from '@/components/ui/rank-badge';
 import { PackageBadge } from '@/components/ui/package-badge';
 import { useToast } from '@/components/crm/toaster';
-import { UnsavedBar } from '@/components/crm/unsaved-bar';
 import { WhatsAppButton } from '@/components/crm/whatsapp-button';
 import { cn, formatDate } from '@/lib/utils';
 import {
@@ -102,11 +101,17 @@ export function MarketerAnagrafica({
   const [saved, setSaved] = React.useState<MarketerExtra>(() => extraOf(profile));
   const [form, setForm] = React.useState<MarketerExtra>(saved);
 
-  // Identity (rank + renewal status) — only when canEditIdentity.
+  // Identity (rank + renewal + enrollment date) — only when canEditIdentity.
   const [rank, setRank] = React.useState<MarketerRank>(profile.rank);
   const [status, setStatus] = React.useState<MarketerStatus>(profile.status);
   const [savedRank, setSavedRank] = React.useState<MarketerRank>(profile.rank);
   const [savedStatus, setSavedStatus] = React.useState<MarketerStatus>(profile.status);
+  // Enrollment date as a YYYY-MM-DD string for the <input type="date">.
+  const initialReg = profile.registration_date
+    ? profile.registration_date.slice(0, 10)
+    : '';
+  const [regDate, setRegDate] = React.useState<string>(initialReg);
+  const [savedRegDate, setSavedRegDate] = React.useState<string>(initialReg);
 
   function set<K extends keyof MarketerExtra>(key: K, value: MarketerExtra[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -116,6 +121,7 @@ export function MarketerAnagrafica({
     setForm(saved);
     setRank(savedRank);
     setStatus(savedStatus);
+    setRegDate(savedRegDate);
     setEditing(true);
   }
 
@@ -123,16 +129,25 @@ export function MarketerAnagrafica({
     setForm(saved);
     setRank(savedRank);
     setStatus(savedStatus);
+    setRegDate(savedRegDate);
     setEditing(false);
   }
 
   async function save() {
     setSaving(true);
     const res = await saveMarketerAnagrafica(profile.id, form);
-    // Persist rank/status only if editable and actually changed.
+    // Persist rank / renewal / enrollment date only if editable and changed.
     let identityOk = true;
-    if (canEditIdentity && (rank !== savedRank || status !== savedStatus)) {
-      const idRes = await saveMarketerIdentityAction(profile.id, { rank, status });
+    const regChanged = canEditIdentity && regDate !== savedRegDate;
+    if (
+      canEditIdentity &&
+      (rank !== savedRank || status !== savedStatus || regChanged)
+    ) {
+      const idRes = await saveMarketerIdentityAction(profile.id, {
+        rank,
+        status,
+        registration_date: regDate || null,
+      });
       identityOk = idRes.ok;
     }
     setSaving(false);
@@ -146,6 +161,7 @@ export function MarketerAnagrafica({
     setSaved(form);
     setSavedRank(rank);
     setSavedStatus(status);
+    setSavedRegDate(regDate);
     setEditing(false);
     if (rankUp) {
       toast({
@@ -172,7 +188,8 @@ export function MarketerAnagrafica({
     (k) => (form[k] ?? null) !== (saved[k] ?? null),
   );
   const identityDirty =
-    canEditIdentity && (rank !== savedRank || status !== savedStatus);
+    canEditIdentity &&
+    (rank !== savedRank || status !== savedStatus || regDate !== savedRegDate);
   const dirty = editing && (extraDirty || identityDirty);
 
   React.useEffect(() => {
@@ -180,7 +197,6 @@ export function MarketerAnagrafica({
   }, [dirty, onDirtyChange]);
 
   return (
-    <>
     <Card className={cn(bare && 'border-0 bg-transparent shadow-none')}>
       <CardHeader
         className={cn(
@@ -222,7 +238,18 @@ export function MarketerAnagrafica({
           <Field
             icon={CalendarPlus}
             label={t('f_registration')}
-            value={profile.registration_date ? formatDate(profile.registration_date) : null}
+            editing={editing}
+            value={savedRegDate ? formatDate(savedRegDate) : null}
+            editor={
+              canEditIdentity ? (
+                <input
+                  type="date"
+                  className={fieldCx}
+                  value={regDate}
+                  onChange={(e) => setRegDate(e.target.value)}
+                />
+              ) : undefined
+            }
           />
           <Field
             icon={Award}
@@ -421,16 +448,6 @@ export function MarketerAnagrafica({
         </Section>
       </CardContent>
     </Card>
-
-      <UnsavedBar
-        dirty={dirty}
-        saving={saving}
-        onSave={save}
-        onDiscard={cancel}
-        saveLabel={t('save')}
-        discardLabel={t('cancel')}
-      />
-    </>
   );
 }
 
