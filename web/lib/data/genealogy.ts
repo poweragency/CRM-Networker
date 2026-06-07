@@ -5,9 +5,11 @@ import { isSupabaseConfigured } from '@/lib/env';
 import { getCurrentClaims } from '@/lib/data/session';
 import type {
   BranchScope,
+  ListaContattiStatus,
   MarketerRank,
   MarketerStatus,
   PlacementLeg,
+  ProspectOutcome,
   ProspectStage,
   TreeNode,
 } from '@/lib/types/db';
@@ -142,9 +144,11 @@ function withCounts(
 
 /** Raw (un-rated) funnel counts for ONE marketer — summable across a subtree. */
 interface PersonalFunnel {
-  /** Prospects "in percorso" (funnel pipeline + Lista-100 entries in percorso). */
+  /** Prospects still "in ballo" — open funnel + Lista-100 entries in percorso that
+   *  aren't concluded. Excludes enrolled/lost AND deleted (the headline count). */
   prospects: number;
-  /** How many reached Business Info (the conversion denominator). */
+  /** How many reached Business Info, EVER (the conversion denominator — counts
+   *  open + enrolled + lost, so the rate reflects the full history). */
   businessInfo: number;
   /** Enrollments (iscrizioni). */
   iscrizioni: number;
@@ -156,15 +160,18 @@ const BUSINESS_INFO_IDX = STAGE_ORDER.indexOf('business_info');
 
 /**
  * Per-marketer PERSONAL funnel counts (audit: these were hardcoded to 0). A
- * prospect "in percorso" comes from TWO sources, both counted:
+ * prospect "in ballo" comes from TWO sources, both counted:
  *   1. the `prospects` table (the Percorso Prospect kanban), and
  *   2. `lista_contatti_entries.percorso >= 1` — Lista-100 contacts moved into the
  *      funnel (percorso 1..5 = Business Info → Iscrizione). These are NOT in the
  *      prospects table (promote creates a contact, not a prospect), so the old
  *      count silently missed them.
- * Returns raw counts (not a ratio) so they can be summed over a subtree before the
- * conversion is computed. Three queries for the whole id set; RLS scopes each to
- * what the caller can see.
+ * The headline `prospects` count includes ONLY active prospects (open / not yet
+ * concluded) — enrolled, lost and deleted are excluded, so a leader sees how many
+ * are genuinely "in ballo". The conversion counters (businessInfo / iscrizioni)
+ * still span the full history. Returns raw counts (not a ratio) so they can be
+ * summed over a subtree before conversion is computed. Three queries for the whole
+ * id set; RLS scopes each to what the caller can see.
  */
 async function fetchPersonalFunnel(
   supabase: SupabaseServerClient,
@@ -174,17 +181,21 @@ async function fetchPersonalFunnel(
   for (const id of ids) out.set(id, { ...ZERO_FUNNEL });
   if (ids.length === 0) return out;
 
-  // 1. Prospects table (kanban pipeline).
+  // 1. Prospects table (kanban pipeline). Only `open` ones count as "in ballo".
   try {
     const { data } = await supabase
       .from('prospects')
-      .select('owner_marketer_id, current_stage')
+      .select('owner_marketer_id, current_stage, outcome')
       .in('owner_marketer_id', ids)
       .is('deleted_at', null);
-    for (const r of (data ?? []) as { owner_marketer_id: string; current_stage: ProspectStage }[]) {
+    for (const r of (data ?? []) as {
+      owner_marketer_id: string;
+      current_stage: ProspectStage;
+      outcome: ProspectOutcome;
+    }[]) {
       const f = out.get(r.owner_marketer_id);
       if (!f) continue;
-      f.prospects += 1;
+      if (r.outcome === 'open') f.prospects += 1; // exclude enrolled/lost
       if (STAGE_ORDER.indexOf(r.current_stage) >= BUSINESS_INFO_IDX) f.businessInfo += 1;
       if (r.current_stage === 'iscrizione') f.iscrizioni += 1;
     }
@@ -193,19 +204,26 @@ async function fetchPersonalFunnel(
   }
 
   // 2. Lista-100 entries in percorso (percorso 1..5 = Business Info → Iscrizione).
+  // "In ballo" excludes the concluded ones (iscritto / non iscritto / percorso 5).
   try {
     const { data } = await supabase
       .from('lista_contatti_entries')
-      .select('owner_marketer_id, percorso')
+      .select('owner_marketer_id, percorso, stato')
       .in('owner_marketer_id', ids)
       .gte('percorso', 1)
       .is('deleted_at', null);
-    for (const r of (data ?? []) as { owner_marketer_id: string; percorso: number }[]) {
+    for (const r of (data ?? []) as {
+      owner_marketer_id: string;
+      percorso: number;
+      stato: ListaContattiStatus | null;
+    }[]) {
       const f = out.get(r.owner_marketer_id);
       if (!f) continue;
-      f.prospects += 1;
+      const concluded =
+        r.percorso >= 5 || r.stato === 'iscritto' || r.stato === 'non_iscritto';
+      if (!concluded) f.prospects += 1; // still in ballo
       f.businessInfo += 1; // percorso >= 1 → already reached Business Info
-      if (r.percorso >= 5) f.iscrizioni += 1; // 5 = Iscrizione
+      if (r.percorso >= 5 || r.stato === 'iscritto') f.iscrizioni += 1; // enrolled
     }
   } catch {
     /* best-effort */
