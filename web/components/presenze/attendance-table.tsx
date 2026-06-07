@@ -61,6 +61,24 @@ function seed(members: AttendanceMember[], pick: (m: AttendanceMember) => Record
   return Object.fromEntries(members.map((m) => [m.id, { ...pick(m) }]));
 }
 
+/** Add ONLY missing members to the flags, preserving live marks (never wipes). Used
+ *  when the `members` prop gets a new reference without an actual day change. */
+function mergeSeed(
+  prev: Flags,
+  members: AttendanceMember[],
+  pick: (m: AttendanceMember) => Record<string, boolean>,
+): Flags {
+  let changed = false;
+  const next: Flags = { ...prev };
+  for (const m of members) {
+    if (!next[m.id]) {
+      next[m.id] = { ...pick(m) };
+      changed = true;
+    }
+  }
+  return changed ? next : prev;
+}
+
 /** Build member→call flags from a flat `${mid}|${cid}` map (a day-switch payload). */
 function seedFromFlat(
   members: AttendanceMember[],
@@ -123,9 +141,13 @@ export function AttendanceTable({
   // Live name filter: typing hides everyone who doesn't match.
   const [query, setQuery] = React.useState('');
 
+  // Only ADD members that aren't already tracked — never re-seed (which would wipe
+  // marks the user just made, since `members` carries the INITIAL day's flags while
+  // the day is now managed client-side via `go`). The day's own values come from the
+  // useState initializer (mount) and from `go` (day switch).
   React.useEffect(() => {
-    setPresent(seed(members, (m) => m.present));
-    setCam(seed(members, (m) => m.cam));
+    setPresent((prev) => mergeSeed(prev, members, (m) => m.present));
+    setCam((prev) => mergeSeed(prev, members, (m) => m.cam));
   }, [members]);
 
   // ── Realtime: reflect everyone else's check-ins live (no manual refresh). ──

@@ -110,10 +110,10 @@ export async function getZoomAttendance(date: string): Promise<AttendanceResult>
   const present = new Map<string, boolean>();
   const camera = new Map<string, boolean>();
   try {
-    const ids = sub.data.map((n) => n.id);
-    // Paginate so a large team's attendance for the day isn't truncated by the row
-    // cap. RLS already scopes rows to the caller's subtree; the id filter narrows to
-    // the loaded members.
+    // NO `.in(ids)`: with a big team that filter became a ~40KB URL and the request
+    // failed → the saved attendance never loaded (everyone showed absent, and marks
+    // appeared to reset). RLS already scopes zoom_attendance to the caller's subtree,
+    // so a plain day query returns exactly the right rows. Paginated for the row cap.
     const data = await fetchAllRows<{
       marketer_id: string;
       call_id: string | null;
@@ -124,7 +124,6 @@ export async function getZoomAttendance(date: string): Promise<AttendanceResult>
         .from('zoom_attendance')
         .select('marketer_id,call_id,present,cam')
         .eq('call_date', date)
-        .in('marketer_id', ids)
         .range(from, to),
     );
     for (const r of data ?? []) {
