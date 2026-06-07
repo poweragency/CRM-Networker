@@ -4,6 +4,7 @@ import { updateMarketerExtra, updateMarketerIdentity } from '@/lib/data/team';
 import { saveWishlist } from '@/lib/data/wishlist';
 import { saveFormazioneProgress } from '@/lib/data/formazione';
 import { getCurrentClaims } from '@/lib/data/session';
+import { getDmoStatus, type DmoStatus } from '@/lib/data/streak';
 import { isSupabaseConfigured } from '@/lib/env';
 import type {
   MarketerExtra,
@@ -19,6 +20,13 @@ import type {
  * throw and return a small serializable envelope the client uses to raise the
  * right toast.
  */
+
+/** Re-read the caller's "Catena d'Oro" DMO status (used by the streak modal to
+ *  refresh after the user completes a task). Always the CALLER's own status. */
+export async function refreshDmoStatusAction(): Promise<DmoStatus> {
+  return getDmoStatus();
+}
+
 export interface SaveAnagraficaResult {
   ok: boolean;
   demo: boolean;

@@ -1236,6 +1236,19 @@
     "no_call_body": "Le call hanno giorni fissi: Wake Up Call il lunedì, Golden Call il giovedì, Join The Dream la domenica.",
     "error": "Salvataggio non riuscito. Riprova."
   },
+  "catena": {
+    "title": "Catena d'Oro",
+    "tooltip": "Catena d'Oro — {n, plural, one {# giorno} other {# giorni}}",
+    "streak_days": "{n, plural, one {giorno di fila} other {giorni di fila}}",
+    "today_done": "Catena completata oggi! 🔥",
+    "progress": "{done}/3 completati oggi",
+    "subtitle_done": "Torna domani e mantieni la striscia.",
+    "subtitle_pending": "Completa i 3 task di oggi per aggiungere un giorno alla catena.",
+    "task_call": "Partecipa a una call Zoom",
+    "task_lista": "Aggiungi un contatto alla Lista 100",
+    "task_funnel": "Crea o fai avanzare un prospect",
+    "refresh": "Aggiorna"
+  },
   "wishlist": {
     "near_to_far": "Le 100 cose che vuoi realizzare.",
     "progress_label": "Completamento",

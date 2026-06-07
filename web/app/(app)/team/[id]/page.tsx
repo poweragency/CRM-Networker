@@ -9,6 +9,7 @@ import { getSevenWhysFor } from '@/lib/data/seven-whys';
 import { getMarketerProfile } from '@/lib/data/team';
 import { getWishlist } from '@/lib/data/wishlist';
 import { getFormazioneProgress } from '@/lib/data/formazione';
+import { getDmoStatus } from '@/lib/data/streak';
 import { ConfigNotice } from '@/components/config-notice';
 import { EmptyState } from '@/components/crm/empty-state';
 import { ProspectBoard } from '@/components/prospects/prospect-board';
@@ -86,6 +87,8 @@ export default async function MarketerProfilePage({
   ]);
 
   const isSelf = claimsRes.claims.marketer_id === node.id;
+  // "Catena d'Oro" streak — own profile only (it's the caller's personal DMO).
+  const dmo = isSelf ? await getDmoStatus() : null;
   // RLS scopes profiles to the viewer's subtree, so any profile that loads is the
   // viewer's own or a downline's — both editable. Rank/renewal: downline only
   // (the server re-enforces the self-guard + the strict-upline rule).
@@ -162,6 +165,7 @@ export default async function MarketerProfilePage({
         isSelf={isSelf}
         crmAccess={profile?.crm_access ?? false}
         phone={profile?.phone ?? null}
+        streak={dmo}
         action={
           profile ? (
             <AnagraficaModal

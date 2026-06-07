@@ -8,6 +8,8 @@ import { RankBadge } from '@/components/ui/rank-badge';
 import { cn } from '@/lib/utils';
 import { RANK_ORDER, type MarketerRank, type TreeNode } from '@/lib/types/db';
 import { WhatsAppButton } from '@/components/crm/whatsapp-button';
+import { CatenaButton } from '@/components/streak/catena-button';
+import type { DmoStatus } from '@/lib/data/streak';
 
 /**
  * MarketerHero — the profile identity masthead (server component), styled as an
@@ -43,6 +45,7 @@ export async function MarketerHero({
   crmAccess = false,
   phone = null,
   action = null,
+  streak = null,
 }: {
   node: TreeNode;
   isSelf: boolean;
@@ -52,6 +55,8 @@ export async function MarketerHero({
   phone?: string | null;
   /** Header action shown to the right of the name (e.g. the Anagrafica button). */
   action?: ReactNode;
+  /** The viewer's own DMO streak — shows the "Catena d'Oro" chip (self only). */
+  streak?: DmoStatus | null;
 }) {
   const t = await getTranslations('team');
   const active = node.status === 'active';
@@ -128,6 +133,7 @@ export async function MarketerHero({
                   {t('you')}
                 </Badge>
               )}
+              {isSelf && streak && <CatenaButton initial={streak} />}
               {(action || (!isSelf && phone)) && (
                 <div className="ml-auto flex items-center gap-2">
                   {action}
