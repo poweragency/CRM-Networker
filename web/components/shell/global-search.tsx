@@ -131,7 +131,7 @@ export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
       ) : null}
 
       {showDropdown && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-xl ring-1 ring-black/5">
+        <div className="absolute left-0 top-full z-50 mt-1 w-[21rem] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-xl ring-1 ring-black/5">
           {hits.length === 0 ? (
             <p className="px-3 py-3 text-xs text-muted-foreground">
               {loading ? '…' : t('empty')}
