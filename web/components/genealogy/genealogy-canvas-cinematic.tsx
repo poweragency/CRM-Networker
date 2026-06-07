@@ -62,6 +62,17 @@ const THEME_VARS = {
   global: '--branch-global',
   left: '--branch-left',
   right: '--branch-right',
+  // Rank tokens — so a rank reads with the SAME color it has everywhere else.
+  rankExecutive: '--rank-executive',
+  rankConsultant: '--rank-consultant',
+  rankTeamLeader: '--rank-team-leader',
+  rankAdvancedTeamLeader: '--rank-advanced-team-leader',
+  rankSeniorTeamLeader: '--rank-senior-team-leader',
+  rankExecutiveTeamLeader: '--rank-executive-team-leader',
+  rankVicePresident: '--rank-vice-president',
+  rankSeniorVicePresident: '--rank-senior-vice-president',
+  rankExecutiveVicePresident: '--rank-executive-vice-president',
+  rankGlobalDirector: '--rank-global-director',
 } as const;
 type ThemeKey = keyof typeof THEME_VARS;
 type Palette = Record<ThemeKey, string>;
@@ -75,7 +86,38 @@ const FALLBACK: Palette = {
   global: '250 84% 62%',
   left: '265 70% 62%',
   right: '170 70% 46%',
+  rankExecutive: '217 12% 65%',
+  rankConsultant: '330 75% 70%',
+  rankTeamLeader: '200 85% 65%',
+  rankAdvancedTeamLeader: '275 70% 70%',
+  rankSeniorTeamLeader: '0 75% 64%',
+  rankExecutiveTeamLeader: '145 55% 55%',
+  rankVicePresident: '45 90% 60%',
+  rankSeniorVicePresident: '28 88% 62%',
+  rankExecutiveVicePresident: '270 70% 70%',
+  rankGlobalDirector: '232 60% 68%',
 };
+
+/** Map each rank to its palette color key (cliente/no_rank stay neutral). */
+const RANK_COLOR_KEY: Record<MarketerRank, ThemeKey | null> = {
+  cliente: null,
+  no_rank: null,
+  executive: 'rankExecutive',
+  consultant: 'rankConsultant',
+  team_leader: 'rankTeamLeader',
+  advanced_team_leader: 'rankAdvancedTeamLeader',
+  senior_team_leader: 'rankSeniorTeamLeader',
+  executive_team_leader: 'rankExecutiveTeamLeader',
+  vice_president: 'rankVicePresident',
+  senior_vice_president: 'rankSeniorVicePresident',
+  executive_vice_president: 'rankExecutiveVicePresident',
+  global_director: 'rankGlobalDirector',
+};
+
+function rankColor(rank: MarketerRank, pal: Palette): string {
+  const key = RANK_COLOR_KEY[rank];
+  return key ? hsl(pal[key], 1) : 'rgba(255,255,255,0.55)';
+}
 
 function readPalette(el: HTMLElement): Palette {
   const cs = getComputedStyle(el);
@@ -119,6 +161,60 @@ function roundRect(
   ctx.arcTo(x, y + h, x, y, rad);
   ctx.arcTo(x, y, x + w, y, rad);
   ctx.closePath();
+}
+
+/** Lucide `Users` icon (v0.452 path data) stroked on the canvas at a given size,
+ *  so the team total carries the SAME glyph as the side panel / sidebar. */
+const USERS_PATHS = [
+  'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2',
+  'M22 21v-2a4 4 0 0 0-3-3.87',
+  'M16 3.13a4 4 0 0 1 0 7.75',
+];
+function drawUsersIcon(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  size: number,
+  color: string,
+): void {
+  const s = size / 24;
+  ctx.save();
+  ctx.translate(cx - size / 2, cy - size / 2);
+  ctx.scale(s, s);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  if (typeof Path2D === 'function') {
+    for (const d of USERS_PATHS) ctx.stroke(new Path2D(d));
+    const circle = new Path2D();
+    circle.arc(9, 7, 4, 0, Math.PI * 2);
+    ctx.stroke(circle);
+  }
+  ctx.restore();
+}
+
+/** A small rounded count pill (label + value), returns the next x cursor (px). */
+function drawCountPill(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  h: number,
+  label: string,
+  value: number,
+  color: string,
+): number {
+  ctx.font = `600 ${h * 0.55}px ui-sans-serif, system-ui, sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  const txt = `${label} ${formatNumber(value)}`;
+  const pw = ctx.measureText(txt).width + h * 0.7;
+  roundRect(ctx, x, y, pw, h, h * 0.3);
+  ctx.fillStyle = hsl(color, 0.18);
+  ctx.fill();
+  ctx.fillStyle = hsl(color, 1);
+  ctx.fillText(txt, x + h * 0.35, y + h / 2);
+  return x + pw + h * 0.3;
 }
 
 function fitText(
@@ -462,35 +558,30 @@ function CinematicInner(
       ctx.fill();
 
       if (mode === 'card') {
-        // Rank label.
-        ctx.fillStyle = prestige ? hsl(pal.warning, 1) : 'rgba(255,255,255,0.6)';
-        ctx.font = `600 ${S(11)}px ui-sans-serif, system-ui, sans-serif`;
+        // Rank label — colored with the rank's own token (as everywhere else).
+        ctx.fillStyle = rankColor(n.rank, pal);
+        ctx.font = `700 ${S(11)}px ui-sans-serif, system-ui, sans-serif`;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
         ctx.fillText(fitText(ctx, RANK_LABELS[n.rank], S(168)), L(60), T(48));
 
-        // Binary counts row.
-        const pill = (
-          lx: number,
-          label: string,
-          value: number,
-          color: string,
-        ): number => {
-          ctx.font = `600 ${S(11)}px ui-sans-serif, system-ui, sans-serif`;
-          const txt = `${label} ${formatNumber(value)}`;
-          const tw = ctx.measureText(txt).width;
-          const pw = tw + S(14);
-          roundRect(ctx, L(lx), T(70), pw, S(20), S(6));
-          ctx.fillStyle = hsl(color, 0.18);
-          ctx.fill();
-          ctx.fillStyle = hsl(color, 1);
-          ctx.fillText(txt, L(lx) + S(7), T(80));
-          return lx + pw / zoom + 6;
-        };
-        let cx = 16;
-        cx = pill(cx, 'L', n.left_count, pal.left);
-        cx = pill(cx, 'R', n.right_count, pal.right);
-        ctx.fillStyle = 'rgba(255,255,255,0.8)';
-        ctx.font = `600 ${S(11)}px ui-sans-serif, system-ui, sans-serif`;
-        ctx.fillText(`Σ ${formatNumber(n.team_size)}`, L(cx + 2), T(80));
+        // Counts row — TEAM (people icon + total) first, then LEFT, then RIGHT.
+        const pillH = S(20);
+        const pillTop = T(70);
+        const rowMid = T(80);
+        let rx = L(16);
+        const tiSize = S(15);
+        drawUsersIcon(ctx, rx + tiSize / 2, rowMid, tiSize, 'rgba(255,255,255,0.7)');
+        rx += tiSize + S(4);
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.font = `700 ${S(12)}px ui-sans-serif, system-ui, sans-serif`;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        const teamTxt = formatNumber(n.team_size);
+        ctx.fillText(teamTxt, rx, rowMid);
+        rx += ctx.measureText(teamTxt).width + S(10);
+        rx = drawCountPill(ctx, rx, pillTop, pillH, 'L', n.left_count, pal.left);
+        drawCountPill(ctx, rx, pillTop, pillH, 'R', n.right_count, pal.right);
 
         // Divider + KPI strip.
         ctx.strokeStyle = 'rgba(255,255,255,0.1)';
