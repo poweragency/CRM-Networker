@@ -5,7 +5,6 @@ import { isSupabaseConfigured } from '@/lib/env';
 import { getCurrentClaims } from '@/lib/data/session';
 import type {
   BranchScope,
-  ListaContattiStatus,
   MarketerRank,
   MarketerStatus,
   PlacementLeg,
@@ -179,9 +178,9 @@ function withCounts(
 
 /** Raw (un-rated) funnel counts for ONE marketer — summable across a subtree. */
 interface PersonalFunnel {
-  /** Prospects still "in ballo" RIGHT NOW — open funnel + Lista-100 entries in
-   *  percorso that aren't concluded. A live snapshot (NOT monthly): excludes
-   *  enrolled/lost AND deleted. */
+  /** Prospects still "in ballo" RIGHT NOW — OPEN prospects in the kanban funnel.
+   *  A live snapshot (NOT monthly): excludes enrolled AND deleted. Lista-100 entries
+   *  are pre-funnel contacts (not in the kanban) and are NOT counted. */
   prospects: number;
   /** Reached Business Info among THIS MONTH's intake (the monthly conversion
    *  denominator — prospects entered this month, stage >= business_info). */
@@ -195,20 +194,17 @@ const BUSINESS_INFO_IDX = STAGE_ORDER.indexOf('business_info');
 /**
  * Per-marketer PERSONAL funnel counts (audit: these were hardcoded to 0).
  *
- * `prospects` = how many are "in ballo" right now — a LIVE snapshot from two
- * sources: the `prospects` table (open only) + `lista_contatti_entries` with
- * percorso 1..4 not concluded (Lista-100 contacts in the funnel; they're not in
- * the prospects table since promote makes a contact). Excludes enrolled/lost/
- * deleted. NOT time-scoped — an open prospect stays "in ballo".
+ * `prospects` = how many are "in ballo" right now — OPEN prospects in the kanban
+ * funnel (`prospects` table, outcome='open'). Excludes enrolled AND deleted. NOT
+ * time-scoped — an open prospect stays "in ballo". Lista-100 entries are pre-funnel
+ * contacts (not in the kanban) and are NOT counted.
  *
  * `iscrizioni` + `businessInfo` are MONTHLY (reset on the 1st): they count only
  * prospects whose `entered_funnel_at` is in the current month (same cohort the
  * dashboard uses), so the conversion = monthly iscritti / monthly business-info.
- * Lista-100 entries have no reliable funnel-entry date, so they feed only the
- * live "in ballo" count, not the monthly metrics.
  *
- * Returns raw counts so they can be summed over a subtree before the rate is
- * computed. Two queries for the whole id set; RLS scopes each to the caller.
+ * Primary path is the `funnel_counts` RPC (server-aggregated); this fallback only
+ * runs if the RPC is unavailable. RLS scopes each read to the caller.
  */
 async function fetchPersonalFunnel(
   supabase: SupabaseServerClient,
@@ -219,11 +215,11 @@ async function fetchPersonalFunnel(
   if (ids.length === 0) return out;
 
   // Primary path: the `funnel_counts` RPC aggregates server-side, so the counts are
-  // EXACT (the old client-side `.in(ids)` reads were capped by PostgREST's row limit →
-  // the tree silently undercounted, esp. Lista-100). It owns the single "prospect in
-  // ballo" definition (open prospects + Lista-100 still in percorso) + this-month's
-  // BI/iscrizioni cohort. The RPC returns ONE row per id, so we CHUNK the id list
-  // (≤500/call) to stay under the same row cap no matter how big the org grows.
+  // EXACT (the old client-side `.in(ids)` reads were capped by PostgREST's row limit).
+  // It owns the single "prospect in ballo" definition — OPEN prospects in the kanban
+  // funnel only (Lista-100 entries are pre-funnel contacts, not counted) — plus this
+  // month's BI/iscrizioni cohort. The RPC returns ONE row per id, so we CHUNK the id
+  // list (≤500/call) to stay under the same row cap no matter how big the org grows.
   try {
     const CHUNK = 500;
     let okAll = true;
@@ -284,27 +280,9 @@ async function fetchPersonalFunnel(
     /* best-effort */
   }
 
-  try {
-    const { data } = await supabase
-      .from('lista_contatti_entries')
-      .select('owner_marketer_id, percorso, stato')
-      .in('owner_marketer_id', ids)
-      .gte('percorso', 1)
-      .is('deleted_at', null);
-    for (const r of (data ?? []) as {
-      owner_marketer_id: string;
-      percorso: number;
-      stato: ListaContattiStatus | null;
-    }[]) {
-      const f = out.get(r.owner_marketer_id);
-      if (!f) continue;
-      const concluded =
-        r.percorso >= 5 || r.stato === 'iscritto' || r.stato === 'non_iscritto';
-      if (!concluded) f.prospects += 1; // still in ballo
-    }
-  } catch {
-    /* best-effort */
-  }
+  // NOTE: Lista-100 entries are PRE-funnel contacts (not in the kanban), so they are
+  // NOT counted as "in ballo" — only open prospects in the kanban count. Mirrors the
+  // `funnel_counts` RPC (migration 0062).
 
   return out;
 }
