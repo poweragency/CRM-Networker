@@ -176,28 +176,12 @@ function MarketerNodeImpl({ data, selected: rfSelected }: NodeProps) {
             <span className="truncate text-sm font-semibold leading-tight text-treeNode-foreground">
               {node.display_name}
             </span>
-            {/* CRM access: verde = CRM attivo, grigio = profilo non attivo. */}
-            <span
-              title={node.crm_access ? t('crm_active') : t('crm_inactive')}
-              aria-label={node.crm_access ? t('crm_active') : t('crm_inactive')}
-              className={cn(
-                'h-2 w-2 shrink-0 rounded-full ring-2',
-                node.crm_access
-                  ? 'bg-success ring-success/25'
-                  : 'bg-treeNode-foreground/30 ring-treeNode-foreground/10',
-              )}
-            />
           </div>
           <div className="mt-1.5 flex items-center gap-1.5">
             <RankBadge
               rank={node.rank}
               className="border border-white/10 px-2 py-0.5 text-[10px] shadow-xs"
             />
-            {!node.crm_access && (
-              <span className="truncate text-[10px] font-medium text-treeNode-foreground/50">
-                {t('crm_inactive')}
-              </span>
-            )}
           </div>
         </div>
       </div>

@@ -547,15 +547,7 @@ function CinematicInner(
       ctx.textAlign = 'left';
       ctx.fillStyle = 'rgba(255,255,255,0.96)';
       ctx.font = `600 ${S(15)}px ui-sans-serif, system-ui, sans-serif`;
-      ctx.fillText(fitText(ctx, n.display_name, S(168)), L(60), T(28));
-
-      // CRM access dot (top-right).
-      ctx.beginPath();
-      ctx.arc(L(236), T(18), Math.max(2, S(4)), 0, Math.PI * 2);
-      ctx.fillStyle = n.crm_access
-        ? hsl(pal.success, 1)
-        : 'rgba(255,255,255,0.25)';
-      ctx.fill();
+      ctx.fillText(fitText(ctx, n.display_name, S(180)), L(60), T(28));
 
       if (mode === 'card') {
         // Rank label — colored with the rank's own token (as everywhere else).

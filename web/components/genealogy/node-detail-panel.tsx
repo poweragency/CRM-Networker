@@ -19,7 +19,6 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Avatar } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { RankBadge } from '@/components/ui/rank-badge';
 import { StatusDot } from '@/components/ui/status-dot';
@@ -127,9 +126,6 @@ export function NodeDetailPanel({
             </h2>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <RankBadge rank={node.rank} />
-              <Badge variant={node.crm_access ? 'success' : 'secondary'}>
-                {node.crm_access ? t('crm_active') : t('crm_inactive')}
-              </Badge>
             </div>
             <div className="mt-2">
               <StatusDot kind="activity" value={node.activity} showLabel />
