@@ -7,15 +7,40 @@ import { formatNumber, formatPercent } from '@/lib/utils';
 import {
   RANK_LABELS,
   RANK_ORDER,
+  type BranchScope,
   type MarketerRank,
   type PlacementLeg,
   type TreeNode,
 } from '@/lib/types/db';
 import { NODE_HEIGHT, NODE_WIDTH, layoutTree } from './layout';
-import type {
-  GenealogyCanvasHandle,
-  GenealogyCanvasProps,
-} from './genealogy-canvas';
+
+/** Imperative handle used by the toolbar / search jump. */
+export interface GenealogyCanvasHandle {
+  fitView: () => void;
+  centerOn: (id: string) => void;
+}
+
+/** Props for the genealogy canvas (the cinematic renderer is the only one). */
+export interface GenealogyCanvasProps {
+  /** Every loaded node (full cache). */
+  nodes: TreeNode[];
+  /** Id the layout is rooted at for the active scope. */
+  layoutRootId: string;
+  scope: BranchScope;
+  expanded: ReadonlySet<string>;
+  selectedId: string | null;
+  onSelect: (node: TreeNode) => void;
+  onToggle: (node: TreeNode) => void;
+  hasChildren: (node: TreeNode) => boolean;
+  /** Node id whose empty legs render as "+" add-slots (null = none). */
+  addSlotsForId: string | null;
+  /** Open the add-member dialog for an empty (parent, leg) slot. */
+  onAddSlot: (parentId: string, leg: PlacementLeg) => void;
+  /** Ids classified as SPILLOVER (in your leg but recruited from outside your line). */
+  spilloverIds?: ReadonlySet<string>;
+  /** Dim spillover nodes so your own sponsorship line stands out. */
+  dimSpillover?: boolean;
+}
 
 /**
  * Cinematic tree viewer — a single-`<canvas>` renderer for the binary genealogy.

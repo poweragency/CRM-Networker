@@ -91,9 +91,19 @@ export function PackageBadge({
   className,
   ...props
 }: PackageBadgeProps) {
-  const tone = PACKAGE_TONE[pkg];
-  const accent = PACKAGE_ACCENT[pkg];
-  const text = label ?? STARTING_PACKAGE_LABELS[pkg];
+  // Tolerate unknown / legacy package values (don't crash a whole page on bad data).
+  const tone = PACKAGE_TONE[pkg] ?? {
+    text: 'text-muted-foreground',
+    bg: 'bg-muted',
+    dot: 'bg-muted-foreground/60',
+  };
+  const accent = PACKAGE_ACCENT[pkg] ?? {
+    ring: 'ring-border',
+    flagship: false,
+    surface: '',
+    sheen: '',
+  };
+  const text = label ?? STARTING_PACKAGE_LABELS[pkg] ?? pkg;
 
   if (variant === 'dot') {
     return (

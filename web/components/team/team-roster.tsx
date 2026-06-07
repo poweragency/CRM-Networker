@@ -37,7 +37,7 @@ const STATUS_TONE: Record<MarketerStatus, string> = {
 /** Left accent rail tone per package (falls back to a neutral border). */
 function packageRail(pkg: StartingPackage | null): string {
   if (!pkg) return 'bg-border';
-  return PACKAGE_TONE[pkg].dot;
+  return PACKAGE_TONE[pkg]?.dot ?? 'bg-border';
 }
 
 export function TeamRoster({ rows }: { rows: TeamMemberRow[] }) {

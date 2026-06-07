@@ -16,8 +16,8 @@ export async function CatenaLeaderboard() {
   const t = await getTranslations('catena');
   const { rows } = await getDmoLeaderboard();
 
-  // Map the DMO rows onto the shared leaderboard entry shape.
-  const entries: TopMarketerEntry[] = rows.map((r, i) => ({
+  // Map the DMO rows onto the shared leaderboard entry shape (top 5 only).
+  const entries: TopMarketerEntry[] = rows.slice(0, 5).map((r, i) => ({
     marketer_id: r.marketer_id,
     display_name: r.display_name,
     rank: r.rank,
