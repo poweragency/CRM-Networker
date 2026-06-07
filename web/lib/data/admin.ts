@@ -109,6 +109,26 @@ export async function listMarketers(
       .limit(500);
     if (error || !data) return { data: applyFilter(mockMarketerRows(), filter), demo: true };
     const rows = (data as Record<string, unknown>[]).map(rowToAdminMarketer);
+    // Backfill team_size from the closure — the `marketers` table has no such
+    // column (it's derived), so without this it stays 0 in the roster/registry.
+    // One round-trip; RLS scopes closure rows to the caller's visible subtree.
+    try {
+      const ids = rows.map((r) => r.id);
+      if (ids.length > 0) {
+        const { data: cl } = await supabase
+          .from('marketer_tree_closure')
+          .select('ancestor_id')
+          .in('ancestor_id', ids)
+          .gte('depth', 1);
+        const counts = new Map<string, number>();
+        for (const c of (cl ?? []) as { ancestor_id: string }[]) {
+          counts.set(c.ancestor_id, (counts.get(c.ancestor_id) ?? 0) + 1);
+        }
+        for (const r of rows) r.team_size = counts.get(r.id) ?? 0;
+      }
+    } catch {
+      /* best-effort: leave team_size at 0 if the closure read fails */
+    }
     return { data: applyFilter(rows, filter), demo: false };
   } catch {
     return { data: applyFilter(mockMarketerRows(), filter), demo: true };

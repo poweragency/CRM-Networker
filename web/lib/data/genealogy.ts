@@ -140,20 +140,29 @@ function withCounts(
   });
 }
 
+interface NodeKpi {
+  prospects: number;
+  conversion: number;
+  iscrizioni: number;
+  calls: number;
+}
+
 /**
- * Per-marketer prospect KPIs for the genealogy node cards (audit: prospects /
- * conversion were hardcoded to 0). `prospects` = the owner's non-deleted pipeline
- * size; `conversion` = iscritti / business-info-reached (kpisFromStages — same
- * definition as the personal performance widget). One query for the whole visible
- * set; RLS scopes prospects to what the caller can see.
+ * Per-marketer KPIs for the genealogy node cards + detail panel (audit: these were
+ * hardcoded to 0). `prospects` = the owner's non-deleted pipeline size; `iscrizioni`
+ * = enrollments; `conversion` = iscritti / business-info-reached (kpisFromStages —
+ * same definition as the personal performance widget); `calls` = calls the marketer
+ * logged. Two queries for the whole visible set; RLS scopes both to what the caller
+ * can see.
  */
 async function fetchProspectKpis(
   supabase: SupabaseServerClient,
   ids: string[],
-): Promise<Map<string, { prospects: number; conversion: number }>> {
-  const out = new Map<string, { prospects: number; conversion: number }>();
-  for (const id of ids) out.set(id, { prospects: 0, conversion: 0 });
+): Promise<Map<string, NodeKpi>> {
+  const out = new Map<string, NodeKpi>();
+  for (const id of ids) out.set(id, { prospects: 0, conversion: 0, iscrizioni: 0, calls: 0 });
   if (ids.length === 0) return out;
+  // Prospect pipeline → prospects + iscrizioni + conversion.
   try {
     const { data } = await supabase
       .from('prospects')
@@ -168,23 +177,51 @@ async function fetchProspectKpis(
     }
     for (const [owner, stages] of stagesByOwner) {
       const k = kpisFromStages(stages);
-      out.set(owner, { prospects: k.prospects, conversion: k.conversionRate });
+      const cur = out.get(owner);
+      if (cur) {
+        cur.prospects = k.prospects;
+        cur.conversion = k.conversionRate;
+        cur.iscrizioni = k.iscrizioni;
+      }
     }
   } catch {
     /* best-effort: leave zeros so the node still renders */
   }
+  // Calls logged by each marketer → calls count.
+  try {
+    const { data } = await supabase
+      .from('calls')
+      .select('marketer_id')
+      .in('marketer_id', ids)
+      .is('deleted_at', null);
+    for (const r of (data ?? []) as { marketer_id: string }[]) {
+      const cur = out.get(r.marketer_id);
+      if (cur) cur.calls += 1;
+    }
+  } catch {
+    /* best-effort: leave calls at 0 */
+  }
   return out;
 }
 
-/** Stamp prospect KPIs (prospects + conversion_rate) onto already-built TreeNodes. */
+/** Stamp the KPIs (prospects, conversion, iscrizioni, calls) onto TreeNodes. */
 function withProspectKpis(
   nodes: TreeNode[],
-  kpis: Map<string, { prospects: number; conversion: number }>,
+  kpis: Map<string, NodeKpi>,
 ): TreeNode[] {
   return nodes.map((n) => {
     const k = kpis.get(n.id);
     return k
-      ? { ...n, kpis: { ...n.kpis, prospects: k.prospects, conversion_rate: k.conversion } }
+      ? {
+          ...n,
+          kpis: {
+            ...n.kpis,
+            prospects: k.prospects,
+            conversion_rate: k.conversion,
+            iscrizioni: k.iscrizioni,
+            calls: k.calls,
+          },
+        }
       : n;
   });
 }
