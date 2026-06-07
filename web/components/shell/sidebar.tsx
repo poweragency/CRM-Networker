@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import type { NavViewer } from '@/lib/nav';
 import { SidebarNav } from '@/components/shell/sidebar-nav';
+import { GlobalSearch } from '@/components/shell/global-search';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
@@ -90,6 +91,13 @@ export function Sidebar({ viewer, orgName, orgLogoUrl, collapsed, onToggleCollap
           </>
         )}
       </div>
+
+      {/* Global search — find team members + prospects by name (expanded only). */}
+      {!collapsed && (
+        <div className="shrink-0 border-b border-nav-foreground/10 px-3 py-2.5">
+          <GlobalSearch />
+        </div>
+      )}
 
       <SidebarNav viewer={viewer} collapsed={collapsed} />
     </aside>

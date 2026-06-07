@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { X } from 'lucide-react';
 import type { NavViewer } from '@/lib/nav';
 import { SidebarNav } from '@/components/shell/sidebar-nav';
+import { GlobalSearch } from '@/components/shell/global-search';
 import { cn } from '@/lib/utils';
 import { useFocusTrap } from '@/lib/use-focus-trap';
 
@@ -112,6 +113,11 @@ export function MobileNav({ viewer, orgName, orgLogoUrl, open, onClose }: Mobile
           >
             <X className="h-[18px] w-[18px]" aria-hidden />
           </button>
+        </div>
+
+        {/* Global search — find team members + prospects by name. */}
+        <div className="shrink-0 border-b border-nav-foreground/10 px-3 py-2.5">
+          <GlobalSearch onNavigate={onClose} />
         </div>
 
         <SidebarNav viewer={viewer} onNavigate={onClose} />

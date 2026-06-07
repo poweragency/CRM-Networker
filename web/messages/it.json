@@ -96,6 +96,12 @@
     "inviteInvalidBody": "Questo invito non esiste, è scaduto o è già stato utilizzato. Contatta chi ti ha invitato.",
     "inviteDemo": "Profilo di esempio in modalità demo: l'attivazione è simulata."
   },
+  "globalsearch": {
+    "placeholder": "Cerca persone…",
+    "team": "Team",
+    "prospect": "Prospect",
+    "empty": "Nessun risultato"
+  },
   "topbar": {
     "search_placeholder": "Cerca…",
     "search_aria": "Cerca nella rete",
