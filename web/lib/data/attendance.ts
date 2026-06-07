@@ -1,5 +1,5 @@
 import 'server-only';
-import { getClient, getOwnerContext } from '@/lib/data/crm-shared';
+import { fetchAllRows, getClient, getOwnerContext } from '@/lib/data/crm-shared';
 import { getSubtree } from '@/lib/data/genealogy';
 import {
   weekdayOf,
@@ -109,12 +109,23 @@ export async function getZoomAttendance(date: string): Promise<AttendanceResult>
   const camera = new Map<string, boolean>();
   try {
     const ids = sub.data.map((n) => n.id);
-    const { data } = await supabase
-      .from('zoom_attendance')
-      .select('marketer_id,call_id,present,cam')
-      .eq('call_date', date)
-      .in('marketer_id', ids);
-    for (const r of (data as { marketer_id: string; call_id: string | null; present: boolean; cam: boolean }[] | null) ?? []) {
+    // Paginate so a large team's attendance for the day isn't truncated by the row
+    // cap. RLS already scopes rows to the caller's subtree; the id filter narrows to
+    // the loaded members.
+    const data = await fetchAllRows<{
+      marketer_id: string;
+      call_id: string | null;
+      present: boolean;
+      cam: boolean;
+    }>((from, to) =>
+      supabase
+        .from('zoom_attendance')
+        .select('marketer_id,call_id,present,cam')
+        .eq('call_date', date)
+        .in('marketer_id', ids)
+        .range(from, to),
+    );
+    for (const r of data ?? []) {
       if (!r.call_id) continue;
       present.set(`${r.marketer_id}|${r.call_id}`, r.present);
       camera.set(`${r.marketer_id}|${r.call_id}`, r.cam);

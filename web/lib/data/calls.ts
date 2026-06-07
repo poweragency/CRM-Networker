@@ -10,6 +10,7 @@ import { MOCK_CALLS, MOCK_CALL_TARGETS } from '@/lib/data/mock/calls';
 import {
   type CrmResult,
   type MutationResult,
+  fetchAllRows,
   getClient,
   getOwnerContext,
   matchesText,
@@ -65,20 +66,24 @@ export async function listCalls(
   const supabase = getClient();
   if (!supabase) return ok(filterMock(filters), true);
   try {
-    let query = supabase.from('calls').select(SELECT).is('deleted_at', null);
-    if (filters.type?.length) query = query.in('call_type', filters.type);
-    if (filters.outcome?.length) query = query.in('outcome', filters.outcome);
-    if (filters.prospectId) query = query.eq('prospect_id', filters.prospectId);
-    if (filters.contactId) query = query.eq('contact_id', filters.contactId);
-    if (filters.sinceDays) {
-      const cutoff = new Date(Date.now() - filters.sinceDays * 86_400_000);
-      query = query.gte('occurred_at', cutoff.toISOString());
-    }
-    query = query.order('occurred_at', { ascending: false });
-    const { data, error } = await query;
-    if (error || !data) return ok(filterMock(filters), true);
+    // Paginate so the log/stats stay complete past the row cap. `makeQuery` rebuilds
+    // the filtered query per page (awaiting a builder consumes it).
+    const cutoff = filters.sinceDays
+      ? new Date(Date.now() - filters.sinceDays * 86_400_000).toISOString()
+      : null;
+    const makeQuery = (from: number, to: number) => {
+      let q = supabase.from('calls').select(SELECT).is('deleted_at', null);
+      if (filters.type?.length) q = q.in('call_type', filters.type);
+      if (filters.outcome?.length) q = q.in('outcome', filters.outcome);
+      if (filters.prospectId) q = q.eq('prospect_id', filters.prospectId);
+      if (filters.contactId) q = q.eq('contact_id', filters.contactId);
+      if (cutoff) q = q.gte('occurred_at', cutoff);
+      return q.order('occurred_at', { ascending: false }).range(from, to);
+    };
+    const data = await fetchAllRows<Call>(makeQuery);
+    if (data === null) return ok(filterMock(filters), true);
     // target_name is resolved by the screen (join) — default null here.
-    const rows = (data as Call[]).map((c) => ({ ...c, target_name: null }));
+    const rows = data.map((c) => ({ ...c, target_name: null }));
     return ok(rows, false);
   } catch {
     return ok(filterMock(filters), true);

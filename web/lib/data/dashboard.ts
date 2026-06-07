@@ -159,6 +159,72 @@ async function resolveMarketers(
   return out;
 }
 
+/**
+ * Primary path: top-N leaderboards aggregated SERVER-SIDE (top_zoom_month /
+ * top_percorsi_month / top_conversion_month). These do the GROUP BY + ORDER BY +
+ * LIMIT in SQL and return only N rows, so they're exact at any org size (the
+ * client-side path below reads whole-org fact tables and is capped by PostgREST's
+ * row limit). Returns null on any RPC error so the caller can fall back.
+ */
+async function topViaRpc(
+  limit: number,
+  selfId: string,
+): Promise<MonthlyTopMarketers | null> {
+  const supabase = getClient();
+  if (!supabase) return null;
+  try {
+    const [zoomRes, percRes, convRes] = await Promise.all([
+      supabase.rpc('top_zoom_month', { p_limit: limit }),
+      supabase.rpc('top_percorsi_month', { p_limit: limit }),
+      supabase.rpc('top_conversion_month', { p_limit: limit }),
+    ]);
+    if (zoomRes.error || percRes.error || convRes.error) return null;
+    const nz = (v: unknown) => Number(v) || 0;
+    const zoom: TopMarketerEntry[] = ((zoomRes.data as Record<string, unknown>[]) ?? []).map(
+      (r, i) => {
+        const present = nz(r.present_count);
+        return {
+          marketer_id: String(r.marketer_id),
+          display_name: (r.display_name as string) ?? '—',
+          rank: (r.rank as MarketerRank) ?? 'executive',
+          value: present,
+          position: i + 1,
+          is_self: String(r.marketer_id) === selfId,
+          cam_rate: present > 0 ? nz(r.cam_count) / present : null,
+        };
+      },
+    );
+    const percorsi: TopMarketerEntry[] = ((percRes.data as Record<string, unknown>[]) ?? []).map(
+      (r, i) => ({
+        marketer_id: String(r.marketer_id),
+        display_name: (r.display_name as string) ?? '—',
+        rank: (r.rank as MarketerRank) ?? 'executive',
+        value: nz(r.cnt),
+        position: i + 1,
+        is_self: String(r.marketer_id) === selfId,
+        cam_rate: null,
+      }),
+    );
+    const conversion: TopMarketerEntry[] = ((convRes.data as Record<string, unknown>[]) ?? []).map(
+      (r, i) => {
+        const resolved = nz(r.resolved);
+        return {
+          marketer_id: String(r.marketer_id),
+          display_name: (r.display_name as string) ?? '—',
+          rank: (r.rank as MarketerRank) ?? 'executive',
+          value: resolved > 0 ? nz(r.enrolled) / resolved : 0,
+          position: i + 1,
+          is_self: String(r.marketer_id) === selfId,
+          cam_rate: null,
+        };
+      },
+    );
+    return { zoom, percorsi, conversion };
+  } catch {
+    return null;
+  }
+}
+
 export async function getMonthlyTopMarketers(
   limit = 5,
 ): Promise<MonthlyTopResult> {
@@ -175,6 +241,11 @@ export async function getMonthlyTopMarketers(
   }
 
   const { marketerId: selfId } = await getOwnerContext();
+
+  // Server-aggregated top-N (scale-safe); fall back to client aggregation on error.
+  const viaRpc = await topViaRpc(limit, selfId);
+  if (viaRpc) return { data: viaRpc, demo: false };
+
   const rows = await fetchPresentRows();
   const zoom = rankZoom(rows, limit, selfId);
 

@@ -109,6 +109,41 @@ async function fetchTeamCounts(
   const counts = new Map<string, { team: number; left: number; right: number }>();
   for (const id of ids) counts.set(id, { team: 0, left: 0, right: 0 });
   if (ids.length === 0) return counts;
+
+  // Primary: server-aggregated team sizes via `team_counts`, chunked (≤500 ids/call)
+  // so the result never hits the row cap — even the org root (whose closure has one
+  // row per descendant) can't truncate, since the count happens inside SQL.
+  try {
+    const CHUNK = 500;
+    let okAll = true;
+    for (let i = 0; i < ids.length; i += CHUNK) {
+      const slice = ids.slice(i, i + CHUNK);
+      const { data, error } = await supabase.rpc('team_counts', { p_ids: slice });
+      if (error || !Array.isArray(data)) {
+        okAll = false;
+        break;
+      }
+      for (const r of data as {
+        marketer_id: string;
+        team: number;
+        lft: number;
+        rgt: number;
+      }[]) {
+        counts.set(r.marketer_id, {
+          team: Number(r.team) || 0,
+          left: Number(r.lft) || 0,
+          right: Number(r.rgt) || 0,
+        });
+      }
+    }
+    if (okAll) return counts;
+  } catch {
+    /* fall through to the closure fallback */
+  }
+
+  // Fallback (RPC unavailable): direct closure read (cap-limited on huge subtrees,
+  // but better than zeros). Reset first so a partial RPC fill can't double-count.
+  for (const id of ids) counts.set(id, { team: 0, left: 0, right: 0 });
   try {
     const { data } = await supabase
       .from('marketer_tree_closure')

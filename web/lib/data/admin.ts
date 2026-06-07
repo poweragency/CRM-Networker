@@ -1,5 +1,5 @@
 import 'server-only';
-import { getClient, getOwnerContext } from '@/lib/data/crm-shared';
+import { fetchAllRows, getClient, getOwnerContext } from '@/lib/data/crm-shared';
 import type {
   AccountStatus,
   AdminMarketerRow,
@@ -99,35 +99,38 @@ export async function listMarketers(
     return { data: applyFilter(mockMarketerRows(), filter), demo: true };
   }
   try {
-    const { data, error } = await supabase
-      .from('marketers')
-      .select(
-        'id,first_name,last_name,display_name,email,rank,status,registration_date,created_at,memberships(role,status,permissions)',
-      )
-      .is('deleted_at', null)
-      .order('created_at', { ascending: true })
-      .limit(500);
-    if (error || !data) return { data: applyFilter(mockMarketerRows(), filter), demo: true };
-    const rows = (data as Record<string, unknown>[]).map(rowToAdminMarketer);
-    // Backfill team_size from the closure — the `marketers` table has no such
-    // column (it's derived), so without this it stays 0 in the roster/registry.
-    // One round-trip; RLS scopes closure rows to the caller's visible subtree.
+    // Paginate the whole registry so it stays COMPLETE past the row cap (a big org
+    // would otherwise be silently truncated → wrong Statistiche / rank distribution).
+    const data = await fetchAllRows<Record<string, unknown>>((from, to) =>
+      supabase
+        .from('marketers')
+        .select(
+          'id,first_name,last_name,display_name,email,rank,status,registration_date,created_at,memberships(role,status,permissions)',
+        )
+        .is('deleted_at', null)
+        .order('created_at', { ascending: true })
+        .range(from, to),
+    );
+    if (data === null) return { data: applyFilter(mockMarketerRows(), filter), demo: true };
+    const rows = data.map(rowToAdminMarketer);
+    // Backfill team_size via the server-aggregated `team_counts` RPC (chunked), so it
+    // can't be truncated even when the root's closure has thousands of descendants.
     try {
       const ids = rows.map((r) => r.id);
-      if (ids.length > 0) {
-        const { data: cl } = await supabase
-          .from('marketer_tree_closure')
-          .select('ancestor_id')
-          .in('ancestor_id', ids)
-          .gte('depth', 1);
-        const counts = new Map<string, number>();
-        for (const c of (cl ?? []) as { ancestor_id: string }[]) {
-          counts.set(c.ancestor_id, (counts.get(c.ancestor_id) ?? 0) + 1);
+      const sizes = new Map<string, number>();
+      const CHUNK = 500;
+      for (let i = 0; i < ids.length; i += CHUNK) {
+        const { data: tc, error } = await supabase.rpc('team_counts', {
+          p_ids: ids.slice(i, i + CHUNK),
+        });
+        if (error || !Array.isArray(tc)) break;
+        for (const c of tc as { marketer_id: string; team: number }[]) {
+          sizes.set(c.marketer_id, Number(c.team) || 0);
         }
-        for (const r of rows) r.team_size = counts.get(r.id) ?? 0;
       }
+      for (const r of rows) r.team_size = sizes.get(r.id) ?? 0;
     } catch {
-      /* best-effort: leave team_size at 0 if the closure read fails */
+      /* best-effort: leave team_size at 0 if the aggregate read fails */
     }
     return { data: applyFilter(rows, filter), demo: false };
   } catch {

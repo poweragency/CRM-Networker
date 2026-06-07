@@ -70,6 +70,33 @@ export async function getOwnerContext(): Promise<{
 
 /* ───────────────────────── shared query helpers ───────────────────────── */
 
+/**
+ * Read EVERY row of a query, defeating PostgREST's per-request row cap. Calls
+ * `makeQuery(from, to)` for successive `.range()` windows and concatenates them
+ * until a short page signals the end. `makeQuery` must build a FRESH query each
+ * call (awaiting a builder consumes it). Returns null only when the FIRST page
+ * errors (so callers can fall back to mock); a mid-paging error keeps what was
+ * read. `page` must be ≤ the platform row cap (default 1000) for the short-page
+ * stop to be reliable.
+ */
+export async function fetchAllRows<T>(
+  makeQuery: (
+    from: number,
+    to: number,
+  ) => PromiseLike<{ data: T[] | null; error: unknown }>,
+  page = 500,
+): Promise<T[] | null> {
+  const out: T[] = [];
+  for (let from = 0; ; from += page) {
+    const { data, error } = await makeQuery(from, from + page - 1);
+    if (error) return from === 0 ? null : out;
+    const batch = data ?? [];
+    out.push(...batch);
+    if (batch.length < page) break;
+  }
+  return out;
+}
+
 export type SortDir = 'asc' | 'desc';
 
 /** Case-insensitive substring match used by mock search fallbacks. */
