@@ -1,5 +1,5 @@
 import 'server-only';
-import { getClient } from '@/lib/data/crm-shared';
+import { fetchAllRows, getClient } from '@/lib/data/crm-shared';
 import { RANK_LABELS, type MarketerRank } from '@/lib/types/db';
 
 /**
@@ -23,7 +23,34 @@ function escapeLike(s: string): string {
   return s.replace(/[\\%_]/g, (m) => `\\${m}`);
 }
 
-export async function searchPeople(query: string): Promise<SearchHit[]> {
+/** A lightweight name index for instant CLIENT-side filtering (the navbar search).
+ *  Team members (id + name + rank), RLS-scoped to the caller's subtree, paginated so
+ *  it's complete past the row cap. Loaded once by the client and filtered locally. */
+export interface TeamIndexEntry {
+  id: string;
+  name: string;
+  rank: MarketerRank;
+}
+
+export async function teamIndex(): Promise<TeamIndexEntry[]> {
+  const supabase = getClient();
+  if (!supabase) return [];
+  const rows = await fetchAllRows<{ id: string; display_name: string; rank: MarketerRank }>(
+    (from, to) =>
+      supabase
+        .from('marketers')
+        .select('id, display_name, rank')
+        .is('deleted_at', null)
+        .order('id', { ascending: true })
+        .range(from, to),
+  );
+  return (rows ?? []).map((r) => ({ id: r.id, name: r.display_name, rank: r.rank }));
+}
+
+export async function searchPeople(
+  query: string,
+  opts: { prospectsOnly?: boolean } = {},
+): Promise<SearchHit[]> {
   const q = query.trim();
   if (q.length < 2) return [];
   const supabase = getClient();
@@ -32,26 +59,29 @@ export async function searchPeople(query: string): Promise<SearchHit[]> {
 
   const hits: SearchHit[] = [];
 
-  // Team members (RLS → the caller's visible subtree).
-  try {
-    const { data } = await supabase
-      .from('marketers')
-      .select('id, display_name, rank')
-      .is('deleted_at', null)
-      .ilike('display_name', pattern)
-      .order('display_name', { ascending: true })
-      .limit(6);
-    for (const r of (data ?? []) as { id: string; display_name: string; rank: MarketerRank }[]) {
-      hits.push({
-        kind: 'team',
-        id: r.id,
-        name: r.display_name,
-        subtitle: RANK_LABELS[r.rank] ?? null,
-        href: `/team/${r.id}`,
-      });
+  // Team members (RLS → the caller's visible subtree). Skipped when the caller filters
+  // the preloaded team index on the client and only needs prospects from the server.
+  if (!opts.prospectsOnly) {
+    try {
+      const { data } = await supabase
+        .from('marketers')
+        .select('id, display_name, rank')
+        .is('deleted_at', null)
+        .ilike('display_name', pattern)
+        .order('display_name', { ascending: true })
+        .limit(6);
+      for (const r of (data ?? []) as { id: string; display_name: string; rank: MarketerRank }[]) {
+        hits.push({
+          kind: 'team',
+          id: r.id,
+          name: r.display_name,
+          subtitle: RANK_LABELS[r.rank] ?? null,
+          href: `/team/${r.id}`,
+        });
+      }
+    } catch {
+      /* best-effort */
     }
-  } catch {
-    /* best-effort */
   }
 
   // Prospects (RLS → visible prospects of the caller's subtree).

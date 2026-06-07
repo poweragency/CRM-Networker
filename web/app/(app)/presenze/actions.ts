@@ -1,6 +1,11 @@
 'use server';
 
-import { setZoomAttendance, setZoomCam } from '@/lib/data/attendance';
+import {
+  getZoomDay,
+  setZoomAttendance,
+  setZoomCam,
+  type ZoomDayResult,
+} from '@/lib/data/attendance';
 
 /**
  * Server Actions backing the Presenze Zoom table. Delegate to the demo-safe
@@ -27,4 +32,9 @@ export async function setZoomCamAction(
   cam: boolean,
 ): Promise<SetAttendanceActionResult> {
   return setZoomCam(marketerId, date, callId, cam);
+}
+
+/** Fast day switch: just the day's calls + attendance (no team reload). */
+export async function getZoomDayAction(date: string): Promise<ZoomDayResult> {
+  return getZoomDay(date);
 }

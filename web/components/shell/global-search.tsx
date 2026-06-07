@@ -6,8 +6,51 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Search, Loader2, Users, Target, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { globalSearchAction } from './search-action';
-import type { SearchHit } from '@/lib/data/search';
+import { RANK_LABELS } from '@/lib/types/db';
+import { searchProspectsAction, teamIndexAction } from './search-action';
+import type { SearchHit, TeamIndexEntry } from '@/lib/data/search';
+
+/**
+ * Session-cached team name index: loaded once (first focus) and filtered on the
+ * CLIENT so team matches are INSTANT — no per-keystroke round-trip. Prospects (too
+ * many to preload) stay on the debounced server search. The cache is module-level so
+ * it survives component remounts across navigation.
+ */
+let teamIndexCache: TeamIndexEntry[] | null = null;
+let teamIndexPromise: Promise<TeamIndexEntry[]> | null = null;
+function loadTeamIndex(): Promise<TeamIndexEntry[]> {
+  if (teamIndexCache) return Promise.resolve(teamIndexCache);
+  if (!teamIndexPromise) {
+    teamIndexPromise = teamIndexAction()
+      .then((r) => {
+        teamIndexCache = r;
+        return r;
+      })
+      .catch(() => {
+        teamIndexPromise = null; // allow a retry on the next focus
+        return [];
+      });
+  }
+  return teamIndexPromise;
+}
+function filterTeam(q: string, limit = 6): SearchHit[] {
+  if (!teamIndexCache) return [];
+  const needle = q.toLowerCase();
+  const out: SearchHit[] = [];
+  for (const m of teamIndexCache) {
+    if (m.name.toLowerCase().includes(needle)) {
+      out.push({
+        kind: 'team',
+        id: m.id,
+        name: m.name,
+        subtitle: RANK_LABELS[m.rank] ?? null,
+        href: `/team/${m.id}`,
+      });
+      if (out.length >= limit) break;
+    }
+  }
+  return out;
+}
 
 /**
  * GlobalSearch — the sidebar search box (top of the menu, under the org brand).
@@ -29,6 +72,7 @@ export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
   const [loading, setLoading] = React.useState(false);
   const [active, setActive] = React.useState(0);
   const [mounted, setMounted] = React.useState(false);
+  const [indexReady, setIndexReady] = React.useState(false);
   const [rect, setRect] = React.useState<{ top: number; left: number; width: number } | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
@@ -36,7 +80,9 @@ export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
 
   React.useEffect(() => setMounted(true), []);
 
-  // Debounced search; only the latest request's result is applied (no races).
+  // INSTANT team results (client-filtered from the preloaded index) + debounced
+  // server search for prospects. `indexReady` is in deps so results appear the
+  // moment the index finishes loading, even if the user typed first.
   React.useEffect(() => {
     const q = query.trim();
     if (q.length < 2) {
@@ -44,22 +90,22 @@ export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
       setLoading(false);
       return;
     }
+    const team = filterTeam(q);
+    setHits(team);
+    setActive(0);
+    setOpen(true);
     setLoading(true);
     const id = ++reqRef.current;
     const timer = window.setTimeout(async () => {
       try {
-        const res = await globalSearchAction(q);
-        if (reqRef.current === id) {
-          setHits(res);
-          setActive(0);
-          setOpen(true);
-        }
+        const prospects = await searchProspectsAction(q);
+        if (reqRef.current === id) setHits([...filterTeam(q), ...prospects]);
       } finally {
         if (reqRef.current === id) setLoading(false);
       }
     }, 220);
     return () => window.clearTimeout(timer);
-  }, [query]);
+  }, [query, indexReady]);
 
   // Close on outside click (ignore the input box AND the portaled dropdown).
   React.useEffect(() => {
@@ -136,6 +182,8 @@ export function GlobalSearch({ onNavigate }: { onNavigate?: () => void }) {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onFocus={() => {
+          // Warm the team index once so the first keystroke is already instant.
+          if (!teamIndexCache) loadTeamIndex().then(() => setIndexReady(true));
           if (hits.length) setOpen(true);
         }}
         onKeyDown={onKeyDown}

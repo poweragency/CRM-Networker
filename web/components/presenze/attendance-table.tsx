@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import {
@@ -16,6 +15,7 @@ import {
   Radio,
   Search,
   Sparkles,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ProgressMeter } from '@/components/ui/progress-meter';
@@ -29,6 +29,7 @@ import { createClient } from '@/lib/supabase/client';
 import type { AttendanceMember, ZoomCallDef } from '@/lib/data/attendance-shared';
 import { CompletionRing } from '@/components/presenze/completion-ring';
 import {
+  getZoomDayAction,
   setZoomAttendanceAction,
   setZoomCamAction,
 } from '@/app/(app)/presenze/actions';
@@ -60,6 +61,20 @@ function seed(members: AttendanceMember[], pick: (m: AttendanceMember) => Record
   return Object.fromEntries(members.map((m) => [m.id, { ...pick(m) }]));
 }
 
+/** Build member→call flags from a flat `${mid}|${cid}` map (a day-switch payload). */
+function seedFromFlat(
+  members: AttendanceMember[],
+  calls: ZoomCallDef[],
+  flat: Record<string, boolean>,
+): Flags {
+  return Object.fromEntries(
+    members.map((m) => [
+      m.id,
+      Object.fromEntries(calls.map((c) => [c.id, flat[`${m.id}|${c.id}`] ?? false])),
+    ]),
+  );
+}
+
 /**
  * Per-call tone ramp — mirrors CompletionRing so the bar/icon/count match the
  * gauge at every level: cold (info) → accent (primary) → success → GOLD (100%).
@@ -81,8 +96,8 @@ function callTone(ratio: number): {
 }
 
 export function AttendanceTable({
-  date,
-  calls,
+  date: initialDate,
+  calls: initialCalls,
   members,
   today,
 }: {
@@ -92,8 +107,14 @@ export function AttendanceTable({
   today: string;
 }) {
   const t = useTranslations('presenze');
-  const router = useRouter();
   const { toast } = useToast();
+
+  // Day + calls are CLIENT state: switching day refetches only the day's payload
+  // (calls + attendance) and never reloads the team — so it's instant. The team
+  // (`members`) is loaded once by the server and stays put.
+  const [date, setDate] = React.useState(initialDate);
+  const [calls, setCalls] = React.useState<ZoomCallDef[]>(initialCalls);
+  const [dayLoading, setDayLoading] = React.useState(false);
 
   const [present, setPresent] = React.useState<Flags>(() => seed(members, (m) => m.present));
   const [cam, setCam] = React.useState<Flags>(() => seed(members, (m) => m.cam));
@@ -171,9 +192,30 @@ export function AttendanceTable({
     };
   }, [supabase, date]);
 
-  function go(nextDate: string) {
-    router.push(`/presenze?date=${nextDate}`);
-  }
+  // Switch day WITHOUT a server round-trip for the team: fetch only the day's
+  // calls + attendance, reseed the flags, and sync the URL via history (no Next
+  // navigation, so the heavy subtree load doesn't re-run).
+  const go = React.useCallback(
+    async (nextDate: string) => {
+      if (nextDate === date || dayLoading) return;
+      setDayLoading(true);
+      try {
+        const res = await getZoomDayAction(nextDate);
+        setDate(nextDate);
+        setCalls(res.calls);
+        setPresent(seedFromFlat(members, res.calls, res.present));
+        setCam(seedFromFlat(members, res.calls, res.cam));
+        if (typeof window !== 'undefined') {
+          window.history.replaceState(null, '', `/presenze?date=${nextDate}`);
+        }
+      } catch {
+        toast({ title: t('error'), variant: 'error' });
+      } finally {
+        setDayLoading(false);
+      }
+    },
+    [date, dayLoading, members, t, toast],
+  );
 
   async function togglePresent(member: AttendanceMember, callId: string) {
     const next = !present[member.id]?.[callId];
@@ -259,7 +301,11 @@ export function AttendanceTable({
         </Button>
         <div className="inline-flex items-center gap-2 rounded-lg border border-border/70 bg-card px-3 py-1.5 text-sm font-medium text-foreground shadow-xs">
           <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
-            <CalendarDays className="h-3.5 w-3.5" aria-hidden />
+            {dayLoading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+            ) : (
+              <CalendarDays className="h-3.5 w-3.5" aria-hidden />
+            )}
           </span>
           <span className="capitalize">{dayLabel}</span>
           {isToday && (

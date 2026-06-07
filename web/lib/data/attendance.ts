@@ -150,6 +150,79 @@ export async function getZoomAttendance(date: string): Promise<AttendanceResult>
   return { date, calls, members, demo: false };
 }
 
+export interface ZoomDayResult {
+  calls: ZoomCallDef[];
+  /** present flags keyed `${marketer_id}|${call_id}` (only cells with a row). */
+  present: Record<string, boolean>;
+  cam: Record<string, boolean>;
+  demo: boolean;
+}
+
+/**
+ * Per-day calls + attendance ONLY (no member list). The Presenze table loads the
+ * team once, then switches day with THIS — so a day change no longer re-runs the
+ * subtree load. Attendance is RLS-scoped to the caller's subtree (no id filter
+ * needed) and paginated so a big team's day isn't truncated by the row cap.
+ */
+export async function getZoomDay(date: string): Promise<ZoomDayResult> {
+  const { demo } = await getOwnerContext();
+  const supabase = getClient();
+  const wd = weekdayOf(date);
+
+  if (!supabase) {
+    const calls = DEMO_CALLS.filter((c) => c.weekday === wd);
+    const present: Record<string, boolean> = {};
+    const cam: Record<string, boolean> = {};
+    for (const [k, v] of presentOverrides) {
+      const [id, d, cid] = k.split('|');
+      if (d === date && id && cid) present[`${id}|${cid}`] = v;
+    }
+    for (const [k, v] of camOverrides) {
+      const [id, d, cid] = k.split('|');
+      if (d === date && id && cid) cam[`${id}|${cid}`] = v;
+    }
+    return { calls, present, cam, demo: true };
+  }
+
+  let calls: ZoomCallDef[] = [];
+  try {
+    const { data } = await supabase
+      .from('zoom_calls')
+      .select('id,title,weekday,start_time,scope,team_branch,created_by, creator:created_by(display_name)')
+      .eq('weekday', wd)
+      .eq('active', true);
+    calls = ((data as Record<string, unknown>[] | null) ?? []).map(mapCallRow).sort(byTimeThenTitle);
+  } catch {
+    calls = [];
+  }
+
+  const present: Record<string, boolean> = {};
+  const cam: Record<string, boolean> = {};
+  try {
+    const rows = await fetchAllRows<{
+      marketer_id: string;
+      call_id: string | null;
+      present: boolean;
+      cam: boolean;
+    }>((from, to) =>
+      supabase
+        .from('zoom_attendance')
+        .select('marketer_id,call_id,present,cam')
+        .eq('call_date', date)
+        .range(from, to),
+    );
+    for (const r of rows ?? []) {
+      if (!r.call_id) continue;
+      present[`${r.marketer_id}|${r.call_id}`] = r.present;
+      cam[`${r.marketer_id}|${r.call_id}`] = r.cam;
+    }
+  } catch {
+    /* leave empty */
+  }
+
+  return { calls, present, cam, demo: false };
+}
+
 export interface SetAttendanceResult {
   ok: boolean;
   demo: boolean;

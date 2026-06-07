@@ -1141,7 +1141,8 @@
     "empty_title": "Nessun membro",
     "empty_body": "Non ci sono ancora marketer nel team.",
     "no_results_title": "Nessun risultato",
-    "no_results_body": "Nessun membro corrisponde alla ricerca."
+    "no_results_body": "Nessun membro corrisponde alla ricerca.",
+    "show_more": "Mostra altri"
   },
   "team": {
     "breadcrumb": "Statistiche",

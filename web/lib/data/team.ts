@@ -10,7 +10,7 @@ import type {
 } from '@/lib/types/db';
 import { getNode } from '@/lib/data/genealogy';
 import { listMarketers } from '@/lib/data/admin';
-import { getClient, getOwnerContext } from '@/lib/data/crm-shared';
+import { fetchAllRows, getClient, getOwnerContext } from '@/lib/data/crm-shared';
 import { logError } from '@/lib/log';
 import { setMarketerIdentity } from '@/lib/data/mock/runtime';
 import { mockExtra } from '@/lib/data/mock/team';
@@ -97,31 +97,82 @@ function resolveExtra(id: string): MarketerExtra {
 
 /** The team roster: one compact row per marketer, clickable → /team/[id]. */
 export async function listTeamMembers(): Promise<TeamResult<TeamMemberRow[]>> {
-  const { data, demo } = await listMarketers();
   const { marketerId: selfId } = await getOwnerContext();
   const supabase = getClient();
-  // "Le persone del mio team" excludes the viewer themselves.
-  const team = data.filter((m) => m.id !== selfId);
-  const extras = supabase ? await fetchExtras(team.map((m) => m.id)) : null;
 
-  const rows: TeamMemberRow[] = team.map((m) => {
-    const ex = extras ? extras.get(m.id) ?? EMPTY_EXTRA : resolveExtra(m.id);
-    return {
-      id: m.id,
-      display_name: m.display_name,
-      rank: m.rank,
-      status: m.status,
-      starting_package: ex.starting_package,
-      phone: ex.phone,
-      city: ex.city,
-      region: ex.region,
-      registration_date: m.registration_date,
-      team_size: m.team_size,
-    };
-  });
-  // Alphabetical by name (it-IT), not by rank/registry order.
-  rows.sort((a, b) => a.display_name.localeCompare(b.display_name, 'it'));
-  return { data: rows, demo };
+  // Demo (no env): mock rows + the in-memory extra resolver.
+  if (!supabase) {
+    const { data } = await listMarketers();
+    const rows: TeamMemberRow[] = data
+      .filter((m) => m.id !== selfId)
+      .map((m) => {
+        const ex = resolveExtra(m.id);
+        return {
+          id: m.id,
+          display_name: m.display_name,
+          rank: m.rank,
+          status: m.status,
+          starting_package: ex.starting_package,
+          phone: ex.phone,
+          city: ex.city,
+          region: ex.region,
+          registration_date: m.registration_date,
+          team_size: m.team_size,
+        };
+      });
+    rows.sort((a, b) => a.display_name.localeCompare(b.display_name, 'it'));
+    return { data: rows, demo: true };
+  }
+
+  // Live: ONE paginated read of identity + anagrafica extras (the extras are columns
+  // on `marketers`, so we no longer fetch the roster twice). Team sizes come from the
+  // server-aggregated `team_counts` RPC (chunked) — never truncated by the row cap.
+  try {
+    const data = await fetchAllRows<Record<string, unknown>>((from, to) =>
+      supabase
+        .from('marketers')
+        .select(
+          'id,first_name,last_name,display_name,rank,status,registration_date,starting_package,phone,city,region',
+        )
+        .is('deleted_at', null)
+        .neq('id', selfId)
+        .order('id', { ascending: true })
+        .range(from, to),
+    );
+    if (data === null) return { data: [], demo: false };
+
+    const ids = data.map((r) => String(r.id));
+    const sizes = new Map<string, number>();
+    const CHUNK = 500;
+    for (let i = 0; i < ids.length; i += CHUNK) {
+      const { data: tc, error } = await supabase.rpc('team_counts', {
+        p_ids: ids.slice(i, i + CHUNK),
+      });
+      if (error || !Array.isArray(tc)) break;
+      for (const c of tc as { marketer_id: string; team: number }[]) {
+        sizes.set(c.marketer_id, Number(c.team) || 0);
+      }
+    }
+
+    const rows: TeamMemberRow[] = data.map((r) => ({
+      id: String(r.id),
+      display_name:
+        (r.display_name as string | null) ??
+        `${r.first_name ?? ''} ${r.last_name ?? ''}`.trim(),
+      rank: r.rank as MarketerRank,
+      status: r.status as MarketerStatus,
+      starting_package: (r.starting_package as StartingPackage | null) ?? null,
+      phone: (r.phone as string | null) ?? null,
+      city: (r.city as string | null) ?? null,
+      region: (r.region as string | null) ?? null,
+      registration_date: (r.registration_date as string | null) ?? null,
+      team_size: sizes.get(String(r.id)) ?? 0,
+    }));
+    rows.sort((a, b) => a.display_name.localeCompare(b.display_name, 'it'));
+    return { data: rows, demo: false };
+  } catch {
+    return { data: [], demo: false };
+  }
 }
 
 /** Full anagrafica for one marketer (identity + sponsor + extras). */

@@ -55,6 +55,14 @@ export function TeamRoster({ rows }: { rows: TeamMemberRow[] }) {
       )
     : rows;
 
+  // Render incrementally: a big org (1000+) is slow to paint all at once, and you
+  // almost always reach a person via search. Show a window + "mostra altri"; the
+  // search still runs over EVERY row. Window resets whenever the query changes.
+  const PAGE = 50;
+  const [limit, setLimit] = React.useState(PAGE);
+  React.useEffect(() => setLimit(PAGE), [needle]);
+  const shown = filtered.slice(0, limit);
+
   const activeCount = React.useMemo(
     () => rows.filter((r) => r.status === 'active').length,
     [rows],
@@ -142,7 +150,7 @@ export function TeamRoster({ rows }: { rows: TeamMemberRow[] }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {filtered.map((r) => {
+                {shown.map((r) => {
                   const location = [r.city, r.region].filter(Boolean).join(' · ');
                   return (
                     <tr
@@ -224,6 +232,20 @@ export function TeamRoster({ rows }: { rows: TeamMemberRow[] }) {
               </tbody>
             </table>
           </div>
+          {filtered.length > limit && (
+            <div className="flex items-center justify-center gap-3 border-t border-border/70 bg-muted/20 px-4 py-3">
+              <span className="text-xs text-muted-foreground">
+                {t('count', { count: shown.length })} / {filtered.length}
+              </span>
+              <button
+                type="button"
+                onClick={() => setLimit((l) => l + 100)}
+                className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {t('show_more')}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
