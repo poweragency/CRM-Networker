@@ -8,6 +8,7 @@ import { getSevenWhysFor } from '@/lib/data/seven-whys';
 import { getMarketerProfile } from '@/lib/data/team';
 import { getWishlist } from '@/lib/data/wishlist';
 import { getFormazioneProgress } from '@/lib/data/formazione';
+import { getDmoStatus } from '@/lib/data/streak';
 import { ConfigNotice } from '@/components/config-notice';
 import { EmptyState } from '@/components/crm/empty-state';
 import { ProspectBoard } from '@/components/prospects/prospect-board';
@@ -64,6 +65,7 @@ export default async function ImpostazioniPage({
     profileRes,
     wishlistRes,
     formazioneRes,
+    dmo,
   ] = await Promise.all([
     getNode(meId),
     listProspectBoard({ ownerMarketerId: meId }),
@@ -72,6 +74,7 @@ export default async function ImpostazioniPage({
     getMarketerProfile(meId),
     getWishlist(meId),
     getFormazioneProgress(meId),
+    getDmoStatus(),
   ]);
 
   const node = nodeRes.data;
@@ -144,6 +147,7 @@ export default async function ImpostazioniPage({
           node={node}
           isSelf
           crmAccess={claims.crm_access}
+          streak={dmo}
           action={profile ? <AnagraficaModal profile={profile} canEdit /> : null}
         />
       )}
