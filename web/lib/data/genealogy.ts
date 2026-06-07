@@ -3,7 +3,6 @@ import { cache } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/env';
 import { getCurrentClaims } from '@/lib/data/session';
-import { kpisFromStages } from '@/lib/prospect-kpis';
 import type {
   BranchScope,
   MarketerRank,
@@ -12,6 +11,7 @@ import type {
   ProspectStage,
   TreeNode,
 } from '@/lib/types/db';
+import { STAGE_ORDER } from '@/lib/types/db';
 import {
   MOCK_ROOT_ID,
   mockChildren,
@@ -140,54 +140,78 @@ function withCounts(
   });
 }
 
-interface NodeKpi {
+/** Raw (un-rated) funnel counts for ONE marketer — summable across a subtree. */
+interface PersonalFunnel {
+  /** Prospects "in percorso" (funnel pipeline + Lista-100 entries in percorso). */
   prospects: number;
-  conversion: number;
+  /** How many reached Business Info (the conversion denominator). */
+  businessInfo: number;
+  /** Enrollments (iscrizioni). */
   iscrizioni: number;
+  /** Calls the marketer logged. */
   calls: number;
 }
+const ZERO_FUNNEL: PersonalFunnel = { prospects: 0, businessInfo: 0, iscrizioni: 0, calls: 0 };
+const BUSINESS_INFO_IDX = STAGE_ORDER.indexOf('business_info');
 
 /**
- * Per-marketer KPIs for the genealogy node cards + detail panel (audit: these were
- * hardcoded to 0). `prospects` = the owner's non-deleted pipeline size; `iscrizioni`
- * = enrollments; `conversion` = iscritti / business-info-reached (kpisFromStages —
- * same definition as the personal performance widget); `calls` = calls the marketer
- * logged. Two queries for the whole visible set; RLS scopes both to what the caller
- * can see.
+ * Per-marketer PERSONAL funnel counts (audit: these were hardcoded to 0). A
+ * prospect "in percorso" comes from TWO sources, both counted:
+ *   1. the `prospects` table (the Percorso Prospect kanban), and
+ *   2. `lista_contatti_entries.percorso >= 1` — Lista-100 contacts moved into the
+ *      funnel (percorso 1..5 = Business Info → Iscrizione). These are NOT in the
+ *      prospects table (promote creates a contact, not a prospect), so the old
+ *      count silently missed them.
+ * Returns raw counts (not a ratio) so they can be summed over a subtree before the
+ * conversion is computed. Three queries for the whole id set; RLS scopes each to
+ * what the caller can see.
  */
-async function fetchProspectKpis(
+async function fetchPersonalFunnel(
   supabase: SupabaseServerClient,
   ids: string[],
-): Promise<Map<string, NodeKpi>> {
-  const out = new Map<string, NodeKpi>();
-  for (const id of ids) out.set(id, { prospects: 0, conversion: 0, iscrizioni: 0, calls: 0 });
+): Promise<Map<string, PersonalFunnel>> {
+  const out = new Map<string, PersonalFunnel>();
+  for (const id of ids) out.set(id, { ...ZERO_FUNNEL });
   if (ids.length === 0) return out;
-  // Prospect pipeline → prospects + iscrizioni + conversion.
+
+  // 1. Prospects table (kanban pipeline).
   try {
     const { data } = await supabase
       .from('prospects')
       .select('owner_marketer_id, current_stage')
       .in('owner_marketer_id', ids)
       .is('deleted_at', null);
-    const stagesByOwner = new Map<string, ProspectStage[]>();
     for (const r of (data ?? []) as { owner_marketer_id: string; current_stage: ProspectStage }[]) {
-      const arr = stagesByOwner.get(r.owner_marketer_id) ?? [];
-      arr.push(r.current_stage);
-      stagesByOwner.set(r.owner_marketer_id, arr);
-    }
-    for (const [owner, stages] of stagesByOwner) {
-      const k = kpisFromStages(stages);
-      const cur = out.get(owner);
-      if (cur) {
-        cur.prospects = k.prospects;
-        cur.conversion = k.conversionRate;
-        cur.iscrizioni = k.iscrizioni;
-      }
+      const f = out.get(r.owner_marketer_id);
+      if (!f) continue;
+      f.prospects += 1;
+      if (STAGE_ORDER.indexOf(r.current_stage) >= BUSINESS_INFO_IDX) f.businessInfo += 1;
+      if (r.current_stage === 'iscrizione') f.iscrizioni += 1;
     }
   } catch {
-    /* best-effort: leave zeros so the node still renders */
+    /* best-effort */
   }
-  // Calls logged by each marketer → calls count.
+
+  // 2. Lista-100 entries in percorso (percorso 1..5 = Business Info → Iscrizione).
+  try {
+    const { data } = await supabase
+      .from('lista_contatti_entries')
+      .select('owner_marketer_id, percorso')
+      .in('owner_marketer_id', ids)
+      .gte('percorso', 1)
+      .is('deleted_at', null);
+    for (const r of (data ?? []) as { owner_marketer_id: string; percorso: number }[]) {
+      const f = out.get(r.owner_marketer_id);
+      if (!f) continue;
+      f.prospects += 1;
+      f.businessInfo += 1; // percorso >= 1 → already reached Business Info
+      if (r.percorso >= 5) f.iscrizioni += 1; // 5 = Iscrizione
+    }
+  } catch {
+    /* best-effort */
+  }
+
+  // 3. Calls logged.
   try {
     const { data } = await supabase
       .from('calls')
@@ -195,35 +219,101 @@ async function fetchProspectKpis(
       .in('marketer_id', ids)
       .is('deleted_at', null);
     for (const r of (data ?? []) as { marketer_id: string }[]) {
-      const cur = out.get(r.marketer_id);
-      if (cur) cur.calls += 1;
+      const f = out.get(r.marketer_id);
+      if (f) f.calls += 1;
     }
   } catch {
-    /* best-effort: leave calls at 0 */
+    /* best-effort */
   }
   return out;
 }
 
-/** Stamp the KPIs (prospects, conversion, iscrizioni, calls) onto TreeNodes. */
-function withProspectKpis(
+/** Conversion = iscritti / business-info-reached (0 when no one reached BI). */
+function conversionOf(f: PersonalFunnel): number {
+  return f.businessInfo > 0 ? f.iscrizioni / f.businessInfo : 0;
+}
+
+/** Stamp funnel counts + conversion onto TreeNodes (personal OR aggregated). */
+function stampFunnel(
   nodes: TreeNode[],
-  kpis: Map<string, NodeKpi>,
+  byId: Map<string, PersonalFunnel>,
 ): TreeNode[] {
   return nodes.map((n) => {
-    const k = kpis.get(n.id);
-    return k
-      ? {
-          ...n,
-          kpis: {
-            ...n.kpis,
-            prospects: k.prospects,
-            conversion_rate: k.conversion,
-            iscrizioni: k.iscrizioni,
-            calls: k.calls,
-          },
-        }
-      : n;
+    const f = byId.get(n.id) ?? ZERO_FUNNEL;
+    return {
+      ...n,
+      kpis: {
+        ...n.kpis,
+        prospects: f.prospects,
+        iscrizioni: f.iscrizioni,
+        calls: f.calls,
+        conversion_rate: conversionOf(f),
+      },
+    };
   });
+}
+
+/**
+ * Roll each loaded node's funnel up over its WHOLE loaded subtree (the node + all
+ * its descendants present in `nodes`). This makes the tree a leader's overview:
+ * the number on a node is the SUM of the team's prospects ("da X in giù ci sono N
+ * prospect"), and the conversion is the team-wide rate — total iscritti ÷ total
+ * Business-Info across the subtree. Summing the raw counts before dividing makes
+ * the rate volume-weighted by team size (NOT a flat average of left/right), and it
+ * naturally folds in the root's own funnel. O(n) post-order over the in-memory tree
+ * (parent_id adjacency), so no extra query and no row-limit risk on big orgs.
+ */
+function aggregateSubtree(
+  nodes: TreeNode[],
+  personal: Map<string, PersonalFunnel>,
+): Map<string, PersonalFunnel> {
+  const inSet = new Set(nodes.map((n) => n.id));
+  const childrenByParent = new Map<string, string[]>();
+  for (const n of nodes) {
+    if (n.parent_id && inSet.has(n.parent_id)) {
+      const arr = childrenByParent.get(n.parent_id) ?? [];
+      arr.push(n.id);
+      childrenByParent.set(n.parent_id, arr);
+    }
+  }
+  // Forest roots = loaded nodes whose parent isn't in the set.
+  const roots = nodes
+    .filter((n) => !n.parent_id || !inSet.has(n.parent_id))
+    .map((n) => n.id);
+  // Pre-order traversal, then reverse → every child is processed before its parent.
+  const order: string[] = [];
+  const stack = [...roots];
+  while (stack.length > 0) {
+    const id = stack.pop() as string;
+    order.push(id);
+    const kids = childrenByParent.get(id);
+    if (kids) for (const c of kids) stack.push(c);
+  }
+  order.reverse();
+
+  const agg = new Map<string, PersonalFunnel>();
+  for (const id of order) {
+    const base = personal.get(id) ?? ZERO_FUNNEL;
+    const a: PersonalFunnel = {
+      prospects: base.prospects,
+      businessInfo: base.businessInfo,
+      iscrizioni: base.iscrizioni,
+      calls: base.calls,
+    };
+    const kids = childrenByParent.get(id);
+    if (kids) {
+      for (const c of kids) {
+        const ca = agg.get(c);
+        if (!ca) continue;
+        a.prospects += ca.prospects;
+        a.businessInfo += ca.businessInfo;
+        a.iscrizioni += ca.iscrizioni;
+        a.calls += ca.calls;
+      }
+    }
+    agg.set(id, a);
+  }
+  return agg;
 }
 
 /** The caller's visible root: own marketer (members) or org root (admins). */
@@ -250,8 +340,8 @@ export async function getRootMarketer(): Promise<GenealogyResult<TreeNode>> {
     if (rootData) {
       const node = toTreeNode(rootData);
       const counts = await fetchTeamCounts(supabase, [node.id]);
-      const pk = await fetchProspectKpis(supabase, [node.id]);
-      return { data: withProspectKpis(withCounts([node], counts), pk)[0], demo: false };
+      const personal = await fetchPersonalFunnel(supabase, [node.id]);
+      return { data: stampFunnel(withCounts([node], counts), personal)[0], demo: false };
     }
 
     // Fallback: root the tree at the caller's OWN marketer (top of their subtree).
@@ -267,8 +357,8 @@ export async function getRootMarketer(): Promise<GenealogyResult<TreeNode>> {
       if (selfData) {
         const node = toTreeNode(selfData);
         const counts = await fetchTeamCounts(supabase, [node.id]);
-        const pk = await fetchProspectKpis(supabase, [node.id]);
-        return { data: withProspectKpis(withCounts([node], counts), pk)[0], demo: false };
+        const personal = await fetchPersonalFunnel(supabase, [node.id]);
+        return { data: stampFunnel(withCounts([node], counts), personal)[0], demo: false };
       }
     }
 
@@ -302,8 +392,10 @@ export async function getChildren(
     const nodes = (data as MarketerRow[]).map(toTreeNode);
     const ids = nodes.map((n) => n.id);
     const counts = await fetchTeamCounts(supabase, ids);
-    const pk = await fetchProspectKpis(supabase, ids);
-    return { data: withProspectKpis(withCounts(nodes, counts), pk), demo: false };
+    // Direct children loaded lazily → show each child's PERSONAL funnel (their full
+    // subtree roll-up is computed by getSubtree when the whole tree is loaded).
+    const personal = await fetchPersonalFunnel(supabase, ids);
+    return { data: stampFunnel(withCounts(nodes, counts), personal), demo: false };
   } catch {
     return { data: [], demo: false };
   }
@@ -352,11 +444,13 @@ export async function getSubtree(
         ? rows
         : rows.filter((r) => r.id === rootId || r.branch_leg === scope);
 
-    // get_subtree already returns team sizes; enrich with per-node prospect KPIs
-    // (prospects + conversion) which the RPC doesn't compute.
+    // get_subtree already returns team sizes; enrich with the funnel KPIs the RPC
+    // doesn't compute. Each node shows its WHOLE-SUBTREE roll-up (team prospects +
+    // team-wide conversion), so the tree reads as a leader's overview.
     const nodes = filtered.map(toTreeNode);
-    const pk = await fetchProspectKpis(supabase, nodes.map((n) => n.id));
-    return { data: withProspectKpis(nodes, pk), demo: false };
+    const personal = await fetchPersonalFunnel(supabase, nodes.map((n) => n.id));
+    const agg = aggregateSubtree(nodes, personal);
+    return { data: stampFunnel(nodes, agg), demo: false };
   } catch {
     return { data: [], demo: false };
   }

@@ -87,7 +87,7 @@ export function CatenaButton({ initial }: { initial: DmoStatus }) {
           'group inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-bold tabular-nums transition-all duration-base ease-standard hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           done
             ? 'border-warning/50 bg-warning/15 text-warning shadow-[0_0_18px_hsl(var(--warning)/0.5)]'
-            : 'border-success/50 bg-success/12 text-success shadow-[0_0_16px_hsl(var(--success)/0.4)] animate-glow-pulse',
+            : 'border-danger/50 bg-danger/12 text-danger shadow-[0_0_16px_hsl(var(--danger)/0.45)] animate-glow-pulse',
         )}
       >
         <Flame className="h-4 w-4 transition-transform group-hover:scale-110" aria-hidden />
@@ -105,20 +105,20 @@ export function CatenaButton({ initial }: { initial: DmoStatus }) {
               'relative overflow-hidden rounded-2xl border p-6 text-center',
               done
                 ? 'border-warning/40 bg-gradient-to-b from-warning/[0.12] to-transparent'
-                : 'border-success/30 bg-gradient-to-b from-success/[0.10] to-transparent',
+                : 'border-danger/30 bg-gradient-to-b from-danger/[0.08] to-transparent',
             )}
           >
             <span
               className={cn(
                 'pointer-events-none absolute left-1/2 top-0 h-28 w-28 -translate-x-1/2 -translate-y-10 rounded-full blur-3xl',
-                done ? 'bg-warning/30 animate-glow-pulse' : 'bg-success/25',
+                done ? 'bg-warning/30 animate-glow-pulse' : 'bg-danger/20',
               )}
               aria-hidden
             />
             <Flame
               className={cn(
                 'relative mx-auto h-12 w-12',
-                done ? 'text-warning' : 'text-success',
+                done ? 'text-warning' : 'text-danger',
               )}
               aria-hidden
             />
@@ -136,7 +136,7 @@ export function CatenaButton({ initial }: { initial: DmoStatus }) {
             <p
               className={cn(
                 'relative mt-3 text-sm font-semibold',
-                done ? 'text-warning' : 'text-success',
+                done ? 'text-warning' : 'text-danger',
               )}
             >
               {done ? t('today_done') : t('progress', { done: doneCount })}
@@ -196,7 +196,7 @@ function TaskRow({
           : done
             ? 'border-success/40 bg-success/[0.08]'
             : 'border-border/70 bg-card hover:border-success/40',
-        highlight && 'ring-2 ring-success/50 animate-glow-pulse',
+        highlight && 'ring-2 ring-danger/50 animate-glow-pulse',
       )}
     >
       <span
