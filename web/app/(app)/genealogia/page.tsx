@@ -22,13 +22,17 @@ export const dynamic = 'force-dynamic';
 export default async function GenealogiaPage() {
   const { claims, demo: claimsDemo } = await getCurrentClaims();
 
-  // Seed the client with the root + the FULL subtree (no 4-level cap) so the whole
-  // tree is visible without manual expansion. Both calls are demo-safe; if either
-  // degrades we flag demo mode for the inline notice.
+  // Seed the client with the root + a BOUNDED window (~300 nodes by BFS) instead of
+  // the whole org — deeper people are reached on demand via search (revealNode loads
+  // just their path + neighborhood). `rollup:true` stamps each node's whole-subtree
+  // prospect total server-side, so the numbers stay correct without loading everyone.
   const rootRes = await getRootMarketer();
   const root = rootRes.data;
 
-  const subtreeRes = await getSubtree(root.id, 'GLOBAL');
+  const subtreeRes = await getSubtree(root.id, 'GLOBAL', undefined, {
+    limit: 300,
+    rollup: true,
+  });
 
   // De-dupe (the subtree already includes the root) into a stable pre-order list.
   const byId = new Map<string, TreeNode>();

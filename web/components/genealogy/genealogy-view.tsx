@@ -205,13 +205,6 @@ export function GenealogyView({
     [addTarget, tree],
   );
 
-  // Instant search: the whole org is already cached client-side, so filter it in
-  // memory (no server round-trip) — the box is immediate at every keystroke.
-  const handleTreeSearch = React.useCallback(
-    async (q: string) => tree.searchLocal(q),
-    [tree],
-  );
-
   const handlePick = React.useCallback(
     async (node: TreeNode) => {
       await tree.revealNode(node);
@@ -262,9 +255,8 @@ export function GenealogyView({
       {/* Marketer search lives in the top navbar (only while this screen is up). */}
       <TopbarSlot>
         <GenealogySearch
-          onSearch={handleTreeSearch}
+          onSearch={tree.search}
           onPick={handlePick}
-          debounceMs={0}
           className="sm:w-full sm:max-w-md"
         />
       </TopbarSlot>

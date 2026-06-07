@@ -4,9 +4,14 @@ import * as React from 'react';
 import type { BranchScope, PlacementLeg, TreeNode } from '@/lib/types/db';
 import {
   loadChildrenAction,
+  loadNodePathAction,
   loadSubtreeAction,
   searchMarketersAction,
 } from '@/app/(app)/genealogia/actions';
+
+/** Initial lazy window: load the root + top levels up to this many nodes. Deeper
+ *  nodes are reached on demand via search → revealNode. */
+const LAZY_WINDOW = 300;
 
 /**
  * Client-side view-model for the binary genealogy (doc 14 §7.3/§7.6).
@@ -196,7 +201,9 @@ export function useGenealogyTree({
       try {
         let working = cache;
         if (!working.has(target.id) || !legAncestorsLoaded(working, target, rootId)) {
-          const res = await loadSubtreeAction(rootId, 'GLOBAL');
+          // LAZY: load just the target's ancestor chain + local neighborhood (not the
+          // whole org), so a search jump stays fast at any scale.
+          const res = await loadNodePathAction(target.id);
           if (res.demo) setDemo(true);
           working = indexById([...cache.values(), ...res.nodes]);
           mergeNodes(res.nodes);
@@ -232,7 +239,11 @@ export function useGenealogyTree({
   const reload = React.useCallback(async (): Promise<void> => {
     setLoading(true);
     try {
-      const res = await loadSubtreeAction(rootId, 'GLOBAL');
+      // Reload the lazy window (root + top levels) with server-side roll-ups.
+      const res = await loadSubtreeAction(rootId, 'GLOBAL', undefined, {
+        limit: LAZY_WINDOW,
+        rollup: true,
+      });
       if (res.demo) setDemo(true);
       mergeNodes(res.nodes);
     } finally {

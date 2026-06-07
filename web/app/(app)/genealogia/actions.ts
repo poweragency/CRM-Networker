@@ -1,6 +1,7 @@
 'use server';
 
 import {
+  getAncestors,
   getChildren,
   getSubtree,
   searchMarketers,
@@ -54,9 +55,23 @@ export async function loadSubtreeAction(
   rootId: string,
   scope: BranchScope,
   maxDepth = TREE_LOAD_DEPTH,
+  opts: { limit?: number; rollup?: boolean } = {},
 ): Promise<ActionResult> {
-  const { data, demo } = await getSubtree(rootId, scope, maxDepth);
+  const { data, demo } = await getSubtree(rootId, scope, maxDepth, opts);
   return { nodes: data, demo };
+}
+
+/**
+ * Reveal a searched node in the LAZY tree without loading the whole org: its ancestor
+ * chain (to connect it to the visible window) + its local neighborhood (a couple of
+ * levels), both with subtree roll-up numbers stamped. "Just the node and those near it."
+ */
+export async function loadNodePathAction(targetId: string): Promise<ActionResult> {
+  const [anc, near] = await Promise.all([
+    getAncestors(targetId),
+    getSubtree(targetId, 'GLOBAL', 2, { rollup: true }),
+  ]);
+  return { nodes: [...anc.data, ...near.data], demo: anc.demo || near.demo };
 }
 
 /** Trigram name search within the caller's visible subtree. */

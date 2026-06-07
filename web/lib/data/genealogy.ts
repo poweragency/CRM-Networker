@@ -372,6 +372,86 @@ function aggregateSubtree(
   return agg;
 }
 
+/** Marketer select columns shared by the single/children/search/ancestor reads. */
+const NODE_COLS =
+  'id,parent_id,leg,sponsor_id,first_name,last_name,display_name,rank,status,memberships(status)';
+
+/**
+ * Stamp each node with its WHOLE-SUBTREE funnel roll-up via the `subtree_funnel` RPC
+ * (server-aggregated). Used in LAZY mode, where the client doesn't hold the full tree
+ * to sum descendants — so the "prospect = team total" number is computed server-side
+ * for exactly the loaded window. Chunked to stay under the row cap; falls back to
+ * zeros (never throws) so the tree still renders.
+ */
+async function stampSubtreeFunnel(
+  supabase: SupabaseServerClient,
+  nodes: TreeNode[],
+): Promise<TreeNode[]> {
+  const byId = new Map<string, PersonalFunnel>();
+  for (const n of nodes) byId.set(n.id, { ...ZERO_FUNNEL });
+  const ids = nodes.map((n) => n.id);
+  if (ids.length === 0) return nodes;
+  try {
+    const CHUNK = 5000;
+    for (let i = 0; i < ids.length; i += CHUNK) {
+      const { data, error } = await supabase.rpc('subtree_funnel', {
+        p_ids: ids.slice(i, i + CHUNK),
+      });
+      if (error || !Array.isArray(data)) break;
+      for (const r of data as {
+        marketer_id: string;
+        prospects: number;
+        business_info: number;
+        iscrizioni: number;
+      }[]) {
+        byId.set(r.marketer_id, {
+          prospects: Number(r.prospects) || 0,
+          businessInfo: Number(r.business_info) || 0,
+          iscrizioni: Number(r.iscrizioni) || 0,
+        });
+      }
+    }
+  } catch {
+    /* leave zeros */
+  }
+  return stampFunnel(nodes, byId);
+}
+
+/**
+ * The ancestor chain of `target` (root → target, target included) as TreeNodes with
+ * team sizes + subtree roll-up stamped. Lets the lazy tree connect a searched node to
+ * the loaded window without fetching the whole org.
+ */
+export async function getAncestors(
+  targetId: string,
+): Promise<GenealogyResult<TreeNode[]>> {
+  if (!isSupabaseConfigured) return { data: [], demo: true };
+  try {
+    const supabase = createClient();
+    if (!supabase) return { data: [], demo: true };
+    const { data: cl, error } = await supabase
+      .from('marketer_tree_closure')
+      .select('ancestor_id')
+      .eq('descendant_id', targetId);
+    if (error || !cl) return { data: [], demo: false };
+    const ids = (cl as { ancestor_id: string }[]).map((r) => r.ancestor_id);
+    if (ids.length === 0) return { data: [], demo: false };
+    const { data: ms } = await supabase
+      .from('marketers')
+      .select(NODE_COLS)
+      .in('id', ids)
+      .is('deleted_at', null);
+    const nodes = ((ms ?? []) as MarketerRow[]).map(toTreeNode);
+    const counts = await fetchTeamCounts(supabase, nodes.map((n) => n.id));
+    return {
+      data: await stampSubtreeFunnel(supabase, withCounts(nodes, counts)),
+      demo: false,
+    };
+  } catch {
+    return { data: [], demo: false };
+  }
+}
+
 /** The caller's visible root: own marketer (members) or org root (admins). */
 export async function getRootMarketer(): Promise<GenealogyResult<TreeNode>> {
   if (!isSupabaseConfigured) {
@@ -475,7 +555,7 @@ export async function getSubtree(
   rootId: string,
   scope: BranchScope,
   maxDepth = TREE_LOAD_DEPTH,
-  opts: { funnel?: boolean } = {},
+  opts: { funnel?: boolean; limit?: number; rollup?: boolean } = {},
 ): Promise<GenealogyResult<TreeNode[]>> {
   const withFunnel = opts.funnel !== false;
   if (!isSupabaseConfigured) {
@@ -485,40 +565,54 @@ export async function getSubtree(
     const supabase = createClient();
     if (!supabase) return { data: mockSubtree(rootId, scope), demo: true };
 
-    // The `get_subtree` RPC returns a TABLE → PostgREST RE-RUNS the whole function for
-    // every .range() page. So instead of blind paging (which re-scanned 3× for a
-    // 1000-node org), we read the authoritative subtree size from the closure (cheap,
-    // indexed) and request exactly that many rows in ONE call. Only if the platform
-    // row cap truncates the response (subtree > cap) do we fetch the remainder.
-    let total = 0;
-    try {
-      const { count } = await supabase
-        .from('marketer_tree_closure')
-        .select('descendant_id', { count: 'exact', head: true })
-        .eq('ancestor_id', rootId);
-      total = count ?? 0;
-    } catch {
-      /* total stays 0 → fall back to incremental short-page detection */
-    }
-
     const rows: MarketerRow[] = [];
-    for (;;) {
-      const want = total > 0 ? total - rows.length : 1000;
-      if (want <= 0) break;
+    if (opts.limit && opts.limit > 0) {
+      // LAZY window: the first N nodes by BFS (get_subtree orders by depth) → the
+      // root + top levels, connected. One call.
       const { data, error } = await supabase
         .rpc('get_subtree', { node_id: rootId, max_depth: maxDepth })
-        .range(rows.length, rows.length + want - 1);
-      if (error) {
-        if (rows.length === 0) return { data: [], demo: false };
-        break;
+        .range(0, opts.limit - 1);
+      if (error) return { data: [], demo: false };
+      rows.push(...((data ?? []) as MarketerRow[]));
+    } else if (maxDepth < TREE_LOAD_DEPTH) {
+      // Depth-bounded (a node's local neighborhood) → small result, one call.
+      const { data, error } = await supabase
+        .rpc('get_subtree', { node_id: rootId, max_depth: maxDepth })
+        .range(0, 49999);
+      if (error) return { data: [], demo: false };
+      rows.push(...((data ?? []) as MarketerRow[]));
+    } else {
+      // FULL subtree. get_subtree returns a TABLE → PostgREST re-runs the function per
+      // .range() page, so we read the subtree size from the closure (cheap, indexed)
+      // and request exactly that many in ONE call; paginate only if the cap truncates.
+      let total = 0;
+      try {
+        const { count } = await supabase
+          .from('marketer_tree_closure')
+          .select('descendant_id', { count: 'exact', head: true })
+          .eq('ancestor_id', rootId);
+        total = count ?? 0;
+      } catch {
+        /* total stays 0 → fall back to incremental short-page detection */
       }
-      const batch = (data ?? []) as MarketerRow[];
-      rows.push(...batch);
-      if (batch.length === 0) break;
-      if (total > 0) {
-        if (rows.length >= total) break;
-      } else if (batch.length < want) {
-        break; // unknown total → a short page means we're done
+      for (;;) {
+        const want = total > 0 ? total - rows.length : 1000;
+        if (want <= 0) break;
+        const { data, error } = await supabase
+          .rpc('get_subtree', { node_id: rootId, max_depth: maxDepth })
+          .range(rows.length, rows.length + want - 1);
+        if (error) {
+          if (rows.length === 0) return { data: [], demo: false };
+          break;
+        }
+        const batch = (data ?? []) as MarketerRow[];
+        rows.push(...batch);
+        if (batch.length === 0) break;
+        if (total > 0) {
+          if (rows.length >= total) break;
+        } else if (batch.length < want) {
+          break;
+        }
       }
     }
 
@@ -533,13 +627,15 @@ export async function getSubtree(
         : rows.filter((r) => r.id === rootId || r.branch_leg === scope);
 
     const nodes = filtered.map(toTreeNode);
-    // Funnel KPIs are only needed by the tree viewer/profile. Callers that just need
-    // the member list (e.g. Presenze) pass funnel:false to skip the extra aggregation.
+    // Callers that just need the member list (e.g. Presenze) pass funnel:false.
     if (!withFunnel) return { data: nodes, demo: false };
 
-    // get_subtree already returns team sizes; enrich with the funnel KPIs the RPC
-    // doesn't compute. Each node shows its WHOLE-SUBTREE roll-up (team prospects +
-    // team-wide conversion), so the tree reads as a leader's overview.
+    // Lazy mode (partial tree) can't sum descendants client-side, so the WHOLE-subtree
+    // roll-up is computed server-side (subtree_funnel). Full mode sums the personal
+    // funnels in-memory (no extra per-node query).
+    if (opts.rollup) {
+      return { data: await stampSubtreeFunnel(supabase, nodes), demo: false };
+    }
     const personal = await fetchPersonalFunnel(supabase, nodes.map((n) => n.id));
     const agg = aggregateSubtree(nodes, personal);
     return { data: stampFunnel(nodes, agg), demo: false };
