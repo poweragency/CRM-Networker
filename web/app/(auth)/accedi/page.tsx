@@ -104,11 +104,11 @@ function LoginForm() {
 
     // Only allow site-relative redirects (block open-redirect via //evil.com or
     // absolute URLs in the `redirect` param).
-    const rawRedirect = searchParams.get('redirect') ?? '/dashboard';
+    const rawRedirect = searchParams.get('redirect') ?? '/impostazioni';
     const redirectTo =
       rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')
         ? rawRedirect
-        : '/dashboard';
+        : '/impostazioni';
     // Stay in the loading state through the navigation (no flicker back to "Accedi").
     setRedirecting(true);
     router.replace(redirectTo);

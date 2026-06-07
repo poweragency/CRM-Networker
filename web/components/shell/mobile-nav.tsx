@@ -81,7 +81,7 @@ export function MobileNav({ viewer, orgName, orgLogoUrl, open, onClose }: Mobile
       >
         <div className="flex h-14 shrink-0 items-center justify-between border-b border-nav-foreground/10 px-4">
           <Link
-            href="/dashboard"
+            href="/impostazioni"
             className="flex items-center gap-2 outline-none focus-visible:ring-2 focus-visible:ring-ring"
             onClick={onClose}
           >

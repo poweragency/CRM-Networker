@@ -58,7 +58,7 @@ export function Sidebar({ viewer, orgName, orgLogoUrl, collapsed, onToggleCollap
         ) : (
           <>
             <Link
-              href="/dashboard"
+              href="/impostazioni"
               className="flex min-w-0 items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label={orgName}
             >

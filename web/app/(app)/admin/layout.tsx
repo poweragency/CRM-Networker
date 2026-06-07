@@ -14,6 +14,6 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const { claims } = await getCurrentClaims();
-  if (!isOrgAdmin(claims)) redirect('/dashboard');
+  if (!isOrgAdmin(claims)) redirect('/impostazioni');
   return <>{children}</>;
 }

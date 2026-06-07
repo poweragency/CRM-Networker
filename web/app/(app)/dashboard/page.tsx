@@ -147,7 +147,7 @@ export default async function DashboardPage() {
         ))}
       </section>
 
-      {/* Catena d'Oro — top DMO performers this month (first iteration). */}
+      {/* Daily Task — top performers this month (same card style as above). */}
       <CatenaLeaderboard />
     </div>
   );

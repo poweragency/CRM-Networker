@@ -33,7 +33,7 @@ export default async function OrgSettingsPage() {
   const { claims, demo } = await getCurrentClaims();
   const isAdmin = claims.role === 'admin' || claims.role === 'owner';
   const isCoAdmin = claims.role === 'co_admin';
-  if (!isAdmin && !isCoAdmin) redirect('/dashboard');
+  if (!isAdmin && !isCoAdmin) redirect('/impostazioni');
 
   const orgRoles = isAdmin ? (await listOrgRoles()).data : [];
   const calls = (await listManageableCalls()).data;
