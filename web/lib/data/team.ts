@@ -175,6 +175,146 @@ export async function listTeamMembers(): Promise<TeamResult<TeamMemberRow[]>> {
   }
 }
 
+const ROSTER_COLS =
+  'id,first_name,last_name,display_name,rank,status,registration_date,starting_package,phone,city,region';
+
+function rowToTeamMember(r: Record<string, unknown>, team: number): TeamMemberRow {
+  return {
+    id: String(r.id),
+    display_name:
+      (r.display_name as string | null) ??
+      `${r.first_name ?? ''} ${r.last_name ?? ''}`.trim(),
+    rank: r.rank as MarketerRank,
+    status: r.status as MarketerStatus,
+    starting_package: (r.starting_package as StartingPackage | null) ?? null,
+    phone: (r.phone as string | null) ?? null,
+    city: (r.city as string | null) ?? null,
+    region: (r.region as string | null) ?? null,
+    registration_date: (r.registration_date as string | null) ?? null,
+    team_size: team,
+  };
+}
+
+export interface TeamPage {
+  rows: TeamMemberRow[];
+  /** Count of rows matching the current search (for "X risultati"). */
+  total: number;
+  /** Org-wide totals for the summary cards (independent of the search). */
+  totalAll: number;
+  activeAll: number;
+}
+
+export interface TeamPageQuery {
+  search?: string;
+  offset?: number;
+  limit?: number;
+}
+
+/**
+ * Server-side roster page: returns only ONE page of members (search-filtered) plus
+ * the totals — so /statistiche sends ~50 rows instead of the whole org. Search runs
+ * on the server (trigram index on display_name); team sizes only for the page rows.
+ */
+export async function listTeamMembersPage(
+  q: TeamPageQuery = {},
+): Promise<TeamResult<TeamPage>> {
+  const search = (q.search ?? '').trim();
+  const offset = Math.max(0, q.offset ?? 0);
+  const limit = Math.min(200, Math.max(1, q.limit ?? 50));
+  const { marketerId: selfId } = await getOwnerContext();
+  const supabase = getClient();
+
+  // Demo (no env): mock rows filtered/sliced in memory.
+  if (!supabase) {
+    const { data } = await listMarketers();
+    const team = data.filter((m) => m.id !== selfId);
+    const needle = search.toLowerCase();
+    const filt = needle
+      ? team.filter((m) => m.display_name.toLowerCase().includes(needle))
+      : team;
+    const rows = filt
+      .slice(offset, offset + limit)
+      .map((m) => rowToTeamMember({ ...m, ...resolveExtra(m.id) }, m.team_size));
+    return {
+      data: {
+        rows,
+        total: filt.length,
+        totalAll: team.length,
+        activeAll: team.filter((m) => m.status === 'active').length,
+      },
+      demo: true,
+    };
+  }
+
+  try {
+    const like = search ? `%${search.replace(/[\\%_]/g, (m) => `\\${m}`)}%` : null;
+    const orFilter = like
+      ? `display_name.ilike.${like},city.ilike.${like},region.ilike.${like}`
+      : null;
+
+    let pageQ = supabase
+      .from('marketers')
+      .select(ROSTER_COLS)
+      .is('deleted_at', null)
+      .neq('id', selfId);
+    if (orFilter) pageQ = pageQ.or(orFilter);
+    const { data, error } = await pageQ
+      .order('display_name', { ascending: true })
+      .order('id', { ascending: true })
+      .range(offset, offset + limit - 1);
+    if (error || !data) {
+      return { data: { rows: [], total: 0, totalAll: 0, activeAll: 0 }, demo: false };
+    }
+
+    // Counts (head-only): matching-search, all members, active members.
+    let matchQ = supabase
+      .from('marketers')
+      .select('id', { count: 'exact', head: true })
+      .is('deleted_at', null)
+      .neq('id', selfId);
+    if (orFilter) matchQ = matchQ.or(orFilter);
+    const [matchRes, allRes, activeRes] = await Promise.all([
+      matchQ,
+      supabase
+        .from('marketers')
+        .select('id', { count: 'exact', head: true })
+        .is('deleted_at', null)
+        .neq('id', selfId),
+      supabase
+        .from('marketers')
+        .select('id', { count: 'exact', head: true })
+        .is('deleted_at', null)
+        .neq('id', selfId)
+        .eq('status', 'active'),
+    ]);
+
+    // Team size only for THIS page's rows (≤ limit ids → one RPC call).
+    const ids = (data as Record<string, unknown>[]).map((r) => String(r.id));
+    const sizes = new Map<string, number>();
+    if (ids.length > 0) {
+      const { data: tc } = await supabase.rpc('team_counts', { p_ids: ids });
+      for (const c of (tc as { marketer_id: string; team: number }[] | null) ?? []) {
+        sizes.set(c.marketer_id, Number(c.team) || 0);
+      }
+    }
+
+    const rows = (data as Record<string, unknown>[]).map((r) =>
+      rowToTeamMember(r, sizes.get(String(r.id)) ?? 0),
+    );
+    return {
+      data: {
+        rows,
+        total: matchRes.count ?? rows.length,
+        totalAll: allRes.count ?? 0,
+        activeAll: activeRes.count ?? 0,
+      },
+      demo: false,
+    };
+  } catch {
+    return { data: { rows: [], total: 0, totalAll: 0, activeAll: 0 }, demo: true };
+  }
+}
+
 /** Full anagrafica for one marketer (identity + sponsor + extras). */
 export async function getMarketerProfile(
   id: string,

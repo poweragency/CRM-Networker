@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { ChevronRight, MapPin, Search, Users, UserCheck, X } from 'lucide-react';
+import { ChevronRight, Loader2, MapPin, Search, Users, UserCheck, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Avatar } from '@/components/ui/avatar';
 import { CountUp } from '@/components/ui/count-up';
@@ -19,14 +19,14 @@ import {
   type StartingPackage,
   type TeamMemberRow,
 } from '@/lib/types/db';
+import { teamRosterPageAction } from '@/app/(app)/statistiche/actions';
 
 /**
- * TeamRoster — the Statistiche roster. A client component for instant
- * name/città/regione search over the server rows. Premium presentation: glowing
- * KPI summary cards (tallying numbers + icon chips), then a premium roster table
- * with a left package-tinted rail, a two-line identity cell (avatar + status dot +
- * città·regione), rank, package and team size, with the WHOLE row navigating to
- * the member profile (/team/[id]). Data immediately comprehensible at a glance.
+ * TeamRoster — the Statistiche roster, SERVER-DRIVEN so it scales to any org size:
+ * the page ships only the first ~50 rows + the totals; search and "load more" fetch
+ * more from the server (trigram name search, RLS-scoped). Premium presentation: KPI
+ * summary cards, then a roster table with a package-tinted rail, a two-line identity
+ * cell, rank, package and team size; the whole row links to /team/[id].
  */
 
 const STATUS_TONE: Record<MarketerStatus, string> = {
@@ -40,35 +40,72 @@ function packageRail(pkg: StartingPackage | null): string {
   return PACKAGE_TONE[pkg]?.dot ?? 'bg-border';
 }
 
-export function TeamRoster({ rows }: { rows: TeamMemberRow[] }) {
+export function TeamRoster({
+  initialRows,
+  total: initialTotal,
+  totalAll,
+  activeAll,
+  pageSize,
+}: {
+  initialRows: TeamMemberRow[];
+  total: number;
+  totalAll: number;
+  activeAll: number;
+  pageSize: number;
+}) {
   const t = useTranslations('statistiche');
   const router = useRouter();
   const [q, setQ] = React.useState('');
+  const [rows, setRows] = React.useState<TeamMemberRow[]>(initialRows);
+  const [total, setTotal] = React.useState(initialTotal);
+  const [loading, setLoading] = React.useState(false);
+  const [loadingMore, setLoadingMore] = React.useState(false);
+  const reqRef = React.useRef(0);
+  const firstRun = React.useRef(true);
 
-  const needle = q.trim().toLowerCase();
-  const filtered = needle
-    ? rows.filter(
-        (r) =>
-          r.display_name.toLowerCase().includes(needle) ||
-          (r.city ?? '').toLowerCase().includes(needle) ||
-          (r.region ?? '').toLowerCase().includes(needle),
-      )
-    : rows;
+  // Debounced server search. The first run is skipped (the initial page came from
+  // the server); clearing the box re-fetches page 1 instantly.
+  React.useEffect(() => {
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
+    const needle = q.trim();
+    const id = ++reqRef.current;
+    setLoading(true);
+    const timer = window.setTimeout(
+      async () => {
+        try {
+          const res = await teamRosterPageAction({ search: needle, limit: pageSize });
+          if (reqRef.current === id) {
+            setRows(res.rows);
+            setTotal(res.total);
+          }
+        } finally {
+          if (reqRef.current === id) setLoading(false);
+        }
+      },
+      needle ? 220 : 0,
+    );
+    return () => window.clearTimeout(timer);
+  }, [q, pageSize]);
 
-  // Render incrementally: a big org (1000+) is slow to paint all at once, and you
-  // almost always reach a person via search. Show a window + "mostra altri"; the
-  // search still runs over EVERY row. Window resets whenever the query changes.
-  const PAGE = 50;
-  const [limit, setLimit] = React.useState(PAGE);
-  React.useEffect(() => setLimit(PAGE), [needle]);
-  const shown = filtered.slice(0, limit);
+  const loadMore = React.useCallback(async () => {
+    setLoadingMore(true);
+    try {
+      const res = await teamRosterPageAction({
+        search: q.trim(),
+        offset: rows.length,
+        limit: pageSize,
+      });
+      setRows((prev) => [...prev, ...res.rows]);
+      setTotal(res.total);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [q, rows.length, pageSize]);
 
-  const activeCount = React.useMemo(
-    () => rows.filter((r) => r.status === 'active').length,
-    [rows],
-  );
-
-  if (rows.length === 0) {
+  if (totalAll === 0) {
     return (
       <EmptyState icon={<Users />} title={t('empty_title')} description={t('empty_body')} />
     );
@@ -90,7 +127,9 @@ export function TeamRoster({ rows }: { rows: TeamMemberRow[] }) {
             className="pl-9 pr-9"
             aria-label={t('search_placeholder')}
           />
-          {q && (
+          {loading ? (
+            <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" aria-hidden />
+          ) : q ? (
             <button
               type="button"
               onClick={() => setQ('')}
@@ -99,35 +138,33 @@ export function TeamRoster({ rows }: { rows: TeamMemberRow[] }) {
             >
               <X className="h-3.5 w-3.5" aria-hidden />
             </button>
-          )}
+          ) : null}
         </div>
       </TopbarSlot>
 
-      {/* KPI summary cards */}
+      {/* KPI summary cards (org-wide totals, independent of the search) */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <SummaryStat
           icon={Users}
           label={t('stat_members')}
-          value={rows.length}
+          value={totalAll}
           chip="bg-primary/10 text-primary"
           bar="from-primary/60"
         />
         <SummaryStat
           icon={UserCheck}
           label={t('stat_active')}
-          value={activeCount}
+          value={activeAll}
           chip="bg-success/10 text-success"
           bar="from-success/60"
         />
       </div>
 
       <p className="text-sm text-muted-foreground" aria-live="polite">
-        {needle
-          ? t('count', { count: filtered.length })
-          : t('count', { count: rows.length })}
+        {t('count', { count: total })}
       </p>
 
-      {filtered.length === 0 ? (
+      {rows.length === 0 ? (
         <EmptyState
           icon={<Search />}
           title={t('no_results_title')}
@@ -150,7 +187,7 @@ export function TeamRoster({ rows }: { rows: TeamMemberRow[] }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {shown.map((r) => {
+                {rows.map((r) => {
                   const location = [r.city, r.region].filter(Boolean).join(' · ');
                   return (
                     <tr
@@ -158,7 +195,6 @@ export function TeamRoster({ rows }: { rows: TeamMemberRow[] }) {
                       onClick={() => router.push(`/team/${r.id}`)}
                       className="group relative cursor-pointer transition-colors hover:bg-muted/40"
                     >
-                      {/* Identity — two lines, with a package-tinted accent rail. */}
                       <td className="relative py-3 pl-4 pr-4">
                         <span
                           className={cn(
@@ -232,16 +268,18 @@ export function TeamRoster({ rows }: { rows: TeamMemberRow[] }) {
               </tbody>
             </table>
           </div>
-          {filtered.length > limit && (
+          {rows.length < total && (
             <div className="flex items-center justify-center gap-3 border-t border-border/70 bg-muted/20 px-4 py-3">
               <span className="text-xs text-muted-foreground">
-                {t('count', { count: shown.length })} / {filtered.length}
+                {rows.length} / {total}
               </span>
               <button
                 type="button"
-                onClick={() => setLimit((l) => l + 100)}
-                className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
               >
+                {loadingMore && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}
                 {t('show_more')}
               </button>
             </div>

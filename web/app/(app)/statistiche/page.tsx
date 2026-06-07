@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { listTeamMembers } from '@/lib/data/team';
+import { listTeamMembersPage } from '@/lib/data/team';
 import { ConfigNotice } from '@/components/config-notice';
 import { TeamRoster } from '@/components/team/team-roster';
+
+const PAGE_SIZE = 50;
 
 /**
  * /statistiche — the team roster (RSC). Lists every member of the team; each row
@@ -18,7 +20,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function StatistichePage() {
   const t = await getTranslations('statistiche');
-  const { data, demo } = await listTeamMembers();
+  // Only the FIRST page + the totals — search/scroll fetch more from the server.
+  const { data, demo } = await listTeamMembersPage({ limit: PAGE_SIZE });
 
   return (
     <div className="animate-fade-in space-y-5">
@@ -29,7 +32,13 @@ export default async function StatistichePage() {
         <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
       </div>
 
-      <TeamRoster rows={data} />
+      <TeamRoster
+        initialRows={data.rows}
+        total={data.total}
+        totalAll={data.totalAll}
+        activeAll={data.activeAll}
+        pageSize={PAGE_SIZE}
+      />
     </div>
   );
 }
