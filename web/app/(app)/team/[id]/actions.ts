@@ -4,7 +4,7 @@ import { updateMarketerExtra, updateMarketerIdentity } from '@/lib/data/team';
 import { saveWishlist } from '@/lib/data/wishlist';
 import { saveFormazioneProgress } from '@/lib/data/formazione';
 import { getCurrentClaims } from '@/lib/data/session';
-import { getDmoStatus, type DmoStatus } from '@/lib/data/streak';
+import { getDmoStatus, toggleDmoTask, type DmoStatus } from '@/lib/data/streak';
 import { isSupabaseConfigured } from '@/lib/env';
 import type {
   MarketerExtra,
@@ -25,6 +25,14 @@ import type {
  *  refresh after the user completes a task). Always the CALLER's own status. */
 export async function refreshDmoStatusAction(): Promise<DmoStatus> {
   return getDmoStatus();
+}
+
+/** Tick/untick one of the caller's 5 manual DMO tasks for today (own DMO only). */
+export async function toggleDmoTaskAction(
+  column: string,
+  value: boolean,
+): Promise<DmoStatus> {
+  return toggleDmoTask(column, value);
 }
 
 export interface SaveAnagraficaResult {

@@ -5,44 +5,76 @@ import { useTranslations } from 'next-intl';
 import {
   Flame,
   Check,
-  Loader2,
-  RefreshCw,
+  BookOpen,
+  Instagram,
   Video,
-  ListChecks,
-  Target,
+  UserPlus,
+  GraduationCap,
   type LucideIcon,
 } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { DmoStatus } from '@/lib/data/streak';
-import { refreshDmoStatusAction } from '@/app/(app)/team/[id]/actions';
+import { toggleDmoTaskAction } from '@/app/(app)/team/[id]/actions';
 
 /**
  * "Catena d'Oro" — the daily-streak chip shown next to the user's own name. A
- * flame + day count that glows RED while today's DMO tasks are pending and GOLD
- * once all are done. Tapping it opens a gamified sheet with the 3 daily tasks and
- * the streak. The status is seeded from the server and can be refreshed in-place
- * (so completing a task and tapping "Aggiorna" updates the chain without a reload).
+ * flame + day count + label that glows GREEN while today's DMO is in progress and
+ * turns GOLD once all 5 tasks are ticked. Tapping it opens a gamified sheet with
+ * the 5 MANUAL daily tasks: each lights up green as you tick it (the next one to do
+ * is highlighted), and when all are done everything turns gold and the day is added
+ * to the chain. Ticks persist to the DB via {@link toggleDmoTaskAction}; the streak
+ * is recomputed server-side and synced back once the in-flight ticks settle.
  */
+
+type TaskKey = 'readPages' | 'igStory' | 'tiktokReel' | 'meetPerson' | 'training';
+
+/** The 5 tasks in order, with their DB column + icon + label key. */
+const TASKS: {
+  key: TaskKey;
+  column: string;
+  icon: LucideIcon;
+  labelKey: string;
+}[] = [
+  { key: 'readPages', column: 'read_pages', icon: BookOpen, labelKey: 'task_read' },
+  { key: 'igStory', column: 'ig_story', icon: Instagram, labelKey: 'task_ig' },
+  { key: 'tiktokReel', column: 'tiktok_reel', icon: Video, labelKey: 'task_tiktok' },
+  { key: 'meetPerson', column: 'meet_person', icon: UserPlus, labelKey: 'task_meet' },
+  { key: 'training', column: 'training', icon: GraduationCap, labelKey: 'task_training' },
+];
+
+function withAllDone(s: DmoStatus): DmoStatus {
+  return { ...s, allDone: TASKS.every((t) => s[t.key]) };
+}
+
 export function CatenaButton({ initial }: { initial: DmoStatus }) {
   const t = useTranslations('catena');
   const [status, setStatus] = React.useState<DmoStatus>(initial);
   const [open, setOpen] = React.useState(false);
-  const [refreshing, setRefreshing] = React.useState(false);
+  // Only sync a server response when no other tick is still in flight, so quick
+  // successive taps don't clobber each other with a stale aggregate.
+  const inflight = React.useRef(0);
 
   const done = status.allDone;
-  const doneCount = [status.present, status.lista, status.funnel].filter(Boolean).length;
+  const doneCount = TASKS.filter((task) => status[task.key]).length;
+  const firstUndone = TASKS.findIndex((task) => !status[task.key]);
 
-  async function refresh() {
-    setRefreshing(true);
-    try {
-      const next = await refreshDmoStatusAction();
-      if (!next.demo) setStatus(next);
-    } finally {
-      setRefreshing(false);
-    }
-  }
+  const toggle = React.useCallback(
+    async (task: (typeof TASKS)[number]) => {
+      const nextVal = !status[task.key];
+      setStatus((prev) => withAllDone({ ...prev, [task.key]: nextVal }));
+      inflight.current += 1;
+      try {
+        const res = await toggleDmoTaskAction(task.column, nextVal);
+        inflight.current -= 1;
+        // Settle from the server only on the last response (real streak update).
+        if (!res.demo && inflight.current === 0) setStatus(res);
+      } catch {
+        inflight.current -= 1;
+      }
+    },
+    [status],
+  );
 
   return (
     <>
@@ -52,38 +84,41 @@ export function CatenaButton({ initial }: { initial: DmoStatus }) {
         title={t('tooltip', { n: status.streak })}
         aria-label={t('tooltip', { n: status.streak })}
         className={cn(
-          'group inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm font-bold tabular-nums transition-all duration-base ease-standard hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          'group inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-bold tabular-nums transition-all duration-base ease-standard hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           done
-            ? 'border-warning/45 bg-warning/10 text-warning shadow-[0_0_14px_hsl(var(--warning)/0.45)]'
-            : 'border-danger/45 bg-danger/10 text-danger shadow-[0_0_14px_hsl(var(--danger)/0.4)] animate-glow-pulse',
+            ? 'border-warning/50 bg-warning/15 text-warning shadow-[0_0_18px_hsl(var(--warning)/0.5)]'
+            : 'border-success/50 bg-success/12 text-success shadow-[0_0_16px_hsl(var(--success)/0.4)] animate-glow-pulse',
         )}
       >
         <Flame className="h-4 w-4 transition-transform group-hover:scale-110" aria-hidden />
         <span>{status.streak}</span>
+        <span className="hidden border-l border-current/20 pl-1.5 text-xs font-semibold uppercase tracking-wide sm:inline">
+          {t('button')}
+        </span>
       </button>
 
       <Modal open={open} onOpenChange={setOpen} title={t('title')} size="md">
         <div className="space-y-5">
-          {/* Streak hero */}
+          {/* Streak hero — green while in progress, gold when the chain is closed. */}
           <div
             className={cn(
               'relative overflow-hidden rounded-2xl border p-6 text-center',
               done
                 ? 'border-warning/40 bg-gradient-to-b from-warning/[0.12] to-transparent'
-                : 'border-danger/30 bg-gradient-to-b from-danger/[0.08] to-transparent',
+                : 'border-success/30 bg-gradient-to-b from-success/[0.10] to-transparent',
             )}
           >
             <span
               className={cn(
                 'pointer-events-none absolute left-1/2 top-0 h-28 w-28 -translate-x-1/2 -translate-y-10 rounded-full blur-3xl',
-                done ? 'bg-warning/30 animate-glow-pulse' : 'bg-danger/20',
+                done ? 'bg-warning/30 animate-glow-pulse' : 'bg-success/25',
               )}
               aria-hidden
             />
             <Flame
               className={cn(
                 'relative mx-auto h-12 w-12',
-                done ? 'text-warning' : 'text-danger',
+                done ? 'text-warning' : 'text-success',
               )}
               aria-hidden
             />
@@ -101,7 +136,7 @@ export function CatenaButton({ initial }: { initial: DmoStatus }) {
             <p
               className={cn(
                 'relative mt-3 text-sm font-semibold',
-                done ? 'text-warning' : 'text-danger',
+                done ? 'text-warning' : 'text-success',
               )}
             >
               {done ? t('today_done') : t('progress', { done: doneCount })}
@@ -111,22 +146,22 @@ export function CatenaButton({ initial }: { initial: DmoStatus }) {
             </p>
           </div>
 
-          {/* Daily tasks */}
+          {/* Daily tasks — tap to tick. The next one to do is highlighted. */}
           <div className="space-y-2">
-            <TaskRow icon={Video} label={t('task_call')} done={status.present} />
-            <TaskRow icon={ListChecks} label={t('task_lista')} done={status.lista} />
-            <TaskRow icon={Target} label={t('task_funnel')} done={status.funnel} />
-          </div>
-
-          <div className="flex justify-end">
-            <Button variant="outline" size="sm" onClick={refresh} disabled={refreshing}>
-              {refreshing ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              ) : (
-                <RefreshCw className="h-4 w-4" aria-hidden />
-              )}
-              {t('refresh')}
-            </Button>
+            <p className="px-0.5 text-xs font-medium text-muted-foreground">
+              {t('tap_hint')}
+            </p>
+            {TASKS.map((task, i) => (
+              <TaskRow
+                key={task.key}
+                icon={task.icon}
+                label={t(task.labelKey)}
+                done={status[task.key]}
+                gold={done}
+                highlight={!done && i === firstUndone}
+                onClick={() => toggle(task)}
+              />
+            ))}
           </div>
         </div>
       </Modal>
@@ -138,22 +173,40 @@ function TaskRow({
   icon: Icon,
   label,
   done,
+  gold,
+  highlight,
+  onClick,
 }: {
   icon: LucideIcon;
   label: string;
   done: boolean;
+  gold: boolean;
+  highlight: boolean;
+  onClick: () => void;
 }) {
   return (
-    <div
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={done}
       className={cn(
-        'flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors',
-        done ? 'border-success/30 bg-success/[0.06]' : 'border-border/70 bg-card',
+        'flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all duration-base ease-standard hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        done && gold
+          ? 'border-warning/40 bg-warning/[0.08]'
+          : done
+            ? 'border-success/40 bg-success/[0.08]'
+            : 'border-border/70 bg-card hover:border-success/40',
+        highlight && 'ring-2 ring-success/50 animate-glow-pulse',
       )}
     >
       <span
         className={cn(
-          'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
-          done ? 'bg-success/12 text-success' : 'bg-muted text-muted-foreground',
+          'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors',
+          done && gold
+            ? 'bg-warning/15 text-warning'
+            : done
+              ? 'bg-success/12 text-success'
+              : 'bg-muted text-muted-foreground',
         )}
       >
         <Icon className="h-[18px] w-[18px]" aria-hidden />
@@ -169,12 +222,16 @@ function TaskRow({
       <span
         className={cn(
           'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors',
-          done ? 'border-success bg-success text-white' : 'border-input',
+          done && gold
+            ? 'border-warning bg-warning text-white'
+            : done
+              ? 'border-success bg-success text-white'
+              : 'border-input',
         )}
         aria-hidden
       >
         {done && <Check className="h-3.5 w-3.5" />}
       </span>
-    </div>
+    </button>
   );
 }

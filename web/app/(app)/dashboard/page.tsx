@@ -9,6 +9,7 @@ import {
   LeaderboardCard,
   type Accent,
 } from '@/components/dashboard/dashboard-leaders';
+import { CatenaLeaderboard } from '@/components/streak/catena-leaderboard';
 import { formatPercent } from '@/lib/utils';
 
 /**
@@ -145,6 +146,9 @@ export default async function DashboardPage() {
           />
         ))}
       </section>
+
+      {/* Catena d'Oro — top DMO performers this month (first iteration). */}
+      <CatenaLeaderboard />
     </div>
   );
 }
