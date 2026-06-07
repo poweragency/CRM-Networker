@@ -78,6 +78,10 @@ export interface GenealogyCanvasProps {
   addSlotsForId: string | null;
   /** Open the add-member dialog for an empty (parent, leg) slot. */
   onAddSlot: (parentId: string, leg: PlacementLeg) => void;
+  /** Ids classified as SPILLOVER (in your leg but recruited from outside your line). */
+  spilloverIds?: ReadonlySet<string>;
+  /** Dim spillover nodes so your own sponsorship line stands out. */
+  dimSpillover?: boolean;
 }
 
 /** Build React Flow nodes/edges from the positioned layout. */
@@ -93,28 +97,35 @@ function toFlow(
     onToggle: (n: TreeNode) => void;
     hasChildren: (n: TreeNode) => boolean;
     onAddSlot: (parentId: string, leg: PlacementLeg) => void;
+    spilloverIds?: ReadonlySet<string>;
+    dimSpillover?: boolean;
   },
 ): { rfNodes: Node<MarketerNodeData | AddSlotNodeData>[]; rfEdges: Edge[] } {
-  const marketerNodes: Node<MarketerNodeData>[] = positioned.map((p) => ({
-    id: p.node.id,
-    type: 'marketer',
-    position: { x: p.x, y: p.y },
-    // React Flow needs explicit dimensions for fitView/minimap math.
-    width: NODE_WIDTH,
-    height: NODE_HEIGHT,
-    selectable: true,
-    draggable: false,
-    selected: ctx.selectedId === p.node.id,
-    data: {
-      node: p.node,
-      branchLeg: p.branchLeg,
+  const marketerNodes: Node<MarketerNodeData>[] = positioned.map((p) => {
+    const spillover = ctx.spilloverIds?.has(p.node.id) ?? false;
+    return {
+      id: p.node.id,
+      type: 'marketer',
+      position: { x: p.x, y: p.y },
+      // React Flow needs explicit dimensions for fitView/minimap math.
+      width: NODE_WIDTH,
+      height: NODE_HEIGHT,
+      selectable: true,
+      draggable: false,
       selected: ctx.selectedId === p.node.id,
-      expanded: ctx.expanded.has(p.node.id),
-      hasChildren: ctx.hasChildren(p.node),
-      onSelect: ctx.onSelect,
-      onToggle: ctx.onToggle,
-    },
-  }));
+      style: ctx.dimSpillover && spillover ? { opacity: 0.4 } : undefined,
+      data: {
+        node: p.node,
+        branchLeg: p.branchLeg,
+        selected: ctx.selectedId === p.node.id,
+        expanded: ctx.expanded.has(p.node.id),
+        hasChildren: ctx.hasChildren(p.node),
+        spillover,
+        onSelect: ctx.onSelect,
+        onToggle: ctx.onToggle,
+      },
+    };
+  });
 
   const addNodes: Node<AddSlotNodeData>[] = addSlots.map((s) => ({
     id: s.id,
@@ -166,6 +177,8 @@ function CanvasInner(
     hasChildren,
     addSlotsForId,
     onAddSlot,
+    spilloverIds,
+    dimSpillover,
   }: GenealogyCanvasProps,
   ref: React.Ref<GenealogyCanvasHandle>,
 ) {
@@ -191,6 +204,8 @@ function CanvasInner(
         onToggle,
         hasChildren,
         onAddSlot,
+        spilloverIds,
+        dimSpillover,
       }),
     [
       positioned,
@@ -203,6 +218,8 @@ function CanvasInner(
       onToggle,
       hasChildren,
       onAddSlot,
+      spilloverIds,
+      dimSpillover,
     ],
   );
 

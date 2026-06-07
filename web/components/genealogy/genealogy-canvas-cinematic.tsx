@@ -297,6 +297,8 @@ function CinematicInner(
     onSelect,
     addSlotsForId,
     onAddSlot,
+    spilloverIds,
+    dimSpillover,
   }: GenealogyCanvasProps,
   ref: React.Ref<GenealogyCanvasHandle>,
 ) {
@@ -322,9 +324,13 @@ function CinematicInner(
   const selectedRef = React.useRef<string | null>(selectedId);
   const onSelectRef = React.useRef(onSelect);
   const onAddSlotRef = React.useRef(onAddSlot);
+  const spilloverRef = React.useRef<ReadonlySet<string> | undefined>(spilloverIds);
+  const dimSpilloverRef = React.useRef<boolean>(dimSpillover ?? false);
   selectedRef.current = selectedId;
   onSelectRef.current = onSelect;
   onAddSlotRef.current = onAddSlot;
+  spilloverRef.current = spilloverIds;
+  dimSpilloverRef.current = dimSpillover ?? false;
 
   const data = React.useMemo(
     () => buildData(nodes, layoutRootId, addSlotsForId),
@@ -447,6 +453,7 @@ function CinematicInner(
       }
       const n = p.node;
       const isSel = n.id === sel;
+      const isSpill = spilloverRef.current?.has(n.id) ?? false;
       const prestige = isPrestige(n.rank);
       const legKey =
         p.branchLeg === 'LEFT'
@@ -457,6 +464,8 @@ function CinematicInner(
       const accent = prestige ? pal.warning : legKey;
       // Depth recession: deeper nodes fade a touch (pseudo-3D), unless selected.
       const depthFade = isSel ? 1 : Math.max(0.6, 1 - p.depth * 0.05);
+      // "Focus my line": fade spillover nodes so the organic line stands out.
+      const dimFactor = dimSpilloverRef.current && isSpill && !isSel ? 0.4 : 1;
 
       if (mode === 'dot') {
         const r = Math.max(2.5, Math.min(9, 7 * zoom)) * (isSel ? 1.5 : 1);
@@ -466,14 +475,17 @@ function CinematicInner(
         }
         ctx.beginPath();
         ctx.arc(sx + sw / 2, sy + sh / 2, r, 0, Math.PI * 2);
-        ctx.fillStyle = hsl(accent, depthFade);
-        ctx.globalAlpha = depthFade;
+        ctx.fillStyle = hsl(isSpill ? pal.info : accent, depthFade);
+        ctx.globalAlpha = depthFade * dimFactor;
         ctx.fill();
         ctx.globalAlpha = 1;
         ctx.shadowBlur = 0;
-        if (isSel || prestige) {
+        if (isSel || prestige || isSpill) {
           ctx.lineWidth = 2;
-          ctx.strokeStyle = hsl(prestige ? pal.warning : pal.primary, 0.95);
+          ctx.strokeStyle = hsl(
+            isSpill ? pal.info : prestige ? pal.warning : pal.primary,
+            0.95,
+          );
           ctx.stroke();
         }
         continue;
@@ -485,7 +497,7 @@ function CinematicInner(
       const S = (v: number) => v * zoom;
 
       // Recede deep nodes in the overview (dot/chip); keep full opacity up close.
-      ctx.globalAlpha = mode === 'card' ? 1 : depthFade;
+      ctx.globalAlpha = (mode === 'card' ? 1 : depthFade) * dimFactor;
 
       // Selected node gets a soft glow halo (one node → shadowBlur is cheap).
       if (isSel) {
@@ -510,15 +522,23 @@ function CinematicInner(
         ctx.fill();
       }
 
-      // Border / selection ring.
+      // Border / selection ring — spillover gets a dashed info-blue outline.
       roundRect(ctx, sx, sy, sw, sh, S(14));
-      ctx.lineWidth = isSel ? 2.4 : 1;
-      ctx.strokeStyle = isSel
-        ? hsl(accent, 0.95)
-        : prestige
-          ? hsl(pal.warning, 0.4)
-          : 'rgba(255,255,255,0.1)';
-      ctx.stroke();
+      if (isSpill && !isSel) {
+        ctx.lineWidth = 1.6;
+        ctx.setLineDash([S(6), S(4)]);
+        ctx.strokeStyle = hsl(pal.info, 0.85);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      } else {
+        ctx.lineWidth = isSel ? 2.4 : 1;
+        ctx.strokeStyle = isSel
+          ? hsl(accent, 0.95)
+          : prestige
+            ? hsl(pal.warning, 0.4)
+            : 'rgba(255,255,255,0.1)';
+        ctx.stroke();
+      }
 
       // Branch rail (left).
       ctx.fillStyle = hsl(accent, 0.95);
@@ -550,6 +570,24 @@ function CinematicInner(
       ctx.fillText(fitText(ctx, n.display_name, S(180)), L(60), T(28));
 
       if (mode === 'card') {
+        // Spillover tag (top-right) — recruited from outside your line.
+        if (isSpill) {
+          const tag = t('spillover').toUpperCase();
+          ctx.font = `700 ${S(8)}px ui-sans-serif, system-ui, sans-serif`;
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          const padX = S(5);
+          const tagH = S(13);
+          const tagW = ctx.measureText(tag).width + padX * 2;
+          const tagX = L(NODE_WIDTH - 12) - tagW;
+          const tagY = T(9);
+          roundRect(ctx, tagX, tagY, tagW, tagH, tagH / 2);
+          ctx.fillStyle = hsl(pal.info, 0.18);
+          ctx.fill();
+          ctx.fillStyle = hsl(pal.info, 1);
+          ctx.fillText(tag, tagX + padX, tagY + tagH / 2);
+        }
+
         // Rank label — colored with the rank's own token (as everywhere else).
         ctx.fillStyle = rankColor(n.rank, pal);
         ctx.font = `700 ${S(11)}px ui-sans-serif, system-ui, sans-serif`;
@@ -703,10 +741,10 @@ function CinematicInner(
     return undefined;
   }, [data, fitKey, fitView, scheduleFrame]);
 
-  // Redraw when the selection changes (highlight lineage / ring).
+  // Redraw when the selection or spillover marking/focus changes.
   React.useEffect(() => {
     scheduleFrame();
-  }, [selectedId, scheduleFrame]);
+  }, [selectedId, spilloverIds, dimSpillover, scheduleFrame]);
 
   // ── Sizing (DPR-aware, capped at 2 for fill-rate) ──────────────────────────
   React.useEffect(() => {

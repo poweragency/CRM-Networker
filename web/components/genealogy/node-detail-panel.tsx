@@ -38,6 +38,10 @@ export interface NodeDetailPanelProps {
   node: TreeNode | null;
   /** Viewer can manage the node (Team Leader+ / admin) — gates removal. */
   canActivate: boolean;
+  /** This node is SPILLOVER for the viewer (recruited from outside your line). */
+  spillover?: boolean;
+  /** Display name of who actually recruited this person (their sponsor). */
+  sponsorName?: string | null;
   onClose: () => void;
   /** Re-root / locate the node in the canvas. */
   onLocate: (node: TreeNode) => void;
@@ -87,6 +91,8 @@ function StatRow({
 export function NodeDetailPanel({
   node,
   canActivate,
+  spillover = false,
+  sponsorName = null,
   onClose,
   onLocate,
   onRemove,
@@ -126,10 +132,20 @@ export function NodeDetailPanel({
             </h2>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <RankBadge rank={node.rank} />
+              {spillover && (
+                <span className="inline-flex items-center rounded-full border border-dashed border-info/50 bg-info/12 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-info">
+                  {t('spillover')}
+                </span>
+              )}
             </div>
             <div className="mt-2">
               <StatusDot kind="activity" value={node.activity} showLabel />
             </div>
+            {spillover && sponsorName && (
+              <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+                {t('spillover_from', { name: sponsorName })}
+              </p>
+            )}
           </div>
           <button
             type="button"

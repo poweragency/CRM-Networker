@@ -36,6 +36,8 @@ export interface MarketerNodeData extends Record<string, unknown> {
   selected: boolean;
   expanded: boolean;
   hasChildren: boolean;
+  /** Recruited from outside your line (placed in your leg via spillover). */
+  spillover?: boolean;
   onToggle: (node: TreeNode) => void;
   onSelect: (node: TreeNode) => void;
 }
@@ -82,7 +84,7 @@ function KpiCell({
 
 function MarketerNodeImpl({ data, selected: rfSelected }: NodeProps) {
   const t = useTranslations('genealogia');
-  const { node, branchLeg, selected, onSelect } =
+  const { node, branchLeg, selected, spillover, onSelect } =
     data as unknown as MarketerNodeData;
 
   const isSelected = selected || rfSelected;
@@ -182,6 +184,11 @@ function MarketerNodeImpl({ data, selected: rfSelected }: NodeProps) {
               rank={node.rank}
               className="border border-white/10 px-2 py-0.5 text-[10px] shadow-xs"
             />
+            {spillover && (
+              <span className="inline-flex items-center rounded-full border border-dashed border-info/50 bg-info/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-info">
+                {t('spillover')}
+              </span>
+            )}
           </div>
         </div>
       </div>

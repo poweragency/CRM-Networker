@@ -26,8 +26,51 @@ import {
   type GenealogyCanvasHandle,
 } from './genealogy-canvas';
 import { GenealogyCanvasCinematic } from './genealogy-canvas-cinematic';
-import { Sparkles, GitBranch } from 'lucide-react';
+import { Sparkles, GitBranch, GitFork } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+/**
+ * Classify each visible node as organic genealogy vs SPILLOVER, relative to the
+ * tree owner (`rootId` = "you"). Binary placement (`parent_id`) ≠ sponsorship
+ * (`sponsor_id`): a person sitting in your leg whom you did NOT recruit (their
+ * sponsor chain doesn't pass through you) is spillover.
+ *
+ * Rule (recursive on the SPONSOR chain): X is organic for you iff its sponsor is
+ * you, OR its sponsor is itself organic for you. If X's sponsor is outside your
+ * subtree (e.g. an upline placed them) the chain can't reach you → spillover.
+ * Example: your upline's direct sponsors someone under you → spillover for you,
+ * but organic for the upline (their chain DOES reach them).
+ */
+function computeSpillover(nodes: TreeNode[], rootId: string): Set<string> {
+  const byId = new Map(nodes.map((n) => [n.id, n] as const));
+  const memo = new Map<string, boolean>();
+  const visiting = new Set<string>();
+  const isOrganic = (id: string): boolean => {
+    if (id === rootId) return true;
+    const cached = memo.get(id);
+    if (cached !== undefined) return cached;
+    if (visiting.has(id)) return false; // cycle guard
+    const node = byId.get(id);
+    if (!node) return false;
+    const sp = node.sponsor_id;
+    let result: boolean;
+    if (!sp) result = false;
+    else if (sp === rootId) result = true;
+    else if (!byId.has(sp)) result = false; // sponsor outside your line → spillover
+    else {
+      visiting.add(id);
+      result = isOrganic(sp);
+      visiting.delete(id);
+    }
+    memo.set(id, result);
+    return result;
+  };
+  const spillover = new Set<string>();
+  for (const n of nodes) {
+    if (n.id !== rootId && !isOrganic(n.id)) spillover.add(n.id);
+  }
+  return spillover;
+}
 
 /**
  * Client orchestrator for /genealogia. Wires the scope provider (Global | Sinistra
@@ -82,6 +125,18 @@ export function GenealogyView({
 
   const selectedNode = selectedId ? tree.getNode(selectedId) ?? null : null;
   const canActivate = canActivateCrm(claims);
+
+  // Spillover classification (relative to you = rootId) + "focus my line" filter.
+  const spilloverIds = React.useMemo(
+    () => computeSpillover(tree.visibleNodes, rootId),
+    [tree.visibleNodes, rootId],
+  );
+  const [focusMyLine, setFocusMyLine] = React.useState(false);
+  const selectedSpillover = selectedId ? spilloverIds.has(selectedId) : false;
+  const sponsorName =
+    selectedNode?.sponsor_id
+      ? tree.getNode(selectedNode.sponsor_id)?.display_name ?? null
+      : null;
 
   // Add-from-tree: the "+" slots are offered to EVERY person (not just admins) on
   // the selected node, or the layout root when nothing is selected (a fresh tree
@@ -163,20 +218,43 @@ export function GenealogyView({
       {/* Full-bleed canvas; the detail panel floats over it as an overlay so the
           tree always uses the whole width (no reserved empty column). */}
       <Card className="relative h-[calc(100dvh-8rem)] min-h-[360px] sm:min-h-[520px] overflow-hidden p-0 shadow-card ring-1 ring-black/5">
-        {/* Viewer-mode toggle — Cinematico (canvas, scala a migliaia) / Classico. */}
-        <div className="absolute left-3 top-3 z-30 inline-flex items-center gap-0.5 rounded-lg border border-border/60 bg-card/85 p-0.5 shadow-lg backdrop-blur">
-          <ModeTab
-            active={mode === 'cinematic'}
-            onClick={() => changeMode('cinematic')}
-            icon={<Sparkles className="h-3.5 w-3.5" aria-hidden />}
-            label={t('view_cinematic')}
-          />
-          <ModeTab
-            active={mode === 'classic'}
-            onClick={() => changeMode('classic')}
-            icon={<GitBranch className="h-3.5 w-3.5" aria-hidden />}
-            label={t('view_classic')}
-          />
+        {/* Top-left controls: viewer-mode toggle + the spillover focus filter. */}
+        <div className="absolute left-3 top-3 z-30 flex items-center gap-2">
+          <div className="inline-flex items-center gap-0.5 rounded-lg border border-border/60 bg-card/85 p-0.5 shadow-lg backdrop-blur">
+            <ModeTab
+              active={mode === 'cinematic'}
+              onClick={() => changeMode('cinematic')}
+              icon={<Sparkles className="h-3.5 w-3.5" aria-hidden />}
+              label={t('view_cinematic')}
+            />
+            <ModeTab
+              active={mode === 'classic'}
+              onClick={() => changeMode('classic')}
+              icon={<GitBranch className="h-3.5 w-3.5" aria-hidden />}
+              label={t('view_classic')}
+            />
+          </div>
+
+          {/* Only useful when there's actually spillover to separate out. */}
+          {spilloverIds.size > 0 && (
+            <button
+              type="button"
+              onClick={() => setFocusMyLine((v) => !v)}
+              aria-pressed={focusMyLine}
+              title={focusMyLine ? t('show_all') : t('focus_my_line')}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold shadow-lg backdrop-blur transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                focusMyLine
+                  ? 'border-primary/50 bg-primary text-primary-foreground'
+                  : 'border-border/60 bg-card/85 text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <GitFork className="h-3.5 w-3.5" aria-hidden />
+              <span className="hidden sm:inline">
+                {focusMyLine ? t('show_all') : t('focus_my_line')}
+              </span>
+            </button>
+          )}
         </div>
 
         {mode === 'cinematic' ? (
@@ -192,6 +270,8 @@ export function GenealogyView({
             hasChildren={tree.hasChildren}
             addSlotsForId={addSlotsForId}
             onAddSlot={handleAddSlot}
+            spilloverIds={spilloverIds}
+            dimSpillover={focusMyLine}
           />
         ) : (
           <GenealogyCanvas
@@ -206,6 +286,8 @@ export function GenealogyView({
             hasChildren={tree.hasChildren}
             addSlotsForId={addSlotsForId}
             onAddSlot={handleAddSlot}
+            spilloverIds={spilloverIds}
+            dimSpillover={focusMyLine}
           />
         )}
 
@@ -220,6 +302,8 @@ export function GenealogyView({
             <NodeDetailPanel
               node={selectedNode}
               canActivate={canActivate}
+              spillover={selectedSpillover}
+              sponsorName={sponsorName}
               onClose={() => setSelectedId(null)}
               onLocate={handleLocate}
               onRemove={handleRemove}
