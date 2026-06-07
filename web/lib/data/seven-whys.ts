@@ -10,7 +10,7 @@ import {
   ok,
 } from '@/lib/data/crm-shared';
 import { demoId } from '@/lib/data/mock/_shared';
-import { getSubtree } from '@/lib/data/genealogy';
+import { getNode, getSubtree } from '@/lib/data/genealogy';
 import type { TreeNode } from '@/lib/types/db';
 import {
   filledCount,
@@ -42,8 +42,9 @@ export async function listSevenWhys(): Promise<CrmResult<SevenWhysRosterRow[]>> 
   const { marketerId: self } = await getOwnerContext();
 
   // The visible people = the caller's own subtree (RLS-equivalent in demo via
-  // the mock genealogy). The genealogy layer is itself demo-safe.
-  const subtreeRes = await getSubtree(self, 'GLOBAL');
+  // the mock genealogy). funnel:false → just identities, no KPI roll-up (the roster
+  // only needs names), so it doesn't pay for the funnel aggregation.
+  const subtreeRes = await getSubtree(self, 'GLOBAL', undefined, { funnel: false });
   const people: TreeNode[] = subtreeRes.data;
 
   const supabase = getClient();
@@ -107,10 +108,12 @@ export async function getSevenWhysFor(
   marketerId: string,
 ): Promise<CrmResult<SevenWhysRosterRow | null>> {
   const { marketerId: self } = await getOwnerContext();
-  const subtreeRes = await getSubtree(self, 'GLOBAL');
-  const person = subtreeRes.data.find((p) => p.id === marketerId);
-  // Not in the caller's visible subtree → not found (RLS-equivalent).
-  if (!person) return ok(null, subtreeRes.demo);
+  // Just the one person (getNode is RLS-scoped + request-cached — the profile already
+  // loaded this node), NOT the whole subtree. Loading the full org here just to read
+  // one name was the /team/[id] open bottleneck (seconds at 10k).
+  const nodeRes = await getNode(marketerId);
+  const person = nodeRes.data;
+  if (!person) return ok(null, nodeRes.demo);
 
   const recRes = await getSevenWhys(marketerId);
   const row: SevenWhysRosterRow = {
@@ -120,7 +123,7 @@ export async function getSevenWhysFor(
     record: recRes.data,
     filled: filledCount(recRes.data),
   };
-  return ok(row, recRes.demo || subtreeRes.demo);
+  return ok(row, recRes.demo || nodeRes.demo);
 }
 
 /** Get the Sette Perché record for a marketer (defaults to the caller). */
