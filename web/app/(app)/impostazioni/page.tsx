@@ -146,7 +146,6 @@ export default async function ImpostazioniPage({
         <MarketerHero
           node={node}
           isSelf
-          crmAccess={claims.crm_access}
           streak={dmo}
           action={profile ? <AnagraficaModal profile={profile} canEdit /> : null}
         />

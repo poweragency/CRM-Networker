@@ -163,7 +163,6 @@ export default async function MarketerProfilePage({
       <MarketerHero
         node={node}
         isSelf={isSelf}
-        crmAccess={profile?.crm_access ?? false}
         phone={profile?.phone ?? null}
         streak={dmo}
         action={

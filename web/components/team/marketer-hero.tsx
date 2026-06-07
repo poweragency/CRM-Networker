@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { ArrowLeft, BadgeCheck, RefreshCw, ShieldCheck, ShieldX } from 'lucide-react';
+import { ArrowLeft, BadgeCheck, RefreshCw } from 'lucide-react';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { RankBadge } from '@/components/ui/rank-badge';
@@ -42,15 +42,12 @@ function isPrestige(rank: MarketerRank): boolean {
 export async function MarketerHero({
   node,
   isSelf,
-  crmAccess = false,
   phone = null,
   action = null,
   streak = null,
 }: {
   node: TreeNode;
   isSelf: boolean;
-  /** Whether the marketer has an active CRM account login. */
-  crmAccess?: boolean;
   /** Phone number → WhatsApp quick-contact (hidden on the own profile). */
   phone?: string | null;
   /** Header action shown to the right of the name (e.g. the Anagrafica button). */
@@ -159,25 +156,15 @@ export async function MarketerHero({
                 )}
               />
 
-              {/* Status strip — renewal + CRM account as crisp pill chips. */}
+              {/* Status strip — renewal (rinnovo). The CRM-account chip was
+                  removed: every account is active from the start, so it carried
+                  no signal. */}
               <div className="flex flex-wrap items-center gap-2">
                 <StatusChip
                   icon={<RefreshCw className="h-3.5 w-3.5" aria-hidden />}
                   label={t('renewal_prefix')}
                   value={active ? t('renewal_active') : t('renewal_inactive')}
                   tone={active ? 'success' : 'danger'}
-                />
-                <StatusChip
-                  icon={
-                    crmAccess ? (
-                      <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
-                    ) : (
-                      <ShieldX className="h-3.5 w-3.5" aria-hidden />
-                    )
-                  }
-                  label={t('account_prefix')}
-                  value={crmAccess ? t('account_on') : t('account_off')}
-                  tone={crmAccess ? 'info' : 'muted'}
                 />
               </div>
             </div>
