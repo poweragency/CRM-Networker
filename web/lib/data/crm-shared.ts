@@ -84,7 +84,9 @@ export async function fetchAllRows<T>(
     from: number,
     to: number,
   ) => PromiseLike<{ data: T[] | null; error: unknown }>,
-  page = 500,
+  // Big page → few round-trips (10k rows = ~1 call). MUST stay ≤ the configured
+  // PostgREST row cap (raised to 50000) so the short-page stop is reliable.
+  page = 10000,
 ): Promise<T[] | null> {
   const out: T[] = [];
   for (let from = 0; ; from += page) {
