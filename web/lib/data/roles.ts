@@ -51,6 +51,9 @@ export async function listOrgRoles(): Promise<{ data: OrgRoleRow[]; demo: boolea
           role: (r.role as MembershipRole) ?? 'member',
         };
       })
+      // Only Team Leader and above are eligible for co-admin — hide everyone else
+      // so the Roles list stays readable at scale.
+      .filter((row) => canBeCoAdmin(row.rank))
       .sort((a, b) => a.display_name.localeCompare(b.display_name, 'it'));
     return { data: rows, demo: false };
   } catch {
