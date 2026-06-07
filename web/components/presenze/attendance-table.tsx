@@ -24,6 +24,7 @@ import { CountUp } from '@/components/ui/count-up';
 import { EmptyState } from '@/components/crm/empty-state';
 import { useToast } from '@/components/crm/toaster';
 import { cn } from '@/lib/utils';
+import { createClient } from '@/lib/supabase/client';
 import type { AttendanceMember, ZoomCallDef } from '@/lib/data/attendance-shared';
 import { CompletionRing } from '@/components/presenze/completion-ring';
 import {
@@ -95,11 +96,69 @@ export function AttendanceTable({
 
   const [present, setPresent] = React.useState<Flags>(() => seed(members, (m) => m.present));
   const [cam, setCam] = React.useState<Flags>(() => seed(members, (m) => m.cam));
+  // Live (Realtime) connection indicator.
+  const [live, setLive] = React.useState(false);
 
   React.useEffect(() => {
     setPresent(seed(members, (m) => m.present));
     setCam(seed(members, (m) => m.cam));
   }, [members]);
+
+  // ── Realtime: reflect everyone else's check-ins live (no manual refresh). ──
+  // A leader watching at the start of a Zoom sees presences/cams appear as the
+  // team taps them. RLS on zoom_attendance scopes the stream to the viewer's
+  // subtree, and we double-guard client-side against the loaded members/calls.
+  const supabase = React.useMemo(() => createClient(), []);
+  const memberIdSet = React.useMemo(() => new Set(members.map((m) => m.id)), [members]);
+  const callIdSet = React.useMemo(() => new Set(calls.map((c) => c.id)), [calls]);
+  const memberIdSetRef = React.useRef(memberIdSet);
+  const callIdSetRef = React.useRef(callIdSet);
+  memberIdSetRef.current = memberIdSet;
+  callIdSetRef.current = callIdSet;
+
+  React.useEffect(() => {
+    if (!supabase) return;
+    const channel = supabase
+      .channel(`zoom_attendance:${date}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'zoom_attendance',
+          filter: `call_date=eq.${date}`,
+        },
+        (payload) => {
+          const rec = (
+            payload.new && Object.keys(payload.new).length > 0
+              ? payload.new
+              : payload.old
+          ) as { marketer_id?: string; call_id?: string | null; present?: boolean; cam?: boolean };
+          const mid = rec?.marketer_id;
+          const cid = rec?.call_id ?? undefined;
+          if (!mid || !cid) return;
+          if (!memberIdSetRef.current.has(mid) || !callIdSetRef.current.has(cid)) return;
+          const removed = payload.eventType === 'DELETE';
+          const nextPresent = removed ? false : Boolean(rec.present);
+          const nextCam = removed ? false : Boolean(rec.cam);
+          setPresent((prev) =>
+            prev[mid]?.[cid] === nextPresent
+              ? prev
+              : { ...prev, [mid]: { ...(prev[mid] ?? {}), [cid]: nextPresent } },
+          );
+          setCam((prev) =>
+            prev[mid]?.[cid] === nextCam
+              ? prev
+              : { ...prev, [mid]: { ...(prev[mid] ?? {}), [cid]: nextCam } },
+          );
+        },
+      )
+      .subscribe((status) => setLive(status === 'SUBSCRIBED'));
+    return () => {
+      setLive(false);
+      supabase.removeChannel(channel);
+    };
+  }, [supabase, date]);
 
   function go(nextDate: string) {
     router.push(`/presenze?date=${nextDate}`);
@@ -188,22 +247,33 @@ export function AttendanceTable({
             {t('today')}
           </Button>
         )}
-        <input
-          type="date"
-          // Uncontrolled + remount-on-date so typing isn't fought by React;
-          // `key` re-seeds the value after a real navigation (buttons/picker).
-          key={date}
-          defaultValue={date}
-          onChange={(e) => {
-            const v = e.target.value;
-            // Navigate ONLY on a complete date (4-digit year ≥ 1000). While the
-            // user types the year digit-by-digit (0002 → 0020 → 0202 → 2026) each
-            // intermediate value is < 1000, so the page no longer jumps away.
-            if (v && Number(v.slice(0, 4)) >= 1000 && v !== date) go(v);
-          }}
-          className="ml-auto h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          aria-label={t('pick_day')}
-        />
+        <div className="ml-auto flex items-center gap-2">
+          {live && (
+            <span
+              className="inline-flex items-center gap-1 rounded-full bg-success/12 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-success ring-1 ring-success/25"
+              title={t('live')}
+            >
+              <Radio className="h-3 w-3 animate-glow-pulse" aria-hidden />
+              {t('live')}
+            </span>
+          )}
+          <input
+            type="date"
+            // Uncontrolled + remount-on-date so typing isn't fought by React;
+            // `key` re-seeds the value after a real navigation (buttons/picker).
+            key={date}
+            defaultValue={date}
+            onChange={(e) => {
+              const v = e.target.value;
+              // Navigate ONLY on a complete date (4-digit year ≥ 1000). While the
+              // user types the year digit-by-digit (0002 → 0020 → 0202 → 2026) each
+              // intermediate value is < 1000, so the page no longer jumps away.
+              if (v && Number(v.slice(0, 4)) >= 1000 && v !== date) go(v);
+            }}
+            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={t('pick_day')}
+          />
+        </div>
       </div>
 
       {members.length === 0 ? (
