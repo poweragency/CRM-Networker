@@ -11,6 +11,8 @@ export async function teamRosterPageAction(query: {
   offset?: number;
   limit?: number;
 }): Promise<TeamPage> {
-  const { data } = await listTeamMembersPage(query);
+  // Search / load-more never need the org-wide summary totals (the client keeps the
+  // ones from the first render), so skip them → one fewer round-trip per keystroke.
+  const { data } = await listTeamMembersPage({ ...query, withTotals: false });
   return data;
 }

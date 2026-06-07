@@ -85,7 +85,7 @@ export function TeamRoster({
           if (reqRef.current === id) setLoading(false);
         }
       },
-      needle ? 220 : 0,
+      needle ? 140 : 0,
     );
     return () => window.clearTimeout(timer);
   }, [q, pageSize]);

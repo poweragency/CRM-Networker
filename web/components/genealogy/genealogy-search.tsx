@@ -29,7 +29,7 @@ export function GenealogySearch({
   onSearch,
   onPick,
   className,
-  debounceMs = 220,
+  debounceMs = 140,
 }: GenealogySearchProps) {
   const t = useTranslations('genealogia');
   const tc = useTranslations('common');

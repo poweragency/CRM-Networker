@@ -208,6 +208,9 @@ export interface TeamPageQuery {
   search?: string;
   offset?: number;
   limit?: number;
+  /** Compute the org-wide summary totals. Only needed on the first load — search /
+   *  load-more skip it (the client keeps the initial totals) to save round-trips. */
+  withTotals?: boolean;
 }
 
 /**
@@ -221,6 +224,7 @@ export async function listTeamMembersPage(
   const search = (q.search ?? '').trim();
   const offset = Math.max(0, q.offset ?? 0);
   const limit = Math.min(200, Math.max(1, q.limit ?? 50));
+  const withTotals = q.withTotals !== false;
   const { marketerId: selfId } = await getOwnerContext();
   const supabase = getClient();
 
@@ -252,13 +256,15 @@ export async function listTeamMembersPage(
       ? `display_name.ilike.${like},city.ilike.${like},region.ilike.${like}`
       : null;
 
+    // ONE request returns the page rows AND the matching total (count:'exact'),
+    // so there's no separate match-count round-trip.
     let pageQ = supabase
       .from('marketers')
-      .select(ROSTER_COLS)
+      .select(ROSTER_COLS, { count: 'exact' })
       .is('deleted_at', null)
       .neq('id', selfId);
     if (orFilter) pageQ = pageQ.or(orFilter);
-    const { data, error } = await pageQ
+    const { data, error, count } = await pageQ
       .order('display_name', { ascending: true })
       .order('id', { ascending: true })
       .range(offset, offset + limit - 1);
@@ -266,27 +272,26 @@ export async function listTeamMembersPage(
       return { data: { rows: [], total: 0, totalAll: 0, activeAll: 0 }, demo: false };
     }
 
-    // Counts (head-only): matching-search, all members, active members.
-    let matchQ = supabase
-      .from('marketers')
-      .select('id', { count: 'exact', head: true })
-      .is('deleted_at', null)
-      .neq('id', selfId);
-    if (orFilter) matchQ = matchQ.or(orFilter);
-    const [matchRes, allRes, activeRes] = await Promise.all([
-      matchQ,
-      supabase
-        .from('marketers')
-        .select('id', { count: 'exact', head: true })
-        .is('deleted_at', null)
-        .neq('id', selfId),
-      supabase
-        .from('marketers')
-        .select('id', { count: 'exact', head: true })
-        .is('deleted_at', null)
-        .neq('id', selfId)
-        .eq('status', 'active'),
-    ]);
+    // Org-wide summary totals: only on the first load (search/load-more skip them).
+    let totalAll = 0;
+    let activeAll = 0;
+    if (withTotals) {
+      const [allRes, activeRes] = await Promise.all([
+        supabase
+          .from('marketers')
+          .select('id', { count: 'exact', head: true })
+          .is('deleted_at', null)
+          .neq('id', selfId),
+        supabase
+          .from('marketers')
+          .select('id', { count: 'exact', head: true })
+          .is('deleted_at', null)
+          .neq('id', selfId)
+          .eq('status', 'active'),
+      ]);
+      totalAll = allRes.count ?? 0;
+      activeAll = activeRes.count ?? 0;
+    }
 
     // Team size only for THIS page's rows (≤ limit ids → one RPC call).
     const ids = (data as Record<string, unknown>[]).map((r) => String(r.id));
@@ -302,12 +307,7 @@ export async function listTeamMembersPage(
       rowToTeamMember(r, sizes.get(String(r.id)) ?? 0),
     );
     return {
-      data: {
-        rows,
-        total: matchRes.count ?? rows.length,
-        totalAll: allRes.count ?? 0,
-        activeAll: activeRes.count ?? 0,
-      },
+      data: { rows, total: count ?? rows.length, totalAll, activeAll },
       demo: false,
     };
   } catch {
