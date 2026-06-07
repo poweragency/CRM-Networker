@@ -4,6 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import {
   AlertTriangle,
+  ArrowUpFromLine,
   FolderOpen,
   Loader2,
   Locate,
@@ -46,6 +47,10 @@ export interface NodeDetailPanelProps {
   onLocate: (node: TreeNode) => void;
   /** Remove the node from the tree (reattaches its single downline). */
   onRemove: (node: TreeNode) => void;
+  /** Insert a new marketer ABOVE this node (it slots into the upline's place). */
+  onInsertAbove?: (node: TreeNode) => void;
+  /** Viewer can insert above (Team Leader+ / admin). */
+  canInsertAbove?: boolean;
   /** A removal is in flight. */
   removing: boolean;
   className?: string;
@@ -95,6 +100,8 @@ export function NodeDetailPanel({
   onClose,
   onLocate,
   onRemove,
+  onInsertAbove,
+  canInsertAbove = false,
   removing,
   className,
 }: NodeDetailPanelProps) {
@@ -270,6 +277,20 @@ export function NodeDetailPanel({
           <Locate aria-hidden />
           {t('view_node')}
         </Button>
+
+        {/* Insert ABOVE — slots a new marketer into this node's place under the
+            upline, with this node hanging below it on the LEFT leg. Team Leader+
+            only (canInsertAbove); hidden for the root. */}
+        {canInsertAbove && onInsertAbove && node.parent_id && (
+          <Button
+            variant="outline"
+            className="w-full border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
+            onClick={() => onInsertAbove(node)}
+          >
+            <ArrowUpFromLine aria-hidden />
+            {t('insert_above')}
+          </Button>
+        )}
 
         {/* Remove from the tree — only for Team Leader+ (canActivate); hidden for
             the root; blocked when both legs are occupied; else a two-step confirm. */}

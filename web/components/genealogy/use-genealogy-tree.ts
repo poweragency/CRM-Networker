@@ -46,6 +46,8 @@ export interface UseGenealogyTree {
   collapseAll: () => void;
   /** Ensure a node + its ancestor chain are loaded & expanded (search jump). */
   revealNode: (target: TreeNode) => Promise<void>;
+  /** Re-fetch the whole subtree and merge (after a structural change). */
+  reload: () => Promise<void>;
   /** Look a node up in the loaded cache. */
   getNode: (id: string) => TreeNode | undefined;
   search: (q: string) => Promise<TreeNode[]>;
@@ -223,6 +225,19 @@ export function useGenealogyTree({
     [cache, rootId, mergeNodes],
   );
 
+  // Re-fetch the full subtree and merge — used after a structural change
+  // (e.g. insert-above) where the parent_id of existing nodes shifts.
+  const reload = React.useCallback(async (): Promise<void> => {
+    setLoading(true);
+    try {
+      const res = await loadSubtreeAction(rootId, 'GLOBAL');
+      if (res.demo) setDemo(true);
+      mergeNodes(res.nodes);
+    } finally {
+      setLoading(false);
+    }
+  }, [rootId, mergeNodes]);
+
   const search = React.useCallback(async (q: string): Promise<TreeNode[]> => {
     const needle = q.trim();
     if (!needle) return [];
@@ -335,6 +350,7 @@ export function useGenealogyTree({
     expandAll,
     collapseAll,
     revealNode,
+    reload,
     getNode,
     search,
     addChild,

@@ -19,7 +19,10 @@ import {
   type StartingPackage,
   type TreeNode,
 } from '@/lib/types/db';
-import { addMarketerAction } from '@/app/(app)/genealogia/actions';
+import {
+  addMarketerAboveAction,
+  addMarketerAction,
+} from '@/app/(app)/genealogia/actions';
 
 /**
  * AddMemberDialog — the "add a member directly from the tree" window. Opened by a
@@ -28,11 +31,10 @@ import { addMarketerAction } from '@/app/(app)/genealogia/actions';
  * node back so the canvas can insert it under (parentId, leg) immediately.
  */
 
-export interface AddMemberTarget {
-  parentId: string;
-  leg: PlacementLeg;
-  parentName: string;
-}
+/** Where the new member goes: in an empty leg BELOW a parent, or ABOVE a node. */
+export type AddMemberTarget =
+  | { mode: 'below'; parentId: string; leg: PlacementLeg; parentName: string }
+  | { mode: 'above'; targetId: string; targetName: string };
 
 export interface AddMemberDialogProps {
   open: boolean;
@@ -79,7 +81,11 @@ export function AddMemberDialog({
   }, [open]);
 
   const legLabel =
-    target?.leg === 'LEFT' ? t('add_leg_left') : t('add_leg_right');
+    target?.mode === 'below'
+      ? target.leg === 'LEFT'
+        ? t('add_leg_left')
+        : t('add_leg_right')
+      : '';
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -99,17 +105,29 @@ export function AddMemberDialog({
     }
     setError(null);
     setSaving(true);
-    const res = await addMarketerAction({
-      parentId: target.parentId,
-      leg: target.leg,
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      rank,
-      pack: pack || null,
-      click,
-      email: mail,
-      password,
-    });
+    const res =
+      target.mode === 'above'
+        ? await addMarketerAboveAction({
+            targetId: target.targetId,
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            rank,
+            pack: pack || null,
+            click,
+            email: mail,
+            password,
+          })
+        : await addMarketerAction({
+            parentId: target.parentId,
+            leg: target.leg,
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            rank,
+            pack: pack || null,
+            click,
+            email: mail,
+            password,
+          });
     setSaving(false);
     if (!res.ok || !res.node) {
       setError(
@@ -136,9 +154,13 @@ export function AddMemberDialog({
     <Modal
       open={open}
       onOpenChange={onOpenChange}
-      title={t('add_title')}
+      title={target?.mode === 'above' ? t('add_title_above') : t('add_title')}
       description={
-        target ? t('add_subtitle', { parent: target.parentName, leg: legLabel }) : undefined
+        target
+          ? target.mode === 'above'
+            ? t('add_subtitle_above', { name: target.targetName })
+            : t('add_subtitle', { parent: target.parentName, leg: legLabel })
+          : undefined
       }
       size="md"
       footer={

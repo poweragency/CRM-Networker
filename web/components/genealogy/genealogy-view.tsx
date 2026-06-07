@@ -139,6 +139,7 @@ export function GenealogyView({
     (parentId: string, leg: PlacementLeg) => {
       const parent = tree.getNode(parentId);
       setAddTarget({
+        mode: 'below',
         parentId,
         leg,
         parentName: parent?.display_name ?? '',
@@ -147,9 +148,28 @@ export function GenealogyView({
     [tree],
   );
 
+  // Open the dialog in "insert above" mode for the selected node.
+  const handleInsertAbove = React.useCallback((node: TreeNode) => {
+    setAddTarget({
+      mode: 'above',
+      targetId: node.id,
+      targetName: node.display_name,
+    });
+  }, []);
+
   const handleAdded = React.useCallback(
-    (node: TreeNode) => {
+    async (node: TreeNode) => {
       if (!addTarget) return;
+      if (addTarget.mode === 'above') {
+        // The tree shape changed structurally (N took the target's slot, the
+        // target dropped to N's LEFT leg). Reload the subtree to pick it up, then
+        // focus the freshly inserted node.
+        setAddTarget(null);
+        await tree.reload();
+        setSelectedId(node.id);
+        window.setTimeout(() => canvasRef.current?.centerOn(node.id), 160);
+        return;
+      }
       tree.addChild(addTarget.parentId, addTarget.leg, node);
       setSelectedId(node.id);
       setAddTarget(null);
@@ -270,6 +290,8 @@ export function GenealogyView({
               onClose={() => setSelectedId(null)}
               onLocate={handleLocate}
               onRemove={handleRemove}
+              onInsertAbove={handleInsertAbove}
+              canInsertAbove={canActivate}
               removing={removingId === selectedNode.id}
             />
           </div>

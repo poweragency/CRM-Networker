@@ -217,6 +217,41 @@ export async function createMarketer(
   }
 }
 
+export interface InsertAboveInput {
+  /** The existing node the new marketer is inserted ABOVE. */
+  targetId: string;
+  firstName: string;
+  lastName: string;
+  rank: MarketerRank;
+  sponsorId: string | null;
+}
+
+/**
+ * Insert a new marketer ABOVE an existing node (mid-tree). The new marketer takes
+ * the target's slot under its current upline and the target becomes the new node's
+ * LEFT child — all atomically via the `insert_marketer_above` RPC (Team Leader+ /
+ * admin, RLS-scoped). Returns the new marketer's id.
+ */
+export async function insertMarketerAbove(
+  input: InsertAboveInput,
+): Promise<CreateMarketerResult> {
+  const supabase = getClient();
+  if (!supabase) return { id: null, demo: true, ok: false };
+  try {
+    const { data, error } = await supabase.rpc('insert_marketer_above', {
+      p_target: input.targetId,
+      p_first: input.firstName,
+      p_last: input.lastName,
+      p_rank: input.rank,
+      p_sponsor: input.sponsorId,
+    });
+    if (error || !data) return { id: null, demo: false, ok: false };
+    return { id: String(data), demo: false, ok: true };
+  } catch {
+    return { id: null, demo: false, ok: false };
+  }
+}
+
 export interface RemoveMarketerResult {
   ok: boolean;
   demo: boolean;

@@ -7,7 +7,7 @@ import {
   TREE_LOAD_DEPTH,
 } from '@/lib/data/genealogy';
 import { updateMarketerExtra } from '@/lib/data/team';
-import { createMarketer, removeMarketer } from '@/lib/data/admin';
+import { createMarketer, insertMarketerAbove, removeMarketer } from '@/lib/data/admin';
 import { activateCrmAccess, revokeAccountForMarketer } from '@/lib/data/account';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { addRuntimeNode, nextRuntimeId } from '@/lib/data/mock/runtime';
@@ -199,6 +199,89 @@ export async function addMarketerAction(
     platform_click: input.click,
   });
   return { node, demo: true, ok: true };
+}
+
+/** Fields for inserting a new marketer ABOVE an existing node. */
+export interface AddAboveInput {
+  /** The node to insert above (becomes the new member's LEFT child). */
+  targetId: string;
+  firstName: string;
+  lastName: string;
+  rank: MarketerRank;
+  pack: StartingPackage | null;
+  click: boolean;
+  email: string;
+  password: string;
+}
+
+/**
+ * Insert a new marketer ABOVE `targetId`: the new node slots into the target's
+ * place under its upline, the target becomes the new node's LEFT child. Atomic via
+ * the `insert_marketer_above` RPC; then stamps extras + creates the login. If the
+ * account fails, remove_marketer(new) cleanly undoes the insertion (reattaches the
+ * target to the upline). Requires a real DB (Team Leader+ / admin, RLS-enforced).
+ */
+export async function addMarketerAboveAction(
+  input: AddAboveInput,
+): Promise<AddMemberResult> {
+  if (!isSupabaseConfigured) {
+    return { node: null, demo: true, ok: false, error: 'service_missing' };
+  }
+
+  const res = await insertMarketerAbove({
+    targetId: input.targetId,
+    firstName: input.firstName,
+    lastName: input.lastName,
+    rank: input.rank,
+    sponsorId: null,
+  });
+  if (!res.ok || !res.id) return { node: null, demo: false, ok: false };
+
+  await updateMarketerExtra(res.id, {
+    starting_package: input.pack,
+    platform_click: input.click,
+  });
+
+  const acc = await activateCrmAccess(res.id, input.email, input.password);
+  if (!acc.ok) {
+    // Undo the insertion: remove_marketer reattaches the target to the upline.
+    await removeMarketer(res.id);
+    return {
+      node: null,
+      demo: false,
+      ok: false,
+      error:
+        acc.error === 'email_taken'
+          ? 'email_taken'
+          : acc.error === 'service_missing'
+            ? 'service_missing'
+            : acc.error === 'weak_password'
+              ? 'weak_password'
+              : 'failed',
+    };
+  }
+
+  // Minimal node — the client reloads the subtree to pick up the new structure.
+  const node: TreeNode = {
+    id: res.id,
+    first_name: input.firstName,
+    last_name: input.lastName,
+    display_name: `${input.firstName} ${input.lastName}`.trim(),
+    parent_id: null,
+    leg: null,
+    sponsor_id: null,
+    rank: input.rank,
+    status: 'active',
+    team_size: 0,
+    left_count: 0,
+    right_count: 0,
+    has_left_child: false,
+    has_right_child: false,
+    activity: 'cold',
+    kpis: { prospects: 0, calls: 0, iscrizioni: 0, conversion_rate: 0 },
+    children_loaded: true,
+  };
+  return { node, demo: false, ok: true };
 }
 
 export interface RemoveMemberResult {
