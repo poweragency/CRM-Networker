@@ -10,8 +10,9 @@ import {
 } from '@/app/(app)/genealogia/actions';
 
 /** Initial lazy window: load the root + top levels up to this many nodes. Deeper
- *  nodes are reached on demand via search → revealNode. */
-const LAZY_WINDOW = 300;
+ *  nodes are reached on demand via search → revealNode. Kept at 150 — 300 made
+ *  the canvas lag on first render. */
+const LAZY_WINDOW = 150;
 
 /**
  * Client-side view-model for the binary genealogy (doc 14 §7.3/§7.6).

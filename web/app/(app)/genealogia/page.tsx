@@ -22,15 +22,16 @@ export const dynamic = 'force-dynamic';
 export default async function GenealogiaPage() {
   const { claims, demo: claimsDemo } = await getCurrentClaims();
 
-  // Seed the client with the root + a BOUNDED window (~300 nodes by BFS) instead of
+  // Seed the client with the root + a BOUNDED window (~150 nodes by BFS) instead of
   // the whole org — deeper people are reached on demand via search (revealNode loads
   // just their path + neighborhood). `rollup:true` stamps each node's whole-subtree
   // prospect total server-side, so the numbers stay correct without loading everyone.
+  // 150 (not 300) keeps the first canvas render smooth.
   const rootRes = await getRootMarketer();
   const root = rootRes.data;
 
   const subtreeRes = await getSubtree(root.id, 'GLOBAL', undefined, {
-    limit: 300,
+    limit: 150,
     rollup: true,
   });
 
