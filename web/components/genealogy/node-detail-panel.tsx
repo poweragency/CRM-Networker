@@ -278,9 +278,11 @@ export function NodeDetailPanel({
           {t('open_profile')}
         </Link>
 
+        {/* "Vai al nodo" (re-center) is hidden on mobile to de-clutter the sheet —
+            on a small canvas it's of little use; kept on desktop (sm+). */}
         <Button
           variant="outline"
-          className="w-full"
+          className="hidden w-full sm:flex"
           onClick={() => onLocate(node)}
         >
           <Locate aria-hidden />

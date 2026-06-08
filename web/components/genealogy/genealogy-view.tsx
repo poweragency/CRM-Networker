@@ -277,9 +277,16 @@ export function GenealogyView({
       {/* Full-bleed canvas; the detail panel floats over it as an overlay so the
           tree always uses the whole width (no reserved empty column). */}
       <Card className="relative h-[calc(100dvh-8rem)] min-h-[360px] sm:min-h-[520px] overflow-hidden p-0 shadow-card ring-1 ring-black/5">
-        {/* Spillover focus filter (only when there's spillover to separate out). */}
+        {/* Mobile-only search overlay (the desktop one lives in the top navbar,
+            which is hidden < md). Top-left, compact, doesn't block the canvas. */}
+        <div className="absolute left-3 top-3 z-30 w-[min(70vw,15rem)] md:hidden">
+          <GenealogySearch onSearch={tree.search} onPick={handlePick} />
+        </div>
+
+        {/* Spillover focus filter (only when there's spillover to separate out).
+            Mobile: top-right so it won't overlap the search; desktop: top-left. */}
         {spilloverIds.size > 0 && (
-          <div className="absolute left-3 top-3 z-30">
+          <div className="absolute right-3 top-3 z-30 md:left-3 md:right-auto">
             <button
               type="button"
               onClick={() => setFocusMyLine((v) => !v)}

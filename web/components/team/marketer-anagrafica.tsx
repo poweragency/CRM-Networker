@@ -17,6 +17,7 @@ import {
   Puzzle,
   RefreshCw,
   User,
+  UserPlus,
   X,
   type LucideIcon,
 } from 'lucide-react';
@@ -235,6 +236,9 @@ export function MarketerAnagrafica({
         <Section icon={User} title={t('sec_identity')} chip="bg-primary/10 text-primary">
           <Field icon={User} label={t('f_first_name')} value={profile.first_name} />
           <Field icon={User} label={t('f_last_name')} value={profile.last_name} />
+          {/* Sponsor = genealogical recruiter (sponsor_id), NOT necessarily the
+              placement parent. Read-only — synced from the tree. */}
+          <Field icon={UserPlus} label={t('f_sponsor')} value={profile.sponsor_name} />
           <Field
             icon={CalendarPlus}
             label={t('f_registration')}

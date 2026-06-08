@@ -9,7 +9,9 @@
  */
 @layer base {
   :root {
-    --background: 240 33% 99%;
+    /* Neutral white page background (was 240 33% 99% — a faint blue-grey that read
+       as "grigiognolo" on mobile). Cards stay 0 0% 100%; depth comes from borders. */
+    --background: 0 0% 100%;
     --foreground: 240 14% 11%;
     --card: 0 0% 100%;
     --card-foreground: 240 14% 11%;

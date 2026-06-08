@@ -214,7 +214,10 @@ export function ProspectCard({
       {...attributes}
       {...listeners}
       className={cn(
-        'touch-none',
+        // `touch-manipulation` (not `touch-none`): on mobile a normal swipe scrolls
+        // the page/list like touching the background; only a long-press (TouchSensor
+        // delay) starts a drag. `touch-none` made cards "eat" the scroll.
+        'touch-manipulation',
         disabled ? 'cursor-default' : 'cursor-grab active:cursor-grabbing',
       )}
       handle={
