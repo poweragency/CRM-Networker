@@ -202,6 +202,12 @@ export function AttendanceTable({
   callIdSetRef.current = callIdSet;
   const pendingRef = React.useRef<Set<string>>(new Set());
   const summaryTimerRef = React.useRef<number | null>(null);
+  // Timestamp of the last local check-in. While the user is actively toggling,
+  // our optimistic gauge is authoritative — a realtime refetch triggered by our
+  // OWN echo can reread a count that still lags the just-written row and briefly
+  // revert the gauge (the gold→green→gold flicker). We skip the refetch inside a
+  // short window after a local toggle; other people's changes still reconcile.
+  const lastLocalToggleRef = React.useRef(0);
 
   const refetchSummary = React.useCallback(() => {
     if (summaryTimerRef.current) window.clearTimeout(summaryTimerRef.current);
@@ -253,8 +259,10 @@ export function AttendanceTable({
               );
             }
           }
-          // Keep the day-wide gauges exact (also for off-page members).
-          refetchSummary();
+          // Keep the day-wide gauges exact (also for off-page members) — but not
+          // right after our own check-in: the optimistic gauge already counted it,
+          // and a server reread here can lag the just-written row and flicker.
+          if (Date.now() - lastLocalToggleRef.current >= 2000) refetchSummary();
         },
       )
       .subscribe((status) => setLive(status === 'SUBSCRIBED'));
@@ -293,6 +301,7 @@ export function AttendanceTable({
   async function togglePresent(member: AttendanceMember, callId: string) {
     const next = !present[member.id]?.[callId];
     const key = `${member.id}|${callId}|p`;
+    lastLocalToggleRef.current = Date.now();
     pendingRef.current.add(key);
     setPresent((prev) => ({ ...prev, [member.id]: { ...prev[member.id], [callId]: next } }));
     // Optimistic gauge: bump the day-wide count for this call.
@@ -331,6 +340,7 @@ export function AttendanceTable({
   async function toggleCam(member: AttendanceMember, callId: string) {
     const next = !cam[member.id]?.[callId];
     const key = `${member.id}|${callId}|c`;
+    lastLocalToggleRef.current = Date.now();
     pendingRef.current.add(key);
     setCam((prev) => ({ ...prev, [member.id]: { ...prev[member.id], [callId]: next } }));
     setSummary((prev) => ({
@@ -376,9 +386,14 @@ export function AttendanceTable({
     <div className="space-y-5">
       {/* ── Day navigator — frosted command bar ──────────────────────────── */}
       <div className="glass flex flex-wrap items-center gap-2 rounded-xl border border-border/70 px-3 py-2.5 shadow-sm">
-        <Button variant="outline" size="sm" onClick={() => go(shiftDay(date, -1))}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => go(shiftDay(date, -1))}
+          aria-label={t('prev_day')}
+        >
           <ChevronLeft aria-hidden />
-          {t('prev_day')}
+          <span className="hidden sm:inline">{t('prev_day')}</span>
         </Button>
         <div className="inline-flex items-center gap-2 rounded-lg border border-border/70 bg-card px-3 py-1.5 text-sm font-medium text-foreground shadow-xs">
           <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
@@ -389,25 +404,33 @@ export function AttendanceTable({
             )}
           </span>
           <span className="capitalize">{dayLabel}</span>
+          {/* "OGGI" badge hidden on mobile (keeps the bar compact on phones). */}
           {isToday && (
-            <span className="ml-0.5 inline-flex items-center gap-1 rounded-full bg-success/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-success">
+            <span className="ml-0.5 hidden items-center gap-1 rounded-full bg-success/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-success sm:inline-flex">
               <span className="h-1.5 w-1.5 rounded-full bg-success animate-glow-pulse" aria-hidden />
               {t('today')}
             </span>
           )}
         </div>
-        <Button variant="outline" size="sm" onClick={() => go(shiftDay(date, 1))}>
-          {t('next_day')}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => go(shiftDay(date, 1))}
+          aria-label={t('next_day')}
+        >
+          <span className="hidden sm:inline">{t('next_day')}</span>
           <ChevronRight aria-hidden />
         </Button>
         {!isToday && (
           <Button variant="ghost" size="sm" onClick={() => go(today)}>
-            {t('today')}
+            {t('go_to_today')}
           </Button>
         )}
-        <div className="ml-auto flex items-center gap-2">
+        {/* On mobile this control group drops to its own full-width row and wraps,
+            so the native date picker never spills off the right edge of the screen. */}
+        <div className="ml-auto flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:flex-nowrap">
           {/* Server name search — typing fetches the matching first page. */}
-          <div className="relative">
+          <div className="relative min-w-0 flex-1 sm:flex-none">
             <Search
               className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
               aria-hidden
@@ -418,7 +441,7 @@ export function AttendanceTable({
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t('search_placeholder')}
               aria-label={t('search_placeholder')}
-              className="h-9 w-40 rounded-md border border-input bg-background pl-8 pr-7 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-52"
+              className="h-9 w-full rounded-md border border-input bg-background pl-8 pr-7 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-52"
             />
             {searching ? (
               <Loader2
@@ -455,7 +478,7 @@ export function AttendanceTable({
               const v = e.target.value;
               if (v && Number(v.slice(0, 4)) >= 1000 && v !== date) go(v);
             }}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-9 shrink-0 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label={t('pick_day')}
           />
         </div>
