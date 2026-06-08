@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import { z } from 'zod';
@@ -59,7 +59,6 @@ function LoginCardSkeleton() {
 
 function LoginForm() {
   const t = useTranslations('auth');
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [serverError, setServerError] = useState<string | null>(null);
   // Keeps the button in its loading state from a successful sign-in until the
@@ -109,10 +108,15 @@ function LoginForm() {
       rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')
         ? rawRedirect
         : '/impostazioni';
-    // Stay in the loading state through the navigation (no flicker back to "Accedi").
+    // HARD navigation (not router.replace + refresh): a full document load
+    // guarantees the browser sends the auth cookies that signInWithPassword just
+    // wrote, so the middleware/server see the session on the very first request.
+    // A soft navigation could run the middleware before those cookies propagated →
+    // it saw no user, bounced back to /accedi, and the page appeared "stuck" until a
+    // manual refresh (more likely after inactivity, when the old session was stale).
+    // `replace` keeps /accedi out of the history (back button won't return to login).
     setRedirecting(true);
-    router.replace(redirectTo);
-    router.refresh();
+    window.location.replace(redirectTo);
   }
 
   return (
