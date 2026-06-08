@@ -200,7 +200,7 @@ export function ProspectBoard({
     // Mobile (touch): require a ~1s long-press to start a drag, so scrolling or
     // tapping to view never moves a card by accident. `tolerance` cancels the
     // press (→ treated as a scroll) if the finger moves before the delay elapses.
-    useSensor(TouchSensor, { activationConstraint: { delay: 1000, tolerance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 300, tolerance: 8 } }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),

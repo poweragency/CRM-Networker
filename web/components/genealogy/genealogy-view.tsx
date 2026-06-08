@@ -278,10 +278,12 @@ export function GenealogyView({
           tree always uses the whole width (no reserved empty column). */}
       <Card className="relative h-[calc(100dvh-8rem)] min-h-[360px] sm:min-h-[520px] overflow-hidden p-0 shadow-card ring-1 ring-black/5">
         {/* Mobile-only search overlay (the desktop one lives in the top navbar,
-            which is hidden < md). Top-left, compact, doesn't block the canvas. */}
-        <div className="absolute left-3 top-3 z-30 w-[min(70vw,15rem)] md:hidden">
-          <GenealogySearch onSearch={tree.search} onPick={handlePick} />
-        </div>
+            hidden < md). Top-left, compact; hidden while a node sheet is open. */}
+        {!selectedNode && (
+          <div className="absolute left-3 top-3 z-30 w-[min(70vw,15rem)] md:hidden">
+            <GenealogySearch onSearch={tree.search} onPick={handlePick} />
+          </div>
+        )}
 
         {/* Spillover focus filter (only when there's spillover to separate out).
             Mobile: top-right so it won't overlap the search; desktop: top-left. */}
@@ -323,11 +325,12 @@ export function GenealogyView({
           dimSpillover={focusMyLine}
         />
 
-        {/* Detail panel: bottom sheet on mobile (full width, capped height), right-
-            side overlay on desktop. The inner panel is h-full + scrolls. */}
+        {/* Detail panel: FULL-SCREEN on mobile (covers the navbar → more room, no
+            cramping, no overlap with the search), right-side overlay on desktop.
+            The inner panel is h-full + scrolls. */}
         {selectedNode && (
           <div
-            className="glass absolute z-20 shadow-xl ring-1 ring-black/5 animate-fade-in inset-x-0 bottom-0 h-[85dvh] rounded-t-2xl border-t border-border/70 sm:inset-y-0 sm:left-auto sm:right-0 sm:h-full sm:w-[min(22rem,92vw)] sm:rounded-none sm:border-l sm:border-t-0 sm:animate-slide-in-right"
+            className="glass fixed inset-0 z-50 shadow-xl ring-1 ring-black/5 animate-fade-in sm:absolute sm:inset-y-0 sm:left-auto sm:right-0 sm:z-20 sm:h-full sm:w-[min(22rem,92vw)] sm:border-l sm:border-border/70 sm:animate-slide-in-right"
             role="dialog"
             aria-modal="false"
           >

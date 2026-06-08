@@ -9,8 +9,12 @@
  */
 @layer base {
   :root {
-    /* Neutral white page background (was 240 33% 99% — a faint blue-grey that read
-       as "grigiognolo" on mobile). Cards stay 0 0% 100%; depth comes from borders. */
+    /* Declare the active scheme so theme-aware browsers (Samsung Internet's "dark
+       mode for web pages", Chrome auto-dark) DON'T force-darken/grey the page — that
+       was making the white look "grigiognolo" regardless of --background. */
+    color-scheme: light;
+    /* Neutral white page background (was 240 33% 99% — a faint blue-grey). Cards stay
+       0 0% 100%; depth comes from borders. */
     --background: 0 0% 100%;
     --foreground: 240 14% 11%;
     --card: 0 0% 100%;
@@ -104,6 +108,7 @@
   }
 
   .dark {
+    color-scheme: dark;
     --background: 240 16% 7%;
     --foreground: 240 20% 96%;
     --card: 240 14% 10%;
