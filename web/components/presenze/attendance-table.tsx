@@ -141,7 +141,6 @@ export function AttendanceTable({
 
   const [present, setPresent] = React.useState<Flags>(() => seed(initialMembers, (m) => m.present));
   const [cam, setCam] = React.useState<Flags>(() => seed(initialMembers, (m) => m.cam));
-  const [live, setLive] = React.useState(false);
   const [query, setQuery] = React.useState('');
   const [searching, setSearching] = React.useState(false);
   const [loadingMore, setLoadingMore] = React.useState(false);
@@ -265,9 +264,8 @@ export function AttendanceTable({
           if (Date.now() - lastLocalToggleRef.current >= 2000) refetchSummary();
         },
       )
-      .subscribe((status) => setLive(status === 'SUBSCRIBED'));
+      .subscribe();
     return () => {
-      setLive(false);
       supabase.removeChannel(channel);
     };
   }, [supabase, date, refetchSummary]);
@@ -363,21 +361,45 @@ export function AttendanceTable({
     }
   }
 
+  // No year in the top label (the native date picker keeps it, formatted by the
+  // browser) — "Lunedì 8 Giugno" reads cleaner.
   const dayLabel = new Intl.DateTimeFormat('it-IT', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
-    year: 'numeric',
   }).format(new Date(`${date}T00:00:00`));
 
   const isToday = date === today;
+
+  // ── Live banner, synced to the call schedule ──────────────────────────────
+  // A call is "in diretta" for one hour from its start time (no end time is
+  // stored — fixed 60' window). Re-evaluated every 30s so the banner appears and
+  // clears on schedule; only meaningful for today.
+  const [nowMs, setNowMs] = React.useState(() => Date.now());
+  React.useEffect(() => {
+    const id = window.setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+  const liveCall = React.useMemo(() => {
+    if (!isToday) return null;
+    const d = new Date(nowMs);
+    const mins = d.getHours() * 60 + d.getMinutes();
+    return (
+      calls.find((c) => {
+        if (!c.start_time) return false;
+        const [h, m] = c.start_time.split(':').map(Number);
+        if (Number.isNaN(h) || Number.isNaN(m)) return false;
+        const start = h * 60 + m;
+        return mins >= start && mins < start + 60;
+      }) ?? null
+    );
+  }, [calls, isToday, nowMs]);
 
   // ── Day-wide aggregates (from the SERVER summary, whole subtree). ──────────
   const totalMembers = summary.totalMembers;
   const totalSlots = totalMembers * calls.length;
   const filledSlots = calls.reduce((acc, c) => acc + (summary.presentCounts[c.id] ?? 0), 0);
   const filledCams = calls.reduce((acc, c) => acc + (summary.camCounts[c.id] ?? 0), 0);
-  const dayPct = totalSlots ? Math.round((filledSlots / totalSlots) * 100) : 0;
 
   const showOverview = totalMembers > 0 && calls.length > 0;
   const searchEmpty = members.length === 0 && query.trim().length > 0;
@@ -459,15 +481,6 @@ export function AttendanceTable({
               </button>
             ) : null}
           </div>
-          {live && (
-            <span
-              className="inline-flex items-center gap-1 rounded-full bg-success/12 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-success ring-1 ring-success/25"
-              title={t('live')}
-            >
-              <Radio className="h-3 w-3 animate-glow-pulse" aria-hidden />
-              {t('live')}
-            </span>
-          )}
           <input
             type="date"
             // Uncontrolled + remount-on-date so typing isn't fought by React;
@@ -501,10 +514,11 @@ export function AttendanceTable({
           {/* ── Overview hero: full-width aggregate gauge ─────────────────── */}
           {showOverview && (
             <DayPulse
-              dayPct={dayPct}
               filledSlots={filledSlots}
               totalSlots={totalSlots}
               cams={filledCams}
+              liveLabel={t('live')}
+              liveCallTitle={liveCall?.title ?? null}
             />
           )}
 
@@ -729,15 +743,19 @@ function ToggleChip({
 
 /** Aggregate day gauge — the full-width "are we winning today?" panel. */
 function DayPulse({
-  dayPct,
   filledSlots,
   totalSlots,
   cams,
+  liveLabel,
+  liveCallTitle,
 }: {
-  dayPct: number;
   filledSlots: number;
   totalSlots: number;
   cams: number;
+  /** Translated "In diretta" label. */
+  liveLabel: string;
+  /** Title of the call currently live (within its first hour), else null. */
+  liveCallTitle: string | null;
 }) {
   return (
     <div className="surface-grid relative overflow-hidden rounded-xl border bg-card p-5 shadow-card">
@@ -747,10 +765,17 @@ function DayPulse({
       />
       <div className="relative flex flex-wrap items-center gap-x-6 gap-y-4">
         <CompletionRing present={filledSlots} total={totalSlots} size={104} stroke={9} />
-        <span className="text-3xl font-bold tabular-nums tracking-tight text-foreground">
-          <CountUp value={dayPct} />
-          <span className="text-lg font-semibold text-muted-foreground">%</span>
-        </span>
+        {/* Live banner — sits where the redundant day % used to be; only while a
+            call is in its first hour (see liveCall in AttendanceTable). */}
+        {liveCallTitle && (
+          <span className="inline-flex items-center gap-2.5 rounded-full border border-success/30 bg-success/12 px-4 py-2 text-success ring-1 ring-success/25">
+            <Radio className="h-4 w-4 shrink-0 animate-glow-pulse" aria-hidden />
+            <span className="flex flex-col leading-tight">
+              <span className="text-sm font-bold uppercase tracking-wide">{liveLabel}</span>
+              <span className="truncate text-[11px] font-medium text-success/80">{liveCallTitle}</span>
+            </span>
+          </span>
+        )}
         <div className="flex flex-1 flex-wrap items-center gap-2">
           <MiniStat icon={UserCheck} value={filledSlots} label="Presenze" accent="text-success" />
           <MiniStat icon={Video} value={cams} label="Cam attive" accent="text-info" />
