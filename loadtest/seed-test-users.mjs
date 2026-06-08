@@ -13,7 +13,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { writeFileSync } from 'node:fs';
 
-const URL = process.env.SUPABASE_URL;
+// NB: don't name this `URL` — that shadows the global URL constructor used below.
+const SUPA_URL = process.env.SUPABASE_URL;
 const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const ORG = process.env.ORG_ID;
 const COUNT = Number(process.env.COUNT || 200);
@@ -21,12 +22,12 @@ const PASSWORD = process.env.TEST_PASSWORD || 'LoadTest!2026';
 const PREFIX = process.env.EMAIL_PREFIX || 'loadtest+';
 const DOMAIN = process.env.EMAIL_DOMAIN || 'example.com';
 
-if (!URL || !SERVICE || !ORG) {
+if (!SUPA_URL || !SERVICE || !ORG) {
   console.error('Missing env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ORG_ID');
   process.exit(1);
 }
 
-const sb = createClient(URL, SERVICE, { auth: { persistSession: false } });
+const sb = createClient(SUPA_URL, SERVICE, { auth: { persistSession: false } });
 
 // Marketers that already have a membership — we won't touch those (real accounts).
 const { data: existing, error: e1 } = await sb
@@ -66,7 +67,15 @@ for (let i = 0; i < free.length; i += CHUNK) {
         email_confirm: true,
       });
       if (ce) {
-        console.warn(`createUser ${email}: ${ce.message}`);
+        // Already created on a previous run → still usable for the test (same
+        // password + membership already linked), so record it in users.json.
+        const dup = /registered|already|exists/i.test(ce.message || '') || ce.code === 'email_exists';
+        if (dup) {
+          users.push({ email, password: PASSWORD });
+          made += 1;
+        } else {
+          console.warn(`createUser ${email}: ${ce.message}`);
+        }
         return;
       }
       const userId = created.user.id;
