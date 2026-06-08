@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Zap, GitBranch, Route, BarChart3, FlaskConical, ShieldCheck } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
@@ -150,6 +151,12 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
             {children}
           </div>
         </div>
+
+        <nav className="flex flex-wrap items-center justify-center gap-4 px-6 pb-4 text-xs text-white/45">
+          <Link href="/privacy" className="hover:text-white">Privacy</Link>
+          <Link href="/cookie" className="hover:text-white">Cookie</Link>
+          <Link href="/termini" className="hover:text-white">Termini</Link>
+        </nav>
 
         <p className="px-6 pb-6 text-center text-xs text-white/40 lg:hidden">
           © {new Date().getFullYear()} PowerNetwork
