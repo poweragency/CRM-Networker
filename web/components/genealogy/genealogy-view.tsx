@@ -188,13 +188,17 @@ export function GenealogyView({
     async (node: TreeNode) => {
       if (!addTarget) return;
       if (addTarget.mode === 'above') {
-        // The tree shape changed structurally (N took the target's slot, the
-        // target dropped to N's LEFT leg). Reload the subtree to pick it up, then
-        // focus the freshly inserted node.
+        // The tree shape changed structurally (N took the target's slot, the target
+        // dropped to N's LEFT leg). Reload refreshes the upper window, but the new
+        // node sits at the target's depth — which can be BEYOND the lazy window
+        // (~150 nodes), so reload alone wouldn't include it. revealNode loads its
+        // ancestor path + neighborhood (same as a search jump) so it actually shows
+        // up and "Vai al nodo" can center it.
         setAddTarget(null);
         await tree.reload();
+        await tree.revealNode(node);
         setSelectedId(node.id);
-        window.setTimeout(() => canvasRef.current?.centerOn(node.id), 160);
+        window.setTimeout(() => canvasRef.current?.centerOn(node.id), 200);
         return;
       }
       tree.addChild(addTarget.parentId, addTarget.leg, node);
@@ -215,9 +219,16 @@ export function GenealogyView({
     [tree],
   );
 
-  const handleLocate = React.useCallback((node: TreeNode) => {
-    canvasRef.current?.centerOn(node.id);
-  }, []);
+  const handleLocate = React.useCallback(
+    async (node: TreeNode) => {
+      // Ensure the node is actually in the layout before centering (no-op fetch if
+      // it's already loaded). Without this, "Vai al nodo" silently did nothing for
+      // a node outside the lazy window (e.g. one just inserted deep in the tree).
+      await tree.revealNode(node);
+      window.setTimeout(() => canvasRef.current?.centerOn(node.id), 120);
+    },
+    [tree],
+  );
 
   // Remove a node from the tree (reattaches its single downline). The server RPC
   // enforces the rules (no removal with two legs / root / self); the client cache
