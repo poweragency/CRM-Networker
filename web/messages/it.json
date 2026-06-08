@@ -1081,6 +1081,7 @@
     "calls_error": "Operazione non riuscita. Riprova.",
     "calls_saved_demo": "Simulato in modalità demo.",
     "calls_title_required": "Il nome della call è obbligatorio.",
+    "calls_time_required": "L'orario della call è obbligatorio.",
     "calls_delete": "Elimina call",
     "calls_empty": "Nessuna call",
     "calls_empty_body": "Aggiungi la prima call della struttura.",

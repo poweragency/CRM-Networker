@@ -55,11 +55,16 @@ export function CallsSettings({
       toast({ title: t('calls_title_required'), variant: 'error' });
       return;
     }
+    // Time is mandatory (admin + co-admin): the "In diretta" banner needs a start.
+    if (!time) {
+      toast({ title: t('calls_time_required'), variant: 'error' });
+      return;
+    }
     setSaving(true);
     const res = await createZoomCallAction({
       title: title.trim(),
       weekday,
-      start_time: time || null,
+      start_time: time,
       scope: isAdmin ? 'org' : 'team',
       team_branch: isAdmin ? null : teamBranch,
     });
@@ -130,9 +135,11 @@ export function CallsSettings({
             </select>
           </label>
           <label className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">
-            {t('calls_time')}
+            {t('calls_time')} <span className="text-danger">*</span>
             <input
               type="time"
+              required
+              aria-required="true"
               className={selectCx}
               value={time}
               onChange={(e) => setTime(e.target.value)}

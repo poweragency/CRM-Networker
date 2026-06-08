@@ -54,6 +54,10 @@ export interface CallResult {
 /** Create a call. Org scope → created_by null; team scope → owned by the caller. */
 export async function createZoomCall(input: CallInput): Promise<CallResult> {
   const supabase = getClient();
+  // Time is mandatory (admin + co-admin) — enforced here too, not just in the UI.
+  if (!input.start_time || !input.start_time.trim()) {
+    return { ok: false, demo: !supabase };
+  }
   if (!supabase) return { ok: true, demo: true };
   try {
     const { orgId, marketerId } = await getOwnerContext();
