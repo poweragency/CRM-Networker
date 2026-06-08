@@ -1,0 +1,13 @@
+{
+  "name": "crm-networker-loadtest",
+  "private": true,
+  "type": "module",
+  "description": "Load-test tooling (k6 + seeding). Not part of the app build.",
+  "scripts": {
+    "seed": "node seed-test-users.mjs",
+    "cleanup": "node cleanup-test-users.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  }
+}
