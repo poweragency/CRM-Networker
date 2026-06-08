@@ -484,6 +484,7 @@
     "created": "Prospect creato",
     "enrolled_toast": "Prospect iscritto! 🎉",
     "owner": "Responsabile",
+    "reference_marketer": "Marketer di riferimento",
     "in_stage_since": "In fase da",
     "in_funnel_since": "Nel funnel da",
     "phase_of": "Fase {idx}/6",

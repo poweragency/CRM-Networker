@@ -280,7 +280,7 @@ export function GenealogyView({
         {/* Mobile-only search overlay (the desktop one lives in the top navbar,
             hidden < md). Top-left, compact; hidden while a node sheet is open. */}
         {!selectedNode && (
-          <div className="absolute left-3 top-3 z-30 w-[min(70vw,15rem)] md:hidden">
+          <div className="absolute left-3 top-3 z-20 w-[min(70vw,15rem)] md:hidden">
             <GenealogySearch onSearch={tree.search} onPick={handlePick} />
           </div>
         )}
@@ -288,7 +288,7 @@ export function GenealogyView({
         {/* Spillover focus filter (only when there's spillover to separate out).
             Mobile: top-right so it won't overlap the search; desktop: top-left. */}
         {spilloverIds.size > 0 && (
-          <div className="absolute right-3 top-3 z-30 md:left-3 md:right-auto">
+          <div className="absolute right-3 top-3 z-20 md:left-3 md:right-auto">
             <button
               type="button"
               onClick={() => setFocusMyLine((v) => !v)}

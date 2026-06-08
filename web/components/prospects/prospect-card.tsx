@@ -6,7 +6,6 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { ArrowUpRight, GripVertical, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Avatar } from '@/components/ui/avatar';
 import { StatusPill } from '@/components/crm/status-pill';
 import { stageTokens } from './stage-tokens';
 import type { ProspectView } from './types';
@@ -132,17 +131,9 @@ export const ProspectCardBody = React.forwardRef<
           )}
         </div>
 
-        {/* Owner */}
-        <div className="flex items-center gap-2">
-          <Avatar
-            name={prospect.owner_name}
-            size="sm"
-            className="h-6 w-6 text-[10px] ring-1 ring-border/60"
-          />
-          <span className="truncate text-xs font-medium text-muted-foreground">
-            {prospect.owner_name}
-          </span>
-        </div>
+        {/* Owner name intentionally NOT shown here — the board is always one
+            marketer's, so it's redundant; the "Marketer di riferimento" lives on the
+            prospect detail. Removing it slims the card (no empty owner row). */}
 
         {/* Next action / outcome */}
         {prospect.outcome !== 'open' ? (
