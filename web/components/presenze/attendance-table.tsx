@@ -444,7 +444,8 @@ export function AttendanceTable({
           <ChevronRight aria-hidden />
         </Button>
         {!isToday && (
-          <Button variant="ghost" size="sm" onClick={() => go(today)}>
+          <Button variant="secondary" size="sm" onClick={() => go(today)}>
+            <CalendarDays aria-hidden />
             {t('go_to_today')}
           </Button>
         )}
