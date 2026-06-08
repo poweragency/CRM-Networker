@@ -157,7 +157,12 @@ export async function addMarketerAction(
     });
 
     // Create the login (auth user + active membership) for the new member.
-    const acc = await activateCrmAccess(res.id, input.email, input.password);
+    const acc = await activateCrmAccess(
+      res.id,
+      input.email,
+      input.password,
+      `${input.firstName} ${input.lastName}`.trim(),
+    );
     if (!acc.ok) {
       // Roll back the half-created marketer (+ its closure) so the admin can retry.
       const admin = getAdminClient();

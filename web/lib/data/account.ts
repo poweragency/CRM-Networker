@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getCurrentClaims } from '@/lib/data/session';
 import { logError } from '@/lib/log';
+import { sendWelcomeEmail } from '@/lib/email/welcome';
 import { RANK_ORDER, type SessionClaims } from '@/lib/types/db';
 
 /**
@@ -139,6 +140,7 @@ export async function activateCrmAccess(
   targetMarketerId: string,
   email: string,
   password: string,
+  fullName?: string,
 ): Promise<ActivateResult> {
   const { claims } = await getCurrentClaims();
   const orgId = claims.org_id;
@@ -211,6 +213,9 @@ export async function activateCrmAccess(
     await admin.auth.admin.deleteUser(userId);
     return { ok: false, error: 'failed' };
   }
+
+  // Welcome email (best-effort: never blocks/falls the account creation).
+  await sendWelcomeEmail(email, fullName ?? '');
 
   return { ok: true };
 }
