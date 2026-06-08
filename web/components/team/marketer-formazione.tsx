@@ -171,10 +171,17 @@ function TrainingArea({
             {doneCount}/{items.length}
           </span>
         </div>
-        {/* Progress bar — at-a-glance completion per area. */}
+        {/* Progress bar — at-a-glance completion per area. Use a gradient
+            (background-image), NOT a solid background-color: Samsung Internet's
+            "dark mode for web" auto-darkens bright solid fills on mobile (the gold
+            turns a muddy dark red right after it paints) but leaves background
+            images untouched — same trick the wishlist bar already relies on. */}
         <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
           <div
-            className={cn('h-full rounded-full transition-all duration-base ease-standard', complete ? 'bg-warning' : 'bg-success')}
+            className={cn(
+              'h-full rounded-full bg-gradient-to-r transition-all duration-base ease-standard',
+              complete ? 'from-warning/80 to-warning' : 'from-success/80 to-success',
+            )}
             style={{ width: `${pct}%` }}
             aria-hidden
           />
@@ -207,12 +214,15 @@ function TrainingArea({
                 >
                   <span
                     className={cn(
-                      'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors',
+                      // Same-colour gradients (background-image) so the filled box
+                      // keeps its exact look but escapes Samsung Internet's auto-dark,
+                      // which would otherwise turn the gold box dark red on mobile.
+                      'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border bg-gradient-to-br transition-colors',
                       isDone
                         ? complete
-                          ? 'border-warning bg-warning text-warning-foreground'
-                          : 'border-success bg-success text-success-foreground'
-                        : 'border-input',
+                          ? 'border-warning from-warning to-warning text-warning-foreground'
+                          : 'border-success from-success to-success text-success-foreground'
+                        : 'border-input from-transparent to-transparent',
                     )}
                     aria-hidden
                   >
