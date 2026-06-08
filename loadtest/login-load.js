@@ -79,6 +79,7 @@ const steady = {
 };
 
 export const options = {
+  setupTimeout: '600s', // token pre-harvest (steady) can take a couple of minutes
   scenarios: SCENARIO === 'burst' ? { burst } : { steady },
   thresholds: {
     // The run "passes" while these hold — when they break you've found the ceiling.
@@ -105,8 +106,8 @@ function claimsFromJwt(token) {
 }
 
 /** signInWithPassword against GoTrue. Returns { token, marketerId, expires } | null. */
-function doLogin() {
-  const u = pickUser();
+function doLogin(u) {
+  u = u || pickUser();
   const res = http.post(
     `${SUPABASE_URL}/auth/v1/token?grant_type=password`,
     JSON.stringify({ email: u.email, password: u.password }),
@@ -165,14 +166,36 @@ export function loginBurst() {
   if (s) activity(s.token, s.marketerId);
 }
 
-// Per-VU session cache so a steady user logs in once, then just acts.
+// STEADY uses pre-harvested tokens (setup) so the load phase is pure RPC — the
+// single-IP Auth rate limit can't pollute the DB-ceiling measurement.
+export function setup() {
+  if (SCENARIO !== 'steady') return { tokens: [] };
+  const want = Math.min(USERS.length, Number(__ENV.HARVEST || USERS.length));
+  const delay = Number(__ENV.HARVEST_DELAY || 0.3); // pace logins to dodge rate limits
+  const tokens = [];
+  for (let i = 0; i < want; i++) {
+    const s = doLogin(USERS[i]);
+    if (s && s.token) tokens.push({ token: s.token, marketerId: s.marketerId });
+    sleep(delay);
+  }
+  console.log(`Harvested ${tokens.length}/${want} tokens for the load phase`);
+  return { tokens };
+}
+
+// Per-VU session cache (fallback path only, when no pre-harvested tokens exist).
 const sessions = {};
-export function steadyUser() {
-  const vu = exec.vu.idInTest;
-  let s = sessions[vu];
-  if (!s || s.expires < Date.now()) {
-    s = doLogin();
-    if (s) sessions[vu] = s;
+export function steadyUser(data) {
+  const pool = (data && data.tokens) || [];
+  let s;
+  if (pool.length) {
+    s = pool[Math.floor(Math.random() * pool.length)]; // reuse a harvested token
+  } else {
+    const vu = exec.vu.idInTest;
+    s = sessions[vu];
+    if (!s || s.expires < Date.now()) {
+      s = doLogin();
+      if (s) sessions[vu] = s;
+    }
   }
   if (s) activity(s.token, s.marketerId);
   // Randomized think-time so requests aren't perfectly synchronized.
