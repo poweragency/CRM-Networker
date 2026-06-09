@@ -204,21 +204,29 @@ export async function promoteListaContatti(
 ): Promise<MutationResult<{ entry_id: string; contact_id: string }>> {
   const { orgId, marketerId } = await getOwnerContext();
   const supabase = getClient();
-  const entry = MOCK_LISTA_CONTATTI.find((e) => e.id === id);
   const contactId = demoId('ct');
 
   if (!supabase) {
     return { data: { entry_id: id, contact_id: contactId }, demo: true, ok: true };
   }
   try {
+    // Read the REAL entry (name + phone). The mock lookup by id never matched a
+    // real UUID, so the promoted contact came out as "Contatto" with no phone.
+    const { data: entryRow } = await supabase
+      .from('lista_contatti_entries')
+      .select('full_name,phone')
+      .eq('id', id)
+      .maybeSingle();
+    const fullName = (entryRow as { full_name?: string } | null)?.full_name ?? '';
+    const phone = (entryRow as { phone?: string | null } | null)?.phone ?? null;
     const { data: contact, error: insErr } = await supabase
       .from('contacts')
       .insert({
         org_id: orgId,
         owner_marketer_id: marketerId,
-        first_name: entry?.full_name.split(' ')[0] ?? 'Contatto',
-        last_name: entry?.full_name.split(' ').slice(1).join(' ') || null,
-        phone: entry?.phone ?? null,
+        first_name: fullName.split(' ')[0] || 'Contatto',
+        last_name: fullName.split(' ').slice(1).join(' ') || null,
+        phone,
         source: 'centos_list',
         status: 'nuovo',
         created_by: marketerId,

@@ -70,5 +70,11 @@ export async function saveProspectExtraAction(
   prospectId: string,
   extra: ProspectExtra,
 ): Promise<SaveProspectExtraResult> {
-  return setProspectExtra(prospectId, extra);
+  const res = await setProspectExtra(prospectId, extra);
+  // `notes` also feeds the kanban card, so refresh the board + detail on a real save.
+  if (res.ok && !res.demo) {
+    revalidatePath('/percorso-prospect');
+    revalidatePath(`/percorso-prospect/${prospectId}`);
+  }
+  return res;
 }

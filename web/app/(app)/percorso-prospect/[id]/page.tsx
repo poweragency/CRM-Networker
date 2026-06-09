@@ -52,7 +52,7 @@ export default async function ProspectDetailPage({
 
   const ownerRes = await getNode(prospect.owner_marketer_id);
   const ownerName = ownerRes.data?.display_name ?? 'Marketer';
-  const extra = getProspectExtra(prospect.id);
+  const extra = await getProspectExtra(prospect.id);
 
   // Phone for the WhatsApp quick-contact comes from the linked contact.
   const contactRes = prospect.contact_id
