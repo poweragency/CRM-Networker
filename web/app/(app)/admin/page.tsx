@@ -57,7 +57,7 @@ export default async function AdminPage() {
   const quick = [
     { href: '/admin/marketer/nuovo', icon: UserPlus, titleKey: 'quick_pre_register', descKey: 'quick_pre_register_desc', accent: 'text-info' },
     { href: '/admin/attivazioni', icon: KeyRound, titleKey: 'quick_activations', descKey: 'quick_activations_desc', accent: 'text-primary' },
-    { href: '/admin/ranghi', icon: Medal, titleKey: 'quick_ranks', descKey: 'quick_ranks', accent: 'text-warning' },
+    { href: '/admin/ranghi', icon: Medal, titleKey: 'quick_ranks', descKey: 'quick_ranks_desc', accent: 'text-warning' },
     { href: '/admin/audit', icon: ScrollText, titleKey: 'quick_audit', descKey: 'quick_audit_desc', accent: 'text-muted-foreground' },
   ] as const;
 

@@ -64,7 +64,7 @@ export function WhatsAppButton({
       title={label}
       className={cn(
         'inline-flex items-center justify-center gap-1.5 rounded-md text-[#25D366] transition-colors hover:bg-[#25D366]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-        withLabel ? 'h-8 px-2.5 text-sm font-medium' : 'h-8 w-8',
+        withLabel ? 'h-9 px-2.5 text-sm font-medium' : 'h-9 w-9',
         className,
       )}
     >
