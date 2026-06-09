@@ -243,10 +243,15 @@ export function GenealogyView({
         toast({ title: t('remove_error'), variant: 'error' });
         return;
       }
-      // The server re-homes anyone this person sponsored onto its own sponsor, so
-      // their spillover flag changes — reload to recompute it.
-      await tree.reload();
+      // Drop the removed node from the cache + reattach its child RIGHT AWAY:
+      // reload() merges additively (it never prunes), so on its own it left the
+      // deleted node in place to collide with the reattached child for the same
+      // (parent, leg) slot — you saw the deleted person stay and the child vanish
+      // until an F5. Then reload to refresh ancestor counts + the sponsees'
+      // spillover (their sponsor_id was re-homed server-side).
+      tree.removeNode(node.id);
       setSelectedId(null);
+      await tree.reload();
       toast({ title: t('remove_done'), variant: 'success' });
     },
     [t, toast, tree],
