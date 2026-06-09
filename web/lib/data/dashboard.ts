@@ -1,5 +1,6 @@
 import 'server-only';
 import { isSupabaseConfigured } from '@/lib/env';
+import { todayInTimeZone } from '@/lib/utils';
 import { getClient, getOwnerContext } from '@/lib/data/crm-shared';
 import { mockTopMarketers, type TopMarketerEntry } from '@/lib/data/mock/dashboard';
 import { stageIndex, type MarketerRank, type ProspectStage } from '@/lib/types/db';
@@ -37,12 +38,16 @@ interface PresentRow {
   rank: MarketerRank;
 }
 
-/** First/last calendar day of the current month, as ISO `YYYY-MM-DD`. */
-function monthBounds(now = new Date()): { from: string; to: string } {
-  const from = new Date(now.getFullYear(), now.getMonth(), 1);
-  const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  const iso = (d: Date) => d.toISOString().slice(0, 10);
-  return { from: iso(from), to: iso(to) };
+/**
+ * First/last calendar day of the current month, as ISO `YYYY-MM-DD`, in the org
+ * timezone (Europe/Rome). Deriving the year/month from the UTC clock + formatting
+ * via toISOString() shifted the bounds to the previous day for a UTC+ org.
+ */
+function monthBounds(): { from: string; to: string } {
+  const [y, m] = todayInTimeZone().split('-').map(Number);
+  const mm = String(m).padStart(2, '0');
+  const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate(); // day 0 of next month
+  return { from: `${y}-${mm}-01`, to: `${y}-${mm}-${String(lastDay).padStart(2, '0')}` };
 }
 
 /** Present (present=true) attendance rows for the month, RLS-scoped to the subtree. */

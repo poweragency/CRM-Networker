@@ -18,6 +18,17 @@ export function formatNumber(value: number, opts?: Intl.NumberFormatOptions): st
   return new Intl.NumberFormat('it-IT', opts).format(value);
 }
 
+/**
+ * Current calendar day as `YYYY-MM-DD` in a given IANA timezone (default the org's
+ * Europe/Rome). Use this instead of `new Date().toISOString().slice(0,10)`, which
+ * returns the UTC day and is off by one for ~1-2h every night for a UTC+ org
+ * (e.g. the Presenze "today"/"OGGI" anchor and month boundaries). `en-CA` formats
+ * as ISO `YYYY-MM-DD`.
+ */
+export function todayInTimeZone(timeZone = 'Europe/Rome'): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone }).format(new Date());
+}
+
 /** Render a 0..1 ratio as an it-IT percentage (e.g. 0.1507 → "15,1%"). */
 export function formatPercent(ratio: number, fractionDigits = 1): string {
   return new Intl.NumberFormat('it-IT', {

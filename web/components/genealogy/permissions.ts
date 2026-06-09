@@ -14,7 +14,7 @@ import type { MarketerRank, MembershipRole, SessionClaims } from '@/lib/types/db
  * `active` is treated as already having access and the action is hidden.
  */
 
-const MIN_RANK_FOR_ACTIVATION: MarketerRank = 'team_leader';
+const MIN_RANK_FOR_ACTIVATION: MarketerRank = 'consultant';
 
 function roleAtLeast(role: MembershipRole, min: MembershipRole): boolean {
   return ROLE_ORDER.indexOf(role) >= ROLE_ORDER.indexOf(min);
@@ -33,10 +33,13 @@ export function canActivateCrm(claims: Pick<SessionClaims, 'role' | 'rank'>): bo
 }
 
 /**
- * Adding a member from the tree is open to EVERY logged-in person (not just
- * admins). Placement is still scoped server-side by RLS to the caller's own
- * visible subtree, so the "+" affordance can be shown for any selected node.
+ * Adding a member from the tree creates the node AND activates its CRM login, so
+ * the affordance must match the SAME capability the server enforces for account
+ * creation (`canManageAccounts`): admin/owner OR rank ≥ consultant. Showing the
+ * "+" to everyone made it a dead control for sub-consultant ranks (the submit
+ * failed at activation with a generic error). Placement is still scoped to the
+ * caller's visible subtree by RLS.
  */
-export function canAddMember(): boolean {
-  return true;
+export function canAddMember(claims: Pick<SessionClaims, 'role' | 'rank'>): boolean {
+  return canActivateCrm(claims);
 }

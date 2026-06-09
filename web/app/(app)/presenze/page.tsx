@@ -5,6 +5,7 @@ import { getAttendanceView } from '@/lib/data/attendance';
 import { ConfigNotice } from '@/components/config-notice';
 import { PageHeader } from '@/components/crm/page-header';
 import { AttendanceTable } from '@/components/presenze/attendance-table';
+import { todayInTimeZone } from '@/lib/utils';
 
 /**
  * /presenze — the Zoom attendance table (RSC). Each viewer sees everyone from
@@ -33,7 +34,9 @@ export default async function PresenzePage({
 }) {
   const t = await getTranslations('presenze');
 
-  const today = new Date().toISOString().slice(0, 10);
+  // Org-local day (Europe/Rome), NOT UTC: otherwise "today"/the "OGGI" anchor and
+  // the live banner are off by one for ~1-2h every night.
+  const today = todayInTimeZone();
   const param = one(searchParams?.date);
   const date = param && ISO_DAY.test(param) ? param : today;
 

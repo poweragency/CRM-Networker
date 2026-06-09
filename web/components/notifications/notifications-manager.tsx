@@ -95,6 +95,13 @@ export function NotificationsManager({
     const now = new Date().toISOString();
     setItems((prev) => prev.map((n) => (n.id === id ? { ...n, read_at: now } : n)));
     const res = await markReadAction(id);
+    // The action returns ok:false on a real (non-demo) write failure — revert the
+    // optimistic mark so the UI never shows a state the server didn't persist.
+    if (!res.ok) {
+      setItems((prev) => prev.map((n) => (n.id === id ? { ...n, read_at: null } : n)));
+      toast({ title: t('action_failed'), variant: 'error' });
+      return;
+    }
     notifyDemo(t('marked_read'), res.demo);
   }
 
@@ -104,12 +111,24 @@ export function NotificationsManager({
     const unreadKeys = items.filter((n) => !n.read_at).map((n) => n.id);
     setItems((prev) => prev.map((n) => (n.read_at ? n : { ...n, read_at: now })));
     const res = await markAllReadAction(unreadKeys);
+    if (!res.ok) {
+      const keys = new Set(unreadKeys);
+      setItems((prev) => prev.map((n) => (keys.has(n.id) ? { ...n, read_at: null } : n)));
+      toast({ title: t('action_failed'), variant: 'error' });
+      return;
+    }
     notifyDemo(t('all_marked_read'), res.demo);
   }
 
   async function dismiss(id: string) {
-    setItems((prev) => prev.filter((n) => n.id !== id));
+    const prev = items;
+    setItems((cur) => cur.filter((n) => n.id !== id));
     const res = await dismissAction(id);
+    if (!res.ok) {
+      setItems(prev); // re-insert at its original position
+      toast({ title: t('action_failed'), variant: 'error' });
+      return;
+    }
     notifyDemo(t('dismissed'), res.demo);
   }
 

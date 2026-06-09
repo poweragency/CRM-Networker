@@ -872,6 +872,7 @@
     "all_marked_read": "Tutte le notifiche segnate come lette",
     "dismissed": "Notifica rimossa",
     "action_demo": "Azione simulata in modalità demo.",
+    "action_failed": "Operazione non riuscita. Riprova.",
     "new_badge": "Nuova"
   },
   "admin": {

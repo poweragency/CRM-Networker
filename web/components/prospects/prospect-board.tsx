@@ -303,9 +303,11 @@ export function ProspectBoard({
       return;
     }
 
-    const originStage =
-      board.columns.find((c) => c.prospects.some((p) => p.id === id))?.stage ??
-      null;
+    // Origin = where the card was at drag START (pre-drag snapshot), NOT the
+    // server `board` prop: the prop is stale after an in-session move, and cards
+    // created this session aren't in it at all (origin would be null → a same-
+    // column drop would wrongly fire a server write).
+    const originStage = findStageOf(preDragMapRef.current ?? toStageMap(board), id);
 
     if (!destStage || destStage === originStage) {
       // Snap back to the server state if nothing meaningful changed.

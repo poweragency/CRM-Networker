@@ -8,13 +8,16 @@ import { RANK_ORDER, type SessionClaims } from '@/lib/types/db';
 
 /**
  * Caller authority for service-role account operations (ADR-003): admin/owner OR
- * rank >= team_leader. This is enforced SERVER-SIDE here — the UI gate is not a
- * security boundary, and these helpers wield the service-role client (bypasses
- * RLS), so they must self-authorize before any privileged call.
+ * rank >= consultant. Consultants and up may onboard (add + activate) people in
+ * their own subtree — recruiting is the core activity, not an admin-only one. This
+ * is enforced SERVER-SIDE here — the UI gate is not a security boundary, and these
+ * helpers wield the service-role client (bypasses RLS), so they must self-authorize
+ * before any privileged call. (Account REVOCATION stays gated upstream by
+ * remove_marketer, which still requires Team Leader+.)
  */
 function canManageAccounts(claims: Pick<SessionClaims, 'role' | 'rank'>): boolean {
   if (claims.role === 'owner' || claims.role === 'admin') return true;
-  return RANK_ORDER.indexOf(claims.rank) >= RANK_ORDER.indexOf('team_leader');
+  return RANK_ORDER.indexOf(claims.rank) >= RANK_ORDER.indexOf('consultant');
 }
 
 /**

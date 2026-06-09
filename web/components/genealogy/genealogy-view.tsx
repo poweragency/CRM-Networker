@@ -125,12 +125,12 @@ export function GenealogyView({
       ? tree.getNode(selectedNode.sponsor_id)?.display_name ?? null
       : null;
 
-  // Add-from-tree: the "+" slots are offered to EVERY person (not just admins) on
-  // the selected node, or the layout root when nothing is selected (a fresh tree
-  // then shows its open slots). RLS scopes the actual placement to the caller's
-  // own visible subtree. Dialog target holds the chosen empty (parent, leg).
+  // Add-from-tree: the "+" slots are offered to anyone who can create accounts
+  // (admin/owner OR rank ≥ consultant — same as the server gate) on the selected
+  // node, or the layout root when nothing is selected. RLS scopes the actual
+  // placement to the caller's visible subtree. Target holds the chosen (parent, leg).
   const [addTarget, setAddTarget] = React.useState<AddMemberTarget | null>(null);
-  const addSlotsForId = canAddMember() ? selectedId ?? layoutRootId : null;
+  const addSlotsForId = canAddMember(claims) ? selectedId ?? layoutRootId : null;
 
   const handleSelect = React.useCallback((node: TreeNode) => {
     setSelectedId(node.id);
