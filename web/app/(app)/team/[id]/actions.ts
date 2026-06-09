@@ -4,6 +4,7 @@ import { updateMarketerExtra, updateMarketerIdentity } from '@/lib/data/team';
 import { saveWishlist } from '@/lib/data/wishlist';
 import { saveFormazioneProgress } from '@/lib/data/formazione';
 import { getCurrentClaims } from '@/lib/data/session';
+import { isOrgAdmin } from '@/lib/data/authz';
 import { getDmoStatus, toggleDmoTask, type DmoStatus } from '@/lib/data/streak';
 import { isSupabaseConfigured } from '@/lib/env';
 import type {
@@ -81,10 +82,11 @@ export interface SaveIdentityResult {
 
 /**
  * Update a marketer's rank and/or renewal status. A manager can change these for
- * someone in their DOWNLINE, but NEVER for themselves — the server enforces the
- * self-guard regardless of the UI. Demo-safe: records an in-memory identity
- * override so every view reflects it; in production this becomes a guarded
- * rank/status RPC (RLS-scoped to the caller's subtree).
+ * someone in their DOWNLINE; self-edit is blocked for everyone EXCEPT the org
+ * admin/owner, who may set their OWN rank (no upline above them to do it). The DB
+ * trigger guard_marketer_structural_cols() already permits admins; this is the
+ * matching app-layer guard. Demo-safe: records an in-memory identity override so
+ * every view reflects it; in production this becomes a guarded rank/status RPC.
  */
 export async function saveMarketerIdentityAction(
   id: string,
@@ -95,7 +97,7 @@ export async function saveMarketerIdentityAction(
   },
 ): Promise<SaveIdentityResult> {
   const { claims } = await getCurrentClaims();
-  if (claims.marketer_id === id) {
+  if (claims.marketer_id === id && !isOrgAdmin(claims)) {
     return { ok: false, demo: !isSupabaseConfigured, forbidden: true };
   }
   const res = await updateMarketerIdentity(id, patch);

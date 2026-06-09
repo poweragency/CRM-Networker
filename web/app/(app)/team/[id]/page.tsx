@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { getNode } from '@/lib/data/genealogy';
 import { getCurrentClaims } from '@/lib/data/session';
+import { isOrgAdmin } from '@/lib/data/authz';
 import { listProspectBoard } from '@/lib/data/prospects';
 import { listListaContatti } from '@/lib/data/lista-contatti';
 import { getSevenWhysFor } from '@/lib/data/seven-whys';
@@ -90,10 +91,11 @@ export default async function MarketerProfilePage({
   // "Catena d'Oro" streak — own profile only (it's the caller's personal DMO).
   const dmo = isSelf ? await getDmoStatus() : null;
   // RLS scopes profiles to the viewer's subtree, so any profile that loads is the
-  // viewer's own or a downline's — both editable. Rank/renewal: downline only
-  // (the server re-enforces the self-guard + the strict-upline rule).
+  // viewer's own or a downline's — both editable. Rank/renewal: a downline (the
+  // server re-enforces the strict-upline rule), PLUS the org admin/owner on their
+  // OWN profile — there's no upline above them to set their rank, so they self-manage.
   const canEdit = true;
-  const canEditIdentity = !isSelf;
+  const canEditIdentity = !isSelf || isOrgAdmin(claimsRes.claims);
   const profile = profileRes.data;
   const demo =
     nodeRes.demo ||

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { getCurrentClaims } from '@/lib/data/session';
+import { isOrgAdmin } from '@/lib/data/authz';
 import { getNode } from '@/lib/data/genealogy';
 import { listProspectBoard } from '@/lib/data/prospects';
 import { listListaContatti } from '@/lib/data/lista-contatti';
@@ -147,7 +148,16 @@ export default async function ImpostazioniPage({
           node={node}
           isSelf
           streak={dmo}
-          action={profile ? <AnagraficaModal profile={profile} canEdit /> : null}
+          action={
+            profile ? (
+              // Org admin/owner may set their OWN rank (no upline above them).
+              <AnagraficaModal
+                profile={profile}
+                canEdit
+                canEditIdentity={isOrgAdmin(claims)}
+              />
+            ) : null
+          }
         />
       )}
 
