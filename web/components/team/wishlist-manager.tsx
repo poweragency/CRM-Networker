@@ -43,6 +43,14 @@ export function WishlistManager({
   const [title, setTitle] = React.useState('');
   const [saving, setSaving] = React.useState(false);
 
+  // A ref mirrors the list so rapid clicks build on the LATEST value (a stale
+  // closure would drop a tick); saves are serialized + coalesced so two quick
+  // toggles can't persist out of order (each save fully replaces the list).
+  const itemsRef = React.useRef(items);
+  itemsRef.current = items;
+  const savingRef = React.useRef(false);
+  const queuedRef = React.useRef<WishlistItem[] | null>(null);
+
   // Completion = realised goals over the whole list (0% on an empty list).
   const doneCount = items.filter((i) => i.done).length;
   const pct = items.length ? Math.round((doneCount / items.length) * 100) : 0;
@@ -50,38 +58,62 @@ export function WishlistManager({
   // token, same gold used at 100% in Presenze) instead of the usual green.
   const allDone = items.length > 0 && doneCount === items.length;
 
-  async function persist(next: WishlistItem[]) {
-    setItems(next);
+  // Serialize saves: only one in flight; `queuedRef` always holds the LATEST set,
+  // so concurrent toggles coalesce to one write of the final state (no out-of-order
+  // last-write-wins). One toast on settle.
+  async function flushSaves() {
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
-    const res = await saveWishlistAction(marketerId, next);
-    setSaving(false);
-    if (!res.ok) {
-      toast({ title: t('error'), variant: 'error' });
-      return;
+    let failed = false;
+    let demo = false;
+    try {
+      while (queuedRef.current) {
+        const toSave = queuedRef.current;
+        queuedRef.current = null;
+        const res = await saveWishlistAction(marketerId, toSave);
+        if (!res.ok) {
+          failed = true;
+          break;
+        }
+        demo = res.demo;
+      }
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
-    toast({
-      title: t('saved'),
-      description: res.demo ? t('saved_demo') : undefined,
-      variant: 'success',
-    });
+    toast(
+      failed
+        ? { title: t('error'), variant: 'error' }
+        : { title: t('saved'), description: demo ? t('saved_demo') : undefined, variant: 'success' },
+    );
+  }
+
+  function commit(next: WishlistItem[]) {
+    itemsRef.current = next;
+    setItems(next);
+    queuedRef.current = next;
+    void flushSaves();
   }
 
   function add() {
     const v = title.trim();
-    if (!v || items.length >= MAX_ITEMS) return;
+    if (!v || itemsRef.current.length >= MAX_ITEMS) return;
     // `horizon` is no longer surfaced in the UI; keep a stable default so the
     // data model (and DB column) stays valid.
-    const next = [...items, { id: newId(items), title: v, horizon: 'vicino' as const, done: false }];
     setTitle('');
-    void persist(next);
+    commit([
+      ...itemsRef.current,
+      { id: newId(itemsRef.current), title: v, horizon: 'vicino' as const, done: false },
+    ]);
   }
 
   function toggle(id: string) {
-    void persist(items.map((i) => (i.id === id ? { ...i, done: !i.done } : i)));
+    commit(itemsRef.current.map((i) => (i.id === id ? { ...i, done: !i.done } : i)));
   }
 
   function remove(id: string) {
-    void persist(items.filter((i) => i.id !== id));
+    commit(itemsRef.current.filter((i) => i.id !== id));
   }
 
   return (

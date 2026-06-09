@@ -76,6 +76,11 @@ export function MarketerFormazione({
   // value (each save replaces the whole set — a stale closure would drop ticks).
   const doneRef = React.useRef<Set<string>>(new Set(initialDone));
   const [done, setDone] = React.useState<Set<string>>(doneRef.current);
+  // Serialize the saves: only one write in flight, `queuedRef` always holds the
+  // LATEST set, so fast toggles coalesce to one write of the final state and can
+  // never persist out of order (last-write-wins on the server).
+  const savingRef = React.useRef(false);
+  const queuedRef = React.useRef<string[] | null>(null);
 
   function toggle(id: string) {
     if (readOnly) return;
@@ -84,12 +89,28 @@ export function MarketerFormazione({
     else next.add(id);
     doneRef.current = next;
     setDone(next);
-    void persist([...next]);
+    queuedRef.current = [...next];
+    void flushSaves();
   }
 
-  async function persist(ids: string[]) {
-    const res = await saveFormazioneAction(marketerId, ids);
-    if (!res.ok) toast({ title: t('error'), variant: 'error' });
+  async function flushSaves() {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    let failed = false;
+    try {
+      while (queuedRef.current) {
+        const ids = queuedRef.current;
+        queuedRef.current = null;
+        const res = await saveFormazioneAction(marketerId, ids);
+        if (!res.ok) {
+          failed = true;
+          break;
+        }
+      }
+    } finally {
+      savingRef.current = false;
+    }
+    if (failed) toast({ title: t('error'), variant: 'error' });
   }
 
   return (

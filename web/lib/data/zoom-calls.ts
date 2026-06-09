@@ -78,6 +78,26 @@ export async function createZoomCall(input: CallInput): Promise<CallResult> {
   }
 }
 
+/** Update a call's start time (RLS: admin any; co-admin own). Lets admins/co-admins
+ *  backfill the orario on calls created before it became mandatory. */
+export async function updateZoomCallStartTime(
+  id: string,
+  startTime: string,
+): Promise<CallResult> {
+  const supabase = getClient();
+  if (!supabase) return { ok: true, demo: true };
+  if (!startTime || !startTime.trim()) return { ok: false, demo: !supabase };
+  try {
+    const { error } = await supabase
+      .from('zoom_calls')
+      .update({ start_time: startTime })
+      .eq('id', id);
+    return { ok: !error, demo: false };
+  } catch {
+    return { ok: false, demo: false };
+  }
+}
+
 /** Delete a call (RLS: admin any; co-admin own). */
 export async function deleteZoomCall(id: string): Promise<CallResult> {
   const supabase = getClient();

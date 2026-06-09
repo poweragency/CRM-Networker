@@ -97,7 +97,18 @@ function LoginForm() {
     });
 
     if (error) {
-      setServerError(t('genericError'));
+      // Give actionable feedback for the non-credential cases (rate limit, email
+      // not confirmed); keep the generic message for bad credentials so we don't
+      // leak which emails exist (anti-enumeration).
+      const status = (error as { status?: number }).status;
+      const code = (error as { code?: string }).code;
+      if (status === 429 || code === 'over_request_rate_limit') {
+        setServerError(t('rateLimited'));
+      } else if (code === 'email_not_confirmed') {
+        setServerError(t('emailNotConfirmed'));
+      } else {
+        setServerError(t('genericError'));
+      }
       return;
     }
 

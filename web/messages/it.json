@@ -48,6 +48,8 @@
     "oauthMicrosoft": "Accedi con Microsoft (presto)",
     "orDivider": "oppure",
     "genericError": "Credenziali non valide. Riprova.",
+    "rateLimited": "Troppi tentativi. Attendi qualche minuto e riprova.",
+    "emailNotConfirmed": "Email non ancora confermata. Controlla la posta (anche lo spam) per il link di conferma.",
     "successRedirect": "Accesso effettuato. Reindirizzamento…",
     "backToLogin": "Torna all'accesso",
 

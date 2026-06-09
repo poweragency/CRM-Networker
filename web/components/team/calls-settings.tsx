@@ -15,6 +15,7 @@ import { WEEKDAY_LABELS, type ZoomCallDef } from '@/lib/data/attendance-shared';
 import {
   createZoomCallAction,
   deleteZoomCallAction,
+  updateZoomCallStartTimeAction,
 } from '@/app/(app)/impostazioni/actions';
 
 /**
@@ -92,6 +93,19 @@ export function CallsSettings({
       return;
     }
     toast({ title: t('calls_deleted'), variant: 'success' });
+    if (!res.demo) router.refresh();
+  }
+
+  // Inline edit of a call's start time (e.g. to backfill calls created before the
+  // orario became mandatory). RLS lets admin edit any, co-admin only their own.
+  async function editTime(id: string, startTime: string) {
+    if (!startTime) return;
+    const res = await updateZoomCallStartTimeAction(id, startTime);
+    if (!res.ok) {
+      toast({ title: t('calls_error'), variant: 'error' });
+      return;
+    }
+    toast({ title: t('calls_added'), variant: 'success' });
     if (!res.demo) router.refresh();
   }
 
@@ -195,6 +209,18 @@ export function CallsSettings({
                       : ''}
                   </p>
                 </div>
+                {canManage(c) && (
+                  // Inline orario editor — fill it to backfill calls created before
+                  // the time became mandatory (an empty field = no orario yet).
+                  <input
+                    type="time"
+                    defaultValue={c.start_time ?? ''}
+                    onChange={(e) => editTime(c.id, e.target.value)}
+                    aria-label={t('calls_time')}
+                    title={t('calls_time')}
+                    className="h-8 w-[6.5rem] shrink-0 rounded-md border border-input bg-background px-2 text-xs tabular-nums shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                )}
                 <Badge variant={c.scope === 'org' ? 'info' : 'secondary'}>
                   {c.scope === 'org' ? t('calls_scope_org') : t('calls_scope_team')}
                 </Badge>

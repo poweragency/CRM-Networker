@@ -7,6 +7,7 @@ import { currentIsOrgAdmin } from '@/lib/data/authz';
 import {
   createZoomCall,
   deleteZoomCall,
+  updateZoomCallStartTime,
   type CallInput,
   type CallResult,
 } from '@/lib/data/zoom-calls';
@@ -47,6 +48,20 @@ export async function setMemberRoleAction(
 /** Create a zoom call (admin → org/team; co-admin → team, RLS-enforced). */
 export async function createZoomCallAction(input: CallInput): Promise<CallResult> {
   const res = await createZoomCall(input);
+  if (res.ok && !res.demo) {
+    revalidatePath('/impostazioni');
+    revalidatePath('/presenze');
+  }
+  return res;
+}
+
+/** Update a zoom call's start time (admin → any; co-admin → own, RLS-enforced).
+ *  Lets the orario be backfilled on calls created before it became mandatory. */
+export async function updateZoomCallStartTimeAction(
+  id: string,
+  startTime: string,
+): Promise<CallResult> {
+  const res = await updateZoomCallStartTime(id, startTime);
   if (res.ok && !res.demo) {
     revalidatePath('/impostazioni');
     revalidatePath('/presenze');

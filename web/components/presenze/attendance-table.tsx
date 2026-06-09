@@ -201,12 +201,18 @@ export function AttendanceTable({
   callIdSetRef.current = callIdSet;
   const pendingRef = React.useRef<Set<string>>(new Set());
   const summaryTimerRef = React.useRef<number | null>(null);
-  // Timestamp of the last local check-in. While the user is actively toggling,
-  // our optimistic gauge is authoritative — a realtime refetch triggered by our
-  // OWN echo can reread a count that still lags the just-written row and briefly
-  // revert the gauge (the gold→green→gold flicker). We skip the refetch inside a
-  // short window after a local toggle; other people's changes still reconcile.
-  const lastLocalToggleRef = React.useRef(0);
+  // Per-cell timestamp of our OWN recent check-ins (key `${marketerId}|${callId}`).
+  // The realtime echo of our own write can reread a count that still lags the
+  // just-written row and briefly revert the optimistic gauge (the gold→green→gold
+  // flicker). We skip the refetch ONLY for an echo matching a cell we just wrote —
+  // OTHER people's changes (no matching recent write) always reconcile the gauge.
+  const recentLocalWritesRef = React.useRef<Map<string, number>>(new Map());
+  const markLocalWrite = React.useCallback((marketerId: string, callId: string) => {
+    const m = recentLocalWritesRef.current;
+    m.set(`${marketerId}|${callId}`, Date.now());
+    // Prune stale entries so the map can't grow over a long session.
+    for (const [k, ts] of m) if (Date.now() - ts > 10_000) m.delete(k);
+  }, []);
 
   const refetchSummary = React.useCallback(() => {
     if (summaryTimerRef.current) window.clearTimeout(summaryTimerRef.current);
@@ -258,10 +264,13 @@ export function AttendanceTable({
               );
             }
           }
-          // Keep the day-wide gauges exact (also for off-page members) — but not
-          // right after our own check-in: the optimistic gauge already counted it,
-          // and a server reread here can lag the just-written row and flicker.
-          if (Date.now() - lastLocalToggleRef.current >= 2000) refetchSummary();
+          // Keep the day-wide gauges exact (also for off-page members). Skip ONLY
+          // the echo of a cell we just wrote ourselves (the optimistic gauge already
+          // counted it, and a server reread can lag the just-written row → flicker).
+          // Everyone else's changes still reconcile the gauge.
+          const writtenAt = recentLocalWritesRef.current.get(`${mid}|${cid}`);
+          const ownRecentEcho = writtenAt !== undefined && Date.now() - writtenAt < 3000;
+          if (!ownRecentEcho) refetchSummary();
         },
       )
       .subscribe();
@@ -299,7 +308,7 @@ export function AttendanceTable({
   async function togglePresent(member: AttendanceMember, callId: string) {
     const next = !present[member.id]?.[callId];
     const key = `${member.id}|${callId}|p`;
-    lastLocalToggleRef.current = Date.now();
+    markLocalWrite(member.id, callId);
     pendingRef.current.add(key);
     setPresent((prev) => ({ ...prev, [member.id]: { ...prev[member.id], [callId]: next } }));
     // Optimistic gauge: bump the day-wide count for this call.
@@ -338,7 +347,7 @@ export function AttendanceTable({
   async function toggleCam(member: AttendanceMember, callId: string) {
     const next = !cam[member.id]?.[callId];
     const key = `${member.id}|${callId}|c`;
-    lastLocalToggleRef.current = Date.now();
+    markLocalWrite(member.id, callId);
     pendingRef.current.add(key);
     setCam((prev) => ({ ...prev, [member.id]: { ...prev[member.id], [callId]: next } }));
     setSummary((prev) => ({

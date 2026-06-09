@@ -217,7 +217,10 @@ export async function activateCrmAccess(
     return { ok: false, error: 'failed' };
   }
 
-  // Welcome email (best-effort: never blocks/falls the account creation).
+  // Welcome email (best-effort: never blocks/fails the account creation). We DO
+  // await it on purpose: on Vercel serverless a fire-and-forget promise can be
+  // dropped when the function freezes after the response, so awaiting is what
+  // actually guarantees delivery (the ~Resend latency is fine for an admin action).
   await sendWelcomeEmail(email, fullName ?? '');
 
   return { ok: true };
