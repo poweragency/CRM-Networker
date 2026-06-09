@@ -26,6 +26,7 @@ import { EmptyState } from '@/components/crm/empty-state';
 import { useToast } from '@/components/crm/toaster';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import type {
   AttendanceMember,
   AttendanceSummary,
@@ -147,6 +148,11 @@ export function AttendanceTable({
 
   const reqRef = React.useRef(0);
   const firstRun = React.useRef(true);
+  // Mirrors for the live-refresh handlers (which can't depend on render state).
+  const queryRef = React.useRef(query);
+  queryRef.current = query;
+  const memberCountRef = React.useRef(members.length);
+  memberCountRef.current = members.length;
 
   // ── Debounced SERVER search: typing fetches the matching first page. ──
   React.useEffect(() => {
@@ -201,6 +207,9 @@ export function AttendanceTable({
   callIdSetRef.current = callIdSet;
   const pendingRef = React.useRef<Set<string>>(new Set());
   const summaryTimerRef = React.useRef<number | null>(null);
+  // The realtime channel, lifted to a ref so the toggle handlers can BROADCAST a
+  // "changed" ping after a write (see below).
+  const channelRef = React.useRef<RealtimeChannel | null>(null);
   // Per-cell timestamp of our OWN recent check-ins (key `${marketerId}|${callId}`).
   // The realtime echo of our own write can reread a count that still lags the
   // just-written row and briefly revert the optimistic gauge (the gold→green→gold
@@ -222,6 +231,44 @@ export function AttendanceTable({
       if (dateRef.current === forDate) setSummary(s);
     }, 400);
   }, []);
+
+  // Re-pull the present/cam flags for the loaded window and merge them in (skipping
+  // any cell with an in-flight LOCAL write). Used when a "changed" broadcast tells
+  // us someone else checked in — this reconciles the visible cells for EVERY viewer
+  // (members included), independently of postgres_changes RLS delivery.
+  const refreshCells = React.useCallback(() => {
+    const forDate = dateRef.current;
+    void (async () => {
+      try {
+        const res = await getAttendancePageAction(
+          forDate,
+          queryRef.current.trim(),
+          0,
+          Math.max(memberCountRef.current, pageSize),
+        );
+        if (dateRef.current !== forDate) return;
+        const apply =
+          (suffix: 'p' | 'c', pick: (m: AttendanceMember) => Record<string, boolean>) =>
+          (prev: Flags): Flags => {
+            const next: Flags = { ...prev };
+            for (const m of res.members) {
+              const incoming = pick(m) ?? {};
+              const cur = { ...(next[m.id] ?? {}) };
+              for (const cid of Object.keys(incoming)) {
+                if (pendingRef.current.has(`${m.id}|${cid}|${suffix}`)) continue;
+                cur[cid] = incoming[cid];
+              }
+              next[m.id] = cur;
+            }
+            return next;
+          };
+        setPresent(apply('p', (m) => m.present));
+        setCam(apply('c', (m) => m.cam));
+      } catch {
+        /* best-effort live refresh */
+      }
+    })();
+  }, [pageSize]);
 
   React.useEffect(() => {
     if (!supabase) return;
@@ -273,11 +320,25 @@ export function AttendanceTable({
           if (!ownRecentEcho) refetchSummary();
         },
       )
+      // Broadcast fallback: postgres_changes is RLS-filtered and, for non-admin
+      // members, the per-subscriber RLS check on zoom_attendance can fail to deliver
+      // (only the upline/admin received echoes → "members must refresh"). A plain
+      // broadcast reaches EVERYONE on the channel; each viewer then refetches its own
+      // correctly-scoped data via the SECURITY DEFINER RPCs. We don't receive our own
+      // broadcast (self defaults off), so it never double-counts our optimistic write.
+      .on('broadcast', { event: 'attendance_changed' }, (msg) => {
+        const p = (msg as { payload?: { date?: string } }).payload;
+        if (p?.date && p.date !== dateRef.current) return;
+        refetchSummary();
+        refreshCells();
+      })
       .subscribe();
+    channelRef.current = channel;
     return () => {
+      channelRef.current = null;
       supabase.removeChannel(channel);
     };
-  }, [supabase, date, refetchSummary]);
+  }, [supabase, date, refetchSummary, refreshCells]);
 
   // Switch day: refetch the day's first page + summary (NOT the whole team).
   const go = React.useCallback(
@@ -332,6 +393,13 @@ export function AttendanceTable({
       toast({ title: t('error'), variant: 'error' });
       return;
     }
+    // Tell every other viewer to reconcile (reliable even where postgres_changes
+    // RLS doesn't deliver to them).
+    void channelRef.current?.send({
+      type: 'broadcast',
+      event: 'attendance_changed',
+      payload: { date: dateRef.current },
+    });
     // Whole team present for this call → achievement.
     const after = before + (next ? 1 : -1);
     if (next && summary.totalMembers > 0 && after === summary.totalMembers) {
@@ -367,7 +435,13 @@ export function AttendanceTable({
         camCounts: { ...prev.camCounts, [callId]: Math.max(0, (prev.camCounts[callId] ?? 0) + (next ? -1 : 1)) },
       }));
       toast({ title: t('error'), variant: 'error' });
+      return;
     }
+    void channelRef.current?.send({
+      type: 'broadcast',
+      event: 'attendance_changed',
+      payload: { date: dateRef.current },
+    });
   }
 
   // No year in the top label (the native date picker keeps it, formatted by the

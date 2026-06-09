@@ -156,6 +156,9 @@ export interface ProspectCardProps {
   disabled?: boolean;
   /** Profile URL to return to — threaded into the detail link as `?from=`. */
   backHref?: string;
+  /** Where a Lista-contatti mirror card's "open" arrow should link (the Lista
+   *  contatti page). Undefined → no arrow (e.g. when viewing a downline's board). */
+  listaHref?: string;
   /** Ask the board to delete this card (real prospect → soft-delete; Lista mirror →
    *  flagged "non iscritto" and removed from the board). */
   onRequestDelete?: (prospect: ProspectView) => void;
@@ -166,6 +169,7 @@ export function ProspectCard({
   prospect,
   disabled,
   backHref,
+  listaHref,
   onRequestDelete,
 }: ProspectCardProps) {
   const {
@@ -186,9 +190,10 @@ export function ProspectCard({
     transition,
   };
 
-  // Mirrored Lista contatti cards have no detail route — drag-only.
+  // Mirrored Lista contatti cards link to the Lista contatti page (when provided);
+  // real prospects link to their detail route.
   const detailHref = prospect.listaContattiId
-    ? undefined
+    ? listaHref
     : backHref
       ? `/percorso-prospect/${prospect.id}?from=${encodeURIComponent(backHref)}`
       : `/percorso-prospect/${prospect.id}`;

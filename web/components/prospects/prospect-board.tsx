@@ -61,6 +61,9 @@ export interface ProspectBoardProps {
   ownerMarketerId?: string;
   /** Profile URL to return to from a prospect's detail (`?from=`). */
   backHref?: string;
+  /** Where a Lista-contatti mirror card's "open" arrow links — the Lista contatti
+   *  page when this is the viewer's OWN board; undefined for a downline's board. */
+  listaHref?: string;
 }
 
 /** Flatten the board into a stage→prospects map for cheap immutable updates. */
@@ -140,6 +143,7 @@ export function ProspectBoard({
   ownerName,
   ownerMarketerId,
   backHref,
+  listaHref,
 }: ProspectBoardProps) {
   const router = useRouter();
   const { toast } = useToast();
@@ -452,6 +456,7 @@ export function ProspectBoard({
                 busy={busyId !== null}
                 extraCards={lcByStage[stage]}
                 backHref={backHref}
+                listaHref={listaHref}
                 onRequestDelete={setDeleteTarget}
               />
             );

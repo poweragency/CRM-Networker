@@ -139,6 +139,9 @@ export default async function MarketerProfilePage({
       ownerName={node.display_name}
       ownerMarketerId={node.id}
       backHref={`/team/${node.id}?tab=prospects`}
+      // Lista mirror cards link to the Lista page only on the viewer's OWN board
+      // (that page shows the caller's own list; not a downline's).
+      listaHref={isSelf ? '/lista-contatti' : undefined}
     />
   );
 

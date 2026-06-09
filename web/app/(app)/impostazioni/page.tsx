@@ -120,6 +120,7 @@ export default async function ImpostazioniPage({
       ownerName={ownerName}
       ownerMarketerId={meId}
       backHref="/impostazioni?tab=prospects"
+      listaHref="/lista-contatti"
     />
   );
   const listaContattiPanel = <ListaContattiManager />;

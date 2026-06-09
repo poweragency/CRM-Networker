@@ -33,6 +33,8 @@ export interface BoardColumnProps {
   extraCards?: ProspectView[];
   /** Profile URL to return to — threaded into each card's detail link. */
   backHref?: string;
+  /** Where a Lista-contatti mirror card's "open" arrow links (the Lista page). */
+  listaHref?: string;
   /** Delete a card (real prospect → soft-delete; Lista mirror → flagged non iscritto). */
   onRequestDelete?: (prospect: ProspectView) => void;
 }
@@ -43,6 +45,7 @@ export function BoardColumn({
   busy,
   extraCards = [],
   backHref,
+  listaHref,
   onRequestDelete,
 }: BoardColumnProps) {
   const { stage, prospects } = column;
@@ -140,6 +143,7 @@ export function BoardColumn({
               prospect={c}
               disabled={busy}
               backHref={backHref}
+              listaHref={listaHref}
               onRequestDelete={onRequestDelete}
             />
           ))}
