@@ -160,7 +160,9 @@ function PercorsoChecks({
             <span
               className={cn(
                 'flex h-5 w-5 items-center justify-center rounded border',
-                done ? 'border-success bg-success text-white' : 'border-input',
+                done
+                  ? 'border-success bg-gradient-to-br from-success to-success text-white'
+                  : 'border-input',
               )}
               aria-hidden
             >
@@ -389,7 +391,7 @@ export function ListaContattiManager() {
                 aria-label={t('progress_label')}
               >
                 <div
-                  className="h-full rounded-full bg-success transition-all"
+                  className="h-full rounded-full bg-gradient-to-r from-success to-success transition-all"
                   style={{ width: `${invitedPct}%` }}
                 />
               </div>

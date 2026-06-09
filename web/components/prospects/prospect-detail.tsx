@@ -173,7 +173,7 @@ export function ProspectDetail({ prospect, extra }: ProspectDetailProps) {
                         done && 'bg-success/15 text-success ring-success/30',
                         active &&
                           cn(
-                            tok.bg,
+                            tok.gradient,
                             'text-primary-foreground shadow-sm ring-transparent',
                           ),
                         !done &&

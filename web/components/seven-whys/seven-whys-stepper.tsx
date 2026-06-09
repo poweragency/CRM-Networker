@@ -62,7 +62,7 @@ export function SevenWhysStepper({
                   className={cn(
                     'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-sm font-semibold tabular-nums transition-colors',
                     filled
-                      ? 'border-transparent bg-primary text-primary-foreground'
+                      ? 'border-transparent bg-gradient-to-br from-primary to-primary text-primary-foreground'
                       : locked
                         ? 'border-dashed border-border bg-muted text-muted-foreground'
                         : 'border-border bg-background text-foreground',

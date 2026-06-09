@@ -40,28 +40,31 @@ interface AccentTheme {
 const ACCENT: Record<Accent, AccentTheme> = {
   primary: {
     chip: 'bg-primary/12 text-primary ring-1 ring-primary/20',
-    bar: 'bg-primary',
+    // Same-colour gradient (background-image) not solid bg: Samsung Internet's
+    // dark-mode-for-web darkens bright solid fills (gold -> dark red) but leaves
+    // background images alone. Applies to every leaderboard value bar.
+    bar: 'bg-gradient-to-r from-primary to-primary',
     aura: 'from-primary/25 via-primary/[0.07]',
     ring: 'ring-primary/25',
     text: 'text-primary',
   },
   info: {
     chip: 'bg-info/12 text-info ring-1 ring-info/20',
-    bar: 'bg-info',
+    bar: 'bg-gradient-to-r from-info to-info',
     aura: 'from-info/25 via-info/[0.07]',
     ring: 'ring-info/25',
     text: 'text-info',
   },
   success: {
     chip: 'bg-success/12 text-success ring-1 ring-success/20',
-    bar: 'bg-success',
+    bar: 'bg-gradient-to-r from-success to-success',
     aura: 'from-success/25 via-success/[0.07]',
     ring: 'ring-success/25',
     text: 'text-success',
   },
   warning: {
     chip: 'bg-warning/15 text-warning ring-1 ring-warning/25',
-    bar: 'bg-warning',
+    bar: 'bg-gradient-to-r from-warning to-warning',
     aura: 'from-warning/30 via-warning/[0.08]',
     ring: 'ring-warning/30',
     text: 'text-warning',
@@ -156,7 +159,7 @@ export function SpotlightCard({
             className={cn('ring-2 ring-offset-2 ring-offset-card', a.ring)}
           />
           <span
-            className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-warning text-warning-foreground ring-2 ring-card shadow-sm"
+            className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-warning to-warning text-warning-foreground ring-2 ring-card shadow-sm"
             aria-hidden
           >
             <Trophy className="h-3 w-3" />

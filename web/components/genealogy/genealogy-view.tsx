@@ -297,7 +297,7 @@ export function GenealogyView({
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold shadow-lg backdrop-blur transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 focusMyLine
-                  ? 'border-primary/50 bg-primary text-primary-foreground'
+                  ? 'border-primary/50 bg-gradient-to-br from-primary to-primary text-primary-foreground'
                   : 'border-border/60 bg-card/85 text-muted-foreground hover:text-foreground',
               )}
             >

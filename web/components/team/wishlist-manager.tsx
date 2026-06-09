@@ -203,8 +203,8 @@ export function WishlistManager({
                   'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors',
                   item.done
                     ? allDone
-                      ? 'border-warning bg-warning text-white'
-                      : 'border-success bg-success text-white'
+                      ? 'border-warning bg-gradient-to-br from-warning to-warning text-white'
+                      : 'border-success bg-gradient-to-br from-success to-success text-white'
                     : 'border-input hover:border-ring',
                   readOnly && 'cursor-default opacity-70',
                 )}

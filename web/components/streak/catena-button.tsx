@@ -228,9 +228,9 @@ function TaskRow({
         className={cn(
           'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors',
           done && gold
-            ? 'border-warning bg-warning text-white'
+            ? 'border-warning bg-gradient-to-br from-warning to-warning text-white'
             : done
-              ? 'border-success bg-success text-white'
+              ? 'border-success bg-gradient-to-br from-success to-success text-white'
               : 'border-input',
         )}
         aria-hidden

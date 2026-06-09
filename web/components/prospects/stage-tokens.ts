@@ -15,6 +15,10 @@ export interface StageTokens {
   text: string;
   /** solid background, e.g. `bg-stage-conoscitiva` */
   bg: string;
+  /** same-colour gradient (background-image) — visually identical to `bg` but
+   *  immune to Samsung Internet's dark-mode-for-web, which darkens solid bright
+   *  fills to a muddy dark red. Use for prominent filled chips/circles. */
+  gradient: string;
   /** soft tint background (~12%) for chips/tints */
   bgSoft: string;
   /** softer tint (~8%) for surfaces */
@@ -31,6 +35,7 @@ const TOKENS: Record<ProspectStage, StageTokens> = {
   conoscitiva: {
     text: 'text-stage-conoscitiva',
     bg: 'bg-stage-conoscitiva',
+    gradient: 'bg-gradient-to-br from-stage-conoscitiva to-stage-conoscitiva',
     bgSoft: 'bg-stage-conoscitiva/12',
     bgFaint: 'bg-stage-conoscitiva/[0.07]',
     border: 'border-stage-conoscitiva/30',
@@ -40,6 +45,7 @@ const TOKENS: Record<ProspectStage, StageTokens> = {
   business_info: {
     text: 'text-stage-businessInfo',
     bg: 'bg-stage-businessInfo',
+    gradient: 'bg-gradient-to-br from-stage-businessInfo to-stage-businessInfo',
     bgSoft: 'bg-stage-businessInfo/12',
     bgFaint: 'bg-stage-businessInfo/[0.07]',
     border: 'border-stage-businessInfo/30',
@@ -49,6 +55,7 @@ const TOKENS: Record<ProspectStage, StageTokens> = {
   follow_up: {
     text: 'text-stage-followUp',
     bg: 'bg-stage-followUp',
+    gradient: 'bg-gradient-to-br from-stage-followUp to-stage-followUp',
     bgSoft: 'bg-stage-followUp/12',
     bgFaint: 'bg-stage-followUp/[0.07]',
     border: 'border-stage-followUp/30',
@@ -58,6 +65,7 @@ const TOKENS: Record<ProspectStage, StageTokens> = {
   closing: {
     text: 'text-stage-closing',
     bg: 'bg-stage-closing',
+    gradient: 'bg-gradient-to-br from-stage-closing to-stage-closing',
     bgSoft: 'bg-stage-closing/12',
     bgFaint: 'bg-stage-closing/[0.07]',
     border: 'border-stage-closing/30',
@@ -67,6 +75,7 @@ const TOKENS: Record<ProspectStage, StageTokens> = {
   check_soldi: {
     text: 'text-stage-checkSoldi',
     bg: 'bg-stage-checkSoldi',
+    gradient: 'bg-gradient-to-br from-stage-checkSoldi to-stage-checkSoldi',
     bgSoft: 'bg-stage-checkSoldi/12',
     bgFaint: 'bg-stage-checkSoldi/[0.07]',
     border: 'border-stage-checkSoldi/30',
@@ -76,6 +85,7 @@ const TOKENS: Record<ProspectStage, StageTokens> = {
   iscrizione: {
     text: 'text-stage-iscrizione',
     bg: 'bg-stage-iscrizione',
+    gradient: 'bg-gradient-to-br from-stage-iscrizione to-stage-iscrizione',
     bgSoft: 'bg-stage-iscrizione/12',
     bgFaint: 'bg-stage-iscrizione/[0.07]',
     border: 'border-stage-iscrizione/30',
