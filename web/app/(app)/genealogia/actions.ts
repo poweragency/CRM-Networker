@@ -10,8 +10,10 @@ import {
 import { updateMarketerExtra } from '@/lib/data/team';
 import {
   createMarketer,
+  getSponsees,
   insertMarketerAbove,
   isUpline,
+  reassignSponsor,
   removeMarketer,
 } from '@/lib/data/admin';
 import { activateCrmAccess, revokeAccountForMarketer } from '@/lib/data/account';
@@ -352,4 +354,20 @@ export async function removeMarketerAction(nodeId: string): Promise<RemoveMember
     await revokeAccountForMarketer(nodeId);
   }
   return res;
+}
+
+/** Direct sponsees of a node (people who had it as their genealogical sponsor).
+ *  After removing a sponsor, the UI walks these to ask for a new sponsor each. */
+export async function getSponseesAction(
+  nodeId: string,
+): Promise<{ id: string; display_name: string }[]> {
+  return getSponsees(nodeId);
+}
+
+/** Reassign one orphaned sponsee to a new sponsor (RPC-validated server-side). */
+export async function reassignSponsorAction(
+  marketerId: string,
+  sponsorId: string,
+): Promise<{ ok: boolean }> {
+  return reassignSponsor(marketerId, sponsorId);
 }

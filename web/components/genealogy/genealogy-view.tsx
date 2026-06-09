@@ -15,7 +15,14 @@ import { NodeDetailPanel } from './node-detail-panel';
 import { canActivateCrm, canAddMember } from './permissions';
 import { useToast } from '@/components/crm/toaster';
 import { useTranslations } from 'next-intl';
-import { removeMarketerAction } from '@/app/(app)/genealogia/actions';
+import {
+  getSponseesAction,
+  removeMarketerAction,
+} from '@/app/(app)/genealogia/actions';
+import {
+  ReassignSponsorModal,
+  type ReassignTarget,
+} from './reassign-sponsor-modal';
 import {
   AddMemberDialog,
   type AddMemberTarget,
@@ -234,6 +241,14 @@ export function GenealogyView({
   // enforces the rules (no removal with two legs / root / self); the client cache
   // mirrors the reattach optimistically.
   const [removingId, setRemovingId] = React.useState<string | null>(null);
+  // After removing a SPONSOR, its sponsees point at a deleted node (→ spillover).
+  // We collect them here and walk them one-by-one asking for a new sponsor.
+  const [reassign, setReassign] = React.useState<{
+    removedId: string;
+    removedName: string;
+    sponsees: ReassignTarget[];
+    suggested: ReassignTarget | null;
+  } | null>(null);
   const handleRemove = React.useCallback(
     async (node: TreeNode) => {
       setRemovingId(node.id);
@@ -243,9 +258,34 @@ export function GenealogyView({
         toast({ title: t('remove_error'), variant: 'error' });
         return;
       }
+      // Suggest the removed person's OWN sponsor (or parent) as the new sponsor —
+      // captured before the local cache drops the node.
+      const suggestedId = node.sponsor_id ?? node.parent_id ?? null;
+      const sNode = suggestedId ? tree.getNode(suggestedId) : null;
       tree.removeNode(node.id);
       setSelectedId(null);
       toast({ title: t('remove_done'), variant: 'success' });
+      // Orphaned sponsees (sponsor_id was this node) → ask for a new sponsor each.
+      const sponsees = await getSponseesAction(node.id);
+      if (sponsees.length > 0) {
+        setReassign({
+          removedId: node.id,
+          removedName: node.display_name,
+          sponsees: sponsees.map((s) => ({ id: s.id, display_name: s.display_name })),
+          suggested: sNode ? { id: sNode.id, display_name: sNode.display_name } : null,
+        });
+      }
+    },
+    [t, toast, tree],
+  );
+
+  const handleReassignDone = React.useCallback(
+    (count: number) => {
+      setReassign(null);
+      if (count > 0) {
+        void tree.reload(); // recompute spillover with the new sponsors
+        toast({ title: t('reassign_done', { count }), variant: 'success' });
+      }
     },
     [t, toast, tree],
   );
@@ -360,6 +400,17 @@ export function GenealogyView({
         target={addTarget}
         onAdded={handleAdded}
       />
+
+      {/* After removing a sponsor: re-home its orphaned sponsees, one by one. */}
+      {reassign && (
+        <ReassignSponsorModal
+          removedName={reassign.removedName}
+          sponsees={reassign.sponsees}
+          suggested={reassign.suggested}
+          excludeIds={[reassign.removedId]}
+          onDone={handleReassignDone}
+        />
+      )}
     </div>
   );
 }

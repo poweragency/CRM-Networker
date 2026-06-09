@@ -310,6 +310,44 @@ export async function removeMarketer(nodeId: string): Promise<RemoveMarketerResu
   }
 }
 
+/** Direct sponsees of a marketer (people whose genealogical sponsor_id = id). Used
+ *  after a removal to re-home them so they aren't orphaned as spillover. RLS-scoped. */
+export async function getSponsees(
+  marketerId: string,
+): Promise<{ id: string; display_name: string }[]> {
+  const supabase = getClient();
+  if (!supabase) return [];
+  try {
+    const { data } = await supabase
+      .from('marketers')
+      .select('id,display_name')
+      .eq('sponsor_id', marketerId)
+      .is('deleted_at', null);
+    return (data as { id: string; display_name: string }[] | null) ?? [];
+  } catch {
+    return [];
+  }
+}
+
+/** Reassign a marketer's genealogical sponsor (RPC `set_sponsor`, validated +
+ *  cycle-checked server-side). Demo-safe. */
+export async function reassignSponsor(
+  marketerId: string,
+  sponsorId: string,
+): Promise<{ ok: boolean }> {
+  const supabase = getClient();
+  if (!supabase) return { ok: true };
+  try {
+    const { error } = await supabase.rpc('set_sponsor', {
+      p_marketer: marketerId,
+      p_sponsor: sponsorId,
+    });
+    return { ok: !error };
+  } catch {
+    return { ok: false };
+  }
+}
+
 /** Count of profiles per rank (for the distribution chart). */
 export async function getRankDistribution(): Promise<
   AdminResult<{ rank: MarketerRank; count: number }[]>
