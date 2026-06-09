@@ -7,6 +7,7 @@ import {
   type CreateInvitationResult,
   type RevokeInvitationResult,
 } from '@/lib/data/admin-invitations';
+import { currentIsOrgAdmin } from '@/lib/data/authz';
 
 /**
  * Server Actions backing /admin/attivazioni. Delegate to the server-only data
@@ -18,7 +19,13 @@ import {
 export async function createInvitationAction(
   input: CreateInvitationInput,
 ): Promise<CreateInvitationResult> {
-  return createInvitation(input);
+  // Only an org admin may grant an ELEVATED role. A non-admin (the action is
+  // POST-dispatchable) is coerced down to 'member' so it can never mint an admin
+  // invitation for an email it controls and self-escalate on acceptance. The DB
+  // eligibility guard enforces the same cap — this is defense-in-depth.
+  const role =
+    input.role !== 'member' && !(await currentIsOrgAdmin()) ? 'member' : input.role;
+  return createInvitation({ ...input, role });
 }
 
 export async function revokeInvitationAction(
