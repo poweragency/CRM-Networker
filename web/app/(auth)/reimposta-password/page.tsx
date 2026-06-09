@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { ShieldCheck, CheckCircle2, AlertCircle, ArrowLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { isSupabaseConfigured } from '@/lib/env';
+import { passwordWeakness } from '@/lib/password';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AuthCard } from '../_components/auth-card';
@@ -89,6 +90,14 @@ export default function ResetPasswordPage() {
 
     const parsed = resetSchema.safeParse(values);
     if (!parsed.success) {
+      return;
+    }
+
+    // Reject trivially-weak/common passwords up front (our own banner) so a
+    // compromised one is never even submitted.
+    const weakness = passwordWeakness(parsed.data.password);
+    if (weakness) {
+      setServerError(weakness === 'short' ? t('passwordTooShort') : t('resetWeakPassword'));
       return;
     }
 

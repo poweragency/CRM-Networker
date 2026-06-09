@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/crm/toaster';
 import { cn } from '@/lib/utils';
+import { passwordWeakness } from '@/lib/password';
 import {
   RANK_LABELS,
   RANK_ORDER,
@@ -128,8 +129,9 @@ export function AddMemberDialog({
       setError(t('add_email_invalid'));
       return;
     }
-    if (password.length < 8) {
-      setError(t('add_password_short'));
+    const weakness = passwordWeakness(password);
+    if (weakness) {
+      setError(weakness === 'short' ? t('add_password_short') : t('add_password_weak'));
       return;
     }
     setError(null);

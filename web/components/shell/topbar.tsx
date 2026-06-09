@@ -4,7 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Bell, LogOut, Menu, Settings } from 'lucide-react';
+import { Bell, KeyRound, LogOut, Menu, Settings } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { ScopeSwitcher } from '@/components/scope-switcher';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
@@ -162,6 +162,10 @@ export function Topbar({ user, unreadCount = 0, onOpenMobileNav }: TopbarProps) 
                 {t('org_settings')}
               </DropdownMenuItem>
             )}
+            <DropdownMenuItem onClick={() => router.push('/reimposta-password')}>
+              <KeyRound className="h-4 w-4" aria-hidden />
+              {t('change_password')}
+            </DropdownMenuItem>
             <DropdownMenuItem
               destructive
               disabled={signingOut}

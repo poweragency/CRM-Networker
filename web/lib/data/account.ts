@@ -4,6 +4,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { getCurrentClaims } from '@/lib/data/session';
 import { logError } from '@/lib/log';
 import { sendWelcomeEmail } from '@/lib/email/welcome';
+import { passwordWeakness } from '@/lib/password';
 import { RANK_ORDER, type SessionClaims } from '@/lib/types/db';
 
 /**
@@ -152,6 +153,11 @@ export async function activateCrmAccess(
   // attacker-chosen credentials). Require admin/owner OR rank >= team_leader.
   // The UI gate is NOT a security boundary.
   if (!canManageAccounts(claims)) return { ok: false, error: 'forbidden' };
+
+  // Reject trivially-weak/common passwords server-side too (the action is
+  // POST-dispatchable, so the client check isn't a boundary). Supabase's optional
+  // leaked-password protection is the breach check on top.
+  if (passwordWeakness(password)) return { ok: false, error: 'weak_password' };
 
   // 1) Authorize via RLS: the target must be visible to the caller (subtree/admin).
   const rls = createClient();

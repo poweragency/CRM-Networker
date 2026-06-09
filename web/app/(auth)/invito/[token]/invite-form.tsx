@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { z } from 'zod';
 import { Mail, CheckCircle2, AlertCircle, ArrowLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { passwordWeakness } from '@/lib/password';
 import type { InvitationContext } from '@/lib/data/invitation';
 import { RANK_LABELS, ROLE_LABELS } from '@/lib/types/db';
 import { Button } from '@/components/ui/button';
@@ -70,6 +71,13 @@ export function InviteForm({
 
     const parsed = inviteSchema.safeParse(values);
     if (!parsed.success) {
+      return;
+    }
+
+    // Block trivially-weak/common passwords before activating the account.
+    const weakness = passwordWeakness(parsed.data.password);
+    if (weakness) {
+      setServerError(weakness === 'short' ? t('passwordTooShort') : t('resetWeakPassword'));
       return;
     }
 
