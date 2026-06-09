@@ -197,20 +197,30 @@ export function AddMemberDialog({
       }
       size="md"
       footer={
-        <>
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => onOpenChange(false)}
-            disabled={saving}
-          >
-            {t('add_cancel')}
-          </Button>
-          <Button type="submit" form="add-member-form" disabled={saving}>
-            {saving && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
-            {saving ? t('add_submitting') : t('add_submit')}
-          </Button>
-        </>
+        // The error sits in the (sticky) footer, right above the confirm button,
+        // so it's always visible when you submit — otherwise it scrolled out of
+        // view at the top of a long form and the user couldn't tell why it failed.
+        <div className="flex w-full flex-col gap-2">
+          {error && (
+            <p className="text-xs font-medium text-danger" role="alert">
+              {error}
+            </p>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+              disabled={saving}
+            >
+              {t('add_cancel')}
+            </Button>
+            <Button type="submit" form="add-member-form" disabled={saving}>
+              {saving && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+              {saving ? t('add_submitting') : t('add_submit')}
+            </Button>
+          </div>
+        </div>
       }
     >
       <form id="add-member-form" onSubmit={onSubmit} className="space-y-4" noValidate>
@@ -246,8 +256,6 @@ export function AddMemberDialog({
             />
           </div>
         </div>
-
-        {error && <p className="text-xs text-danger">{error}</p>}
 
         <div>
           <Label htmlFor="am-rank" className="mb-1.5 block">
