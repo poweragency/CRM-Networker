@@ -10,6 +10,7 @@ import { SidebarNav } from '@/components/shell/sidebar-nav';
 import { GlobalSearch } from '@/components/shell/global-search';
 import { cn } from '@/lib/utils';
 import { useFocusTrap } from '@/lib/use-focus-trap';
+import { useBodyScrollLock } from '@/lib/use-body-scroll-lock';
 
 /**
  * Mobile navigation drawer (< md). A slide-in panel + scrim, controlled by the
@@ -40,19 +41,15 @@ export function MobileNav({ viewer, orgName, orgLogoUrl, open, onClose }: Mobile
     }
   }, [pathname, onClose]);
 
-  // Escape to close + body scroll lock while open.
+  // Body scroll lock while open (shared, reference-counted) + Escape to close.
+  useBodyScrollLock(open);
   React.useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose();
     }
     document.addEventListener('keydown', onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prev;
-    };
+    return () => document.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
   return (

@@ -4,6 +4,7 @@ import * as React from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFocusTrap } from '@/lib/use-focus-trap';
+import { useBodyScrollLock } from '@/lib/use-body-scroll-lock';
 
 /**
  * Modal — a centered, accessible dialog "window" (no Radix). Used to open a
@@ -42,18 +43,14 @@ export function Modal({
   const descId = React.useId();
   const trapRef = useFocusTrap<HTMLDivElement>(open);
 
+  useBodyScrollLock(open);
   React.useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') onOpenChange(false);
     }
     document.addEventListener('keydown', onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prev;
-    };
+    return () => document.removeEventListener('keydown', onKey);
   }, [open, onOpenChange]);
 
   if (!open) return null;

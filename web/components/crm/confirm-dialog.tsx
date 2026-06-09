@@ -5,6 +5,7 @@ import { AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useFocusTrap } from '@/lib/use-focus-trap';
+import { useBodyScrollLock } from '@/lib/use-body-scroll-lock';
 
 /**
  * ConfirmDialog — a focused, accessible confirmation modal (no Radix). Used for
@@ -41,6 +42,7 @@ export function ConfirmDialog({
   const titleId = React.useId();
   const descId = React.useId();
 
+  useBodyScrollLock(open);
   React.useEffect(() => {
     if (!open) return;
     confirmRef.current?.focus();
@@ -48,12 +50,7 @@ export function ConfirmDialog({
       if (e.key === 'Escape') onOpenChange(false);
     }
     document.addEventListener('keydown', onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prev;
-    };
+    return () => document.removeEventListener('keydown', onKey);
   }, [open, onOpenChange]);
 
   if (!open) return null;
