@@ -128,3 +128,32 @@ export function compareBy<T>(
 export function nowIso(): string {
   return new Date().toISOString();
 }
+
+/**
+ * Columns a client may NEVER set via a generic update patch. The validation
+ * schemas are deliberately permissive (`.passthrough()`), and `isValid()` only
+ * returns a boolean — the ORIGINAL request body flows to the data layer — so an
+ * update that spreads the patch (`update({ ...patch })`) could otherwise let a
+ * caller overwrite tenant/ownership/audit columns (mass assignment, audit
+ * FINDING #7). RLS `WITH CHECK` still backstops org_id/owner, but stripping these
+ * here closes the integrity hole (e.g. forging created_by) before it reaches the
+ * DB. `updated_at` is excluded too: callers set it explicitly after the spread.
+ */
+const READONLY_PATCH_COLS = new Set<string>([
+  'id',
+  'org_id',
+  'created_at',
+  'created_by',
+  'updated_by',
+  'updated_at',
+  'deleted_at',
+]);
+
+/** Drop never-client-writable columns from an update patch (mass-assignment guard). */
+export function stripReadonly<T extends Record<string, unknown>>(patch: T): Partial<T> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(patch)) {
+    if (!READONLY_PATCH_COLS.has(k)) out[k] = v;
+  }
+  return out as Partial<T>;
+}

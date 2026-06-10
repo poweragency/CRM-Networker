@@ -14,7 +14,7 @@
 // Request  (POST, verify_jwt=false): { token: string, password: string }
 // Response (200): { membership_id: uuid, email: string }
 // =============================================================================
-import { preflight } from '../_shared/cors.ts';
+import { withCors } from '../_shared/cors.ts';
 import { json, error, mapPgError } from '../_shared/http.ts';
 import { sha256Hex } from '../_shared/token.ts';
 import { adminClient } from '../_shared/supabase.ts';
@@ -24,9 +24,7 @@ interface Body {
   password?: string;
 }
 
-Deno.serve(async (req) => {
-  const pre = preflight(req);
-  if (pre) return pre;
+Deno.serve(withCors(async (req) => {
   if (req.method !== 'POST') return error('method_not_allowed', 405);
 
   let body: Body;
@@ -93,4 +91,4 @@ Deno.serve(async (req) => {
   }
 
   return json({ membership_id: membershipId, email });
-});
+}));

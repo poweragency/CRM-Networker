@@ -1,12 +1,13 @@
-import { corsHeaders } from './cors.ts';
+import { corsBaseHeaders } from './cors.ts';
 
 // Small response helpers so every function returns CORS-safe JSON / files and a
-// consistent error envelope { error: <code>, message?: <detail> }.
+// consistent error envelope { error: <code>, message?: <detail> }. The per-request
+// Access-Control-Allow-Origin is stamped by withCors() (see cors.ts FINDING #8).
 
 export function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsBaseHeaders, 'Content-Type': 'application/json' },
   });
 }
 
@@ -23,7 +24,7 @@ export function fileResponse(
   return new Response(bytes, {
     status: 200,
     headers: {
-      ...corsHeaders,
+      ...corsBaseHeaders,
       'Content-Type': contentType,
       'Content-Disposition': `attachment; filename="${filename}"`,
     },

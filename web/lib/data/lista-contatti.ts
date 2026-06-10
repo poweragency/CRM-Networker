@@ -8,6 +8,7 @@ import {
   getOwnerContext,
   nowIso,
   ok,
+  stripReadonly,
 } from '@/lib/data/crm-shared';
 import { demoId } from '@/lib/data/mock/_shared';
 
@@ -166,7 +167,7 @@ export async function updateListaContatti(
   try {
     const { data, error } = await supabase
       .from('lista_contatti_entries')
-      .update({ ...withStamp, updated_at: nowIso() })
+      .update({ ...stripReadonly(withStamp), updated_at: nowIso() })
       .eq('id', id)
       .select(SELECT)
       .maybeSingle();

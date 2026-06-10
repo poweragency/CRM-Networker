@@ -13,7 +13,7 @@
 //     crm_access?: boolean, expires_at?: ISO8601 }
 // Response (200): { invitation_id: uuid, invite_url: string, emailed: boolean }
 // =============================================================================
-import { preflight } from '../_shared/cors.ts';
+import { withCors } from '../_shared/cors.ts';
 import { json, error, mapPgError } from '../_shared/http.ts';
 import { mintToken, sha256Hex } from '../_shared/token.ts';
 import { userClient, siteUrl } from '../_shared/supabase.ts';
@@ -26,9 +26,7 @@ interface Body {
   expires_at?: string;
 }
 
-Deno.serve(async (req) => {
-  const pre = preflight(req);
-  if (pre) return pre;
+Deno.serve(withCors(async (req) => {
   if (req.method !== 'POST') return error('method_not_allowed', 405);
 
   let body: Body;
@@ -94,4 +92,4 @@ Deno.serve(async (req) => {
   }
 
   return json({ invitation_id: data, invite_url: inviteUrl, emailed }, 201);
-});
+}));

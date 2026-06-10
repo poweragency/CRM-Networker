@@ -14,7 +14,7 @@
 //               options? }
 // Response (200): the rendered file (Content-Disposition: attachment).
 // =============================================================================
-import { preflight } from '../_shared/cors.ts';
+import { withCors } from '../_shared/cors.ts';
 import { error, fileResponse, mapPgError } from '../_shared/http.ts';
 import { userClient } from '../_shared/supabase.ts';
 
@@ -23,9 +23,7 @@ interface Body {
   format?: 'csv' | 'json' | 'pdf' | 'xlsx';
 }
 
-Deno.serve(async (req) => {
-  const pre = preflight(req);
-  if (pre) return pre;
+Deno.serve(withCors(async (req) => {
   if (req.method !== 'POST') return error('method_not_allowed', 405);
 
   let body: Body;
@@ -68,7 +66,7 @@ Deno.serve(async (req) => {
   // CSV: flatten the report-specific `data` block to rows.
   const rows = flattenToRows((dataset as Record<string, unknown>)?.data);
   return fileResponse(toCsv(rows), `${base}.csv`, 'text/csv; charset=utf-8');
-});
+}));
 
 /**
  * Coerce an arbitrary report `data` block into tabular rows:

@@ -15,6 +15,7 @@ import {
   matchesText,
   nowIso,
   ok,
+  stripReadonly,
 } from '@/lib/data/crm-shared';
 import { demoId } from '@/lib/data/mock/_shared';
 
@@ -206,7 +207,7 @@ export async function updateContact(
   try {
     const { data, error } = await supabase
       .from('contacts')
-      .update({ ...patch, updated_at: nowIso() })
+      .update({ ...stripReadonly(patch), updated_at: nowIso() })
       .eq('id', id)
       .select(SELECT)
       .maybeSingle();
