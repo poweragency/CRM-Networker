@@ -26,3 +26,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# playwright (e2e) — saved session + run artifacts
+/e2e/.auth/
+/test-results/
+/playwright-report/
+/playwright/.cache/
