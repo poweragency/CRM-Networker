@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { Eye, Route, Sparkles, TrendingUp, Trophy } from 'lucide-react';
 import { getCurrentClaims } from '@/lib/data/session';
-import { getMonthlyTopMarketers } from '@/lib/data/dashboard';
+import { getCycleInfo, getMonthlyTopMarketers } from '@/lib/data/dashboard';
 import type { TopMarketerEntry } from '@/lib/data/mock/dashboard';
 import { ConfigNotice } from '@/components/config-notice';
 import {
@@ -32,17 +32,21 @@ export default async function DashboardPage() {
   const t = await getTranslations('dashboard');
 
   const { demo } = await getCurrentClaims();
-  const top = await getMonthlyTopMarketers(5);
+  const [top, cycle] = await Promise.all([getMonthlyTopMarketers(5), getCycleInfo()]);
   const isDemo = demo || top.demo;
 
   const youLabel = t('you_badge');
   const emptyLabel = t('top_empty');
 
-  // Current month label (it-IT) for the hero subtitle — display only.
+  // Period label for the hero: the company cycle ("Ciclo 78") when configured,
+  // else the current calendar month (it-IT). Display only.
   const monthLabel = new Intl.DateTimeFormat('it-IT', {
     month: 'long',
     year: 'numeric',
   }).format(new Date());
+  const onCycle = cycle.configured && cycle.number != null;
+  const periodLabel = onCycle ? `Ciclo ${cycle.number}` : monthLabel;
+  const heading = onCycle ? `Migliori marketer del ciclo ${cycle.number}` : t('top_title');
 
   // One config per category drives both the Spotlight hero and the leaderboard.
   const categories: ReadonlyArray<{
@@ -111,10 +115,10 @@ export default async function DashboardPage() {
             </span>
             <div className="min-w-0">
               <h1 className="text-2xl font-bold leading-tight tracking-tight text-foreground sm:text-3xl">
-                {t('top_title')}
+                {heading}
               </h1>
               <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-muted-foreground">
-                {t('top_subtitle', { month: monthLabel })}
+                {t('top_subtitle', { month: periodLabel })}
               </p>
             </div>
           </div>
@@ -125,7 +129,7 @@ export default async function DashboardPage() {
               <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
             </span>
             <Sparkles className="h-3.5 w-3.5" aria-hidden />
-            <span className="capitalize">{monthLabel}</span>
+            <span className="capitalize">{periodLabel}</span>
           </span>
         </div>
       </section>
