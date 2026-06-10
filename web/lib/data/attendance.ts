@@ -56,9 +56,9 @@ function defaultPresent(id: string, date: string, callId: string): boolean {
 
 /** Demo calls (no env): the 3 historical fixed calls. */
 const DEMO_CALLS: ZoomCallDef[] = [
-  { id: 'wake_up', title: 'Wake Up Call', weekday: 1, start_time: null, scope: 'org', team_branch: null, created_by: null, created_by_name: null },
-  { id: 'golden', title: 'Golden Call', weekday: 4, start_time: null, scope: 'org', team_branch: null, created_by: null, created_by_name: null },
-  { id: 'join_the_dream', title: 'Join The Dream', weekday: 0, start_time: null, scope: 'org', team_branch: null, created_by: null, created_by_name: null },
+  { id: 'wake_up', title: 'Wake Up Call', weekday: 1, start_time: null, scope: 'org', team_branch: null, min_rank: null, created_by: null, created_by_name: null },
+  { id: 'golden', title: 'Golden Call', weekday: 4, start_time: null, scope: 'org', team_branch: null, min_rank: null, created_by: null, created_by_name: null },
+  { id: 'join_the_dream', title: 'Join The Dream', weekday: 0, start_time: null, scope: 'org', team_branch: null, min_rank: null, created_by: null, created_by_name: null },
 ];
 
 function mapCallRow(r: Record<string, unknown>): ZoomCallDef {
@@ -70,6 +70,7 @@ function mapCallRow(r: Record<string, unknown>): ZoomCallDef {
     start_time: (r.start_time as string | null) ?? null,
     scope: (r.scope as 'org' | 'team') ?? 'org',
     team_branch: (r.team_branch as 'left' | 'right' | 'all' | null) ?? null,
+    min_rank: (r.min_rank as ZoomCallDef['min_rank']) ?? null,
     created_by: (r.created_by as string | null) ?? null,
     created_by_name: cr?.display_name ?? null,
   };
@@ -80,7 +81,7 @@ const byTimeThenTitle = (a: ZoomCallDef, b: ZoomCallDef) =>
   a.title.localeCompare(b.title, 'it');
 
 const CALL_COLS =
-  'id,title,weekday,start_time,scope,team_branch,created_by, creator:created_by(display_name)';
+  'id,title,weekday,start_time,scope,team_branch,min_rank,created_by, creator:created_by(display_name)';
 
 type SupabaseClient = NonNullable<ReturnType<typeof getClient>>;
 

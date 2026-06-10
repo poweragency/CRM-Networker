@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/crm/empty-state';
 import { useToast } from '@/components/crm/toaster';
 import { cn } from '@/lib/utils';
 import { WEEKDAY_LABELS, type ZoomCallDef } from '@/lib/data/attendance-shared';
+import { RANK_LABELS, RANK_ORDER, type MarketerRank } from '@/lib/types/db';
 import {
   createZoomCallAction,
   deleteZoomCallAction,
@@ -31,6 +32,10 @@ const selectCx =
 // Weekday option order: Mon..Sun (more natural than Sun-first).
 const WEEKDAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 
+// Min-rank options: "Tutti" (everyone) + ranks from executive up. cliente/no_rank
+// are part of "Tutti", so they are skipped as a selectable minimum.
+const RANK_OPTIONS = RANK_ORDER.slice(2);
+
 export function CallsSettings({
   initial,
   isAdmin,
@@ -48,6 +53,7 @@ export function CallsSettings({
   const [weekday, setWeekday] = React.useState(1);
   const [time, setTime] = React.useState('');
   const [teamBranch, setTeamBranch] = React.useState<'all' | 'left' | 'right'>('all');
+  const [minRank, setMinRank] = React.useState<MarketerRank | ''>('');
   const [saving, setSaving] = React.useState(false);
   const [deleting, setDeleting] = React.useState<string | null>(null);
 
@@ -68,6 +74,7 @@ export function CallsSettings({
       start_time: time,
       scope: isAdmin ? 'org' : 'team',
       team_branch: isAdmin ? null : teamBranch,
+      min_rank: minRank || null,
     });
     setSaving(false);
     if (!res.ok) {
@@ -81,6 +88,7 @@ export function CallsSettings({
     });
     setTitle('');
     setTime('');
+    setMinRank('');
     if (!res.demo) router.refresh();
   }
 
@@ -159,6 +167,21 @@ export function CallsSettings({
               onChange={(e) => setTime(e.target.value)}
             />
           </label>
+          <label className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">
+            Rank minimo
+            <select
+              className={selectCx}
+              value={minRank}
+              onChange={(e) => setMinRank(e.target.value as MarketerRank | '')}
+            >
+              <option value="">Tutti</option>
+              {RANK_OPTIONS.map((r) => (
+                <option key={r} value={r}>
+                  {RANK_LABELS[r]}
+                </option>
+              ))}
+            </select>
+          </label>
           {!isAdmin && (
             <label className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">
               {t('calls_branch')}
@@ -224,6 +247,9 @@ export function CallsSettings({
                 <Badge variant={c.scope === 'org' ? 'info' : 'secondary'}>
                   {c.scope === 'org' ? t('calls_scope_org') : t('calls_scope_team')}
                 </Badge>
+                {c.min_rank && (
+                  <Badge variant="warning">{RANK_LABELS[c.min_rank]}+</Badge>
+                )}
                 {canManage(c) && (
                   <button
                     type="button"
