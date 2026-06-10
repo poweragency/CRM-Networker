@@ -140,6 +140,48 @@ const BASE_PERMS = {
   view_branch_comparison: false,
 };
 
+type AdminClient = NonNullable<ReturnType<typeof getAdminClient>>;
+
+/** Find an auth user id by email via the admin API (paged). null if not found. */
+async function findAuthUserIdByEmail(admin: AdminClient, email: string): Promise<string | null> {
+  const target = email.trim().toLowerCase();
+  for (let page = 1; page <= 25; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 });
+    if (error) return null;
+    const users = data?.users ?? [];
+    const hit = users.find((u) => (u.email ?? '').toLowerCase() === target);
+    if (hit) return hit.id;
+    if (users.length < 200) break; // last page reached
+  }
+  return null;
+}
+
+/**
+ * If `email` is held by an ORPHANED login — an auth user with NO membership anywhere
+ * (a leftover from a prior deletion / data wipe) — hard-delete that login so the
+ * email becomes reusable, and return true. A login that STILL has any membership is
+ * a real account and is left untouched (returns false). This is what makes account
+ * deletion effectively definitive: a removed person's email can be onboarded again.
+ */
+async function reclaimOrphanEmail(admin: AdminClient, email: string): Promise<boolean> {
+  const userId = await findAuthUserIdByEmail(admin, email);
+  if (!userId) return false;
+  const { data: mem } = await admin
+    .from('memberships')
+    .select('id')
+    .eq('user_id', userId)
+    .limit(1)
+    .maybeSingle();
+  if (mem) return false; // still linked → real account, not an orphan
+  try {
+    await admin.auth.admin.deleteUser(userId);
+    return true;
+  } catch (e) {
+    logError('reclaimOrphanEmail.deleteUser', e, { email });
+    return false;
+  }
+}
+
 export async function activateCrmAccess(
   targetMarketerId: string,
   email: string,
@@ -188,12 +230,26 @@ export async function activateCrmAccess(
   }
 
   // Create the auth user (auto-confirmed: no email round-trip needed).
-  const { data: created, error: createErr } = await admin.auth.admin.createUser({
+  let { data: created, error: createErr } = await admin.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
   });
-  const userId = created?.user?.id;
+  let userId = created?.user?.id;
+
+  // If the email is "taken" by an ORPHANED login (a leftover from a prior deletion
+  // or a data wipe — no membership anywhere), reclaim it (hard-delete the stale
+  // login) and retry, so a previously-removed person's email can be reused. A login
+  // that still has a membership is a real account and is left untouched.
+  if ((createErr || !userId) && classifyAuthError(createErr) === 'email_taken') {
+    if (await reclaimOrphanEmail(admin, email)) {
+      const retry = await admin.auth.admin.createUser({ email, password, email_confirm: true });
+      created = retry.data;
+      createErr = retry.error;
+      userId = retry.data?.user?.id;
+    }
+  }
+
   if (createErr || !userId) {
     if (createErr) logError('activateCrmAccess.createUser', createErr);
     // Distinguish weak/leaked password from email-already-in-use so the UI can
