@@ -17,11 +17,10 @@ export const dynamic = 'force-dynamic';
  * and runs the activation flow. Invalid/expired tokens get a clear dead-end;
  * missing env degrades to a demo context (RESILIENCE).
  */
-export default async function InvitePage({
-  params,
-}: {
-  params: { token: string };
+export default async function InvitePage(props: {
+  params: Promise<{ token: string }>;
 }) {
+  const params = await props.params;
   const { context, demo } = await getInvitation(params.token);
 
   if (!context) {

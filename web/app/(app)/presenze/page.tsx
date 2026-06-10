@@ -27,11 +27,10 @@ function one(v: string | string[] | undefined): string | undefined {
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
-export default async function PresenzePage({
-  searchParams,
-}: {
-  searchParams?: { date?: string | string[] };
+export default async function PresenzePage(props: {
+  searchParams?: Promise<{ date?: string | string[] }>;
 }) {
+  const searchParams = await props.searchParams;
   const t = await getTranslations('presenze');
 
   // Org-local day (Europe/Rome), NOT UTC: otherwise "today"/the "OGGI" anchor and

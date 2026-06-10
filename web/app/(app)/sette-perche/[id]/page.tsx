@@ -24,11 +24,10 @@ import { SevenWhysDetail } from '@/components/seven-whys/seven-whys-detail';
  */
 export const dynamic = 'force-dynamic';
 
-export default async function SevenWhyDetailPage({
-  params,
-}: {
-  params: { id: string };
+export default async function SevenWhyDetailPage(props: {
+  params: Promise<{ id: string }>;
 }) {
+  const params = await props.params;
   const t = await getTranslations('sette_perche');
   const tc = await getTranslations('crm');
 

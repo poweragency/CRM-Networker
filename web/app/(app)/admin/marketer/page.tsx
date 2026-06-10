@@ -26,11 +26,10 @@ function one(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
 }
 
-export default async function AdminMarketerPage({
-  searchParams,
-}: {
-  searchParams?: { q?: string | string[]; status?: string | string[]; account?: string | string[] };
+export default async function AdminMarketerPage(props: {
+  searchParams?: Promise<{ q?: string | string[]; status?: string | string[]; account?: string | string[] }>;
 }) {
+  const searchParams = await props.searchParams;
   const t = await getTranslations('admin_marketer');
 
   const q = one(searchParams?.q) ?? '';

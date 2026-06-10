@@ -39,11 +39,10 @@ import { PersonalFiles } from '@/components/team/personal-files';
  */
 export const dynamic = 'force-dynamic';
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { id: string };
+export async function generateMetadata(props: {
+  params: Promise<{ id: string }>;
 }): Promise<Metadata> {
+  const params = await props.params;
   const { data: node } = await getNode(params.id);
   return { title: node?.display_name ?? 'Marketer' };
 }
@@ -56,13 +55,12 @@ function parseTab(value: string | string[] | undefined): Tab {
   return TABS.includes(v as Tab) ? (v as Tab) : 'prospects';
 }
 
-export default async function MarketerProfilePage({
-  params,
-  searchParams,
-}: {
-  params: { id: string };
-  searchParams?: { tab?: string | string[] };
+export default async function MarketerProfilePage(props: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ tab?: string | string[] }>;
 }) {
+  const params = await props.params;
+  const searchParams = await props.searchParams;
   const t = await getTranslations('team');
 
   const nodeRes = await getNode(params.id);

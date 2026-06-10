@@ -46,11 +46,10 @@ function parseBranch(value: string | string[] | undefined): BranchScope {
   return v === 'RIGHT' ? 'RIGHT' : v === 'LEFT' ? 'LEFT' : 'GLOBAL';
 }
 
-export default async function ClassifichePage({
-  searchParams,
-}: {
-  searchParams?: { metric?: string | string[]; scope?: string | string[]; branch?: string | string[] };
+export default async function ClassifichePage(props: {
+  searchParams?: Promise<{ metric?: string | string[]; scope?: string | string[]; branch?: string | string[] }>;
 }) {
+  const searchParams = await props.searchParams;
   const t = await getTranslations('classifiche');
   const metric = parseMetric(searchParams?.metric);
   const scope = parseScope(searchParams?.scope);

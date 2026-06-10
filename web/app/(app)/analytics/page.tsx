@@ -55,11 +55,10 @@ function parseScope(value: string | string[] | undefined): BranchScope {
   return 'GLOBAL';
 }
 
-export default async function AnalyticsPage({
-  searchParams,
-}: {
-  searchParams?: { scope?: string | string[] };
+export default async function AnalyticsPage(props: {
+  searchParams?: Promise<{ scope?: string | string[] }>;
 }) {
+  const searchParams = await props.searchParams;
   const t = await getTranslations('analytics');
   const scope = parseScope(searchParams?.scope);
   const overview = await getAnalyticsOverview(scope);
