@@ -96,14 +96,28 @@ export const getCurrentClaims = cache(async function getCurrentClaims(): Promise
     const supabase = createClient();
     if (!supabase) return fallbackResult();
 
+    // SECURITY (audit FINDING #2): validate the session against the Supabase Auth
+    // server BEFORE trusting any claim. `getSession()` alone only reads the local
+    // cookie and never verifies the JWT signature/revocation, so app-level authz
+    // (currentIsOrgAdmin / canManageAccounts / getOwnerContext) must not rely on it
+    // directly. `getUser()` re-validates the token server-side; once it confirms the
+    // token is authentic, decoding that SAME token locally for the custom claims is
+    // safe (no second round-trip). Deduped per request by the React cache() wrapper.
+    const {
+      data: { user },
+      error: userErr,
+    } = await supabase.auth.getUser();
+
+    if (userErr || !user) return fallbackResult();
+
     const {
       data: { session },
     } = await supabase.auth.getSession();
 
-    if (!session) return fallbackResult();
+    if (!session) return fallbackResult(user.email ?? null);
 
-    // Decode the JWT claim set. `getSession()` returns the access token; the
-    // custom claims live in its payload (no extra network round-trip).
+    // Decode the (now server-validated) JWT claim set. The custom claims live in the
+    // access-token payload stamped by the access-token hook (no extra round-trip).
     const payload = decodeJwt(session.access_token);
     const appMeta =
       (payload?.app_metadata as Record<string, unknown> | undefined) ?? {};
