@@ -11,7 +11,7 @@ import { defineConfig, devices } from '@playwright/test';
  * One-time:     `npx playwright install chromium`
  * Run:          `npm run test:e2e`
  */
-const baseURL = process.env.E2E_BASE_URL ?? 'https://networker.vercel.app';
+const baseURL = process.env.E2E_BASE_URL ?? 'https://crm-networker.vercel.app';
 
 export default defineConfig({
   testDir: './e2e',
