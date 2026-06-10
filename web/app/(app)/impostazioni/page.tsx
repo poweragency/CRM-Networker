@@ -48,11 +48,10 @@ function parseTab(value: string | string[] | undefined): Tab {
   return TABS.includes(v as Tab) ? (v as Tab) : 'prospects';
 }
 
-export default async function ImpostazioniPage({
-  searchParams,
-}: {
-  searchParams?: { tab?: string | string[] };
+export default async function ImpostazioniPage(props: {
+  searchParams?: Promise<{ tab?: string | string[] }>;
 }) {
+  const searchParams = await props.searchParams;
   const tt = await getTranslations('team');
 
   const { claims, demo: claimsDemo, email } = await getCurrentClaims();

@@ -16,22 +16,24 @@ interface CookieToSet {
  * Returns `null` when env is not configured so server components can render a
  * config notice instead of throwing (scaffold requirement).
  *
- * Must be called within a request scope (it uses `next/headers` cookies()).
+ * Next 15: `cookies()` is async, so the cookie adapter resolves it lazily inside
+ * `getAll`/`setAll` (called by supabase-js when it actually touches cookies). This
+ * keeps `createClient()` synchronous — no `await` ripple across the data layer —
+ * and is the canonical @supabase/ssr pattern for the App Router.
  */
 export function createClient() {
   if (!isSupabaseConfigured) {
     return null;
   }
 
-  const cookieStore = cookies();
-
   return createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     cookies: {
-      getAll() {
-        return cookieStore.getAll();
+      async getAll() {
+        return (await cookies()).getAll();
       },
-      setAll(cookiesToSet: CookieToSet[]) {
+      async setAll(cookiesToSet: CookieToSet[]) {
         try {
+          const cookieStore = await cookies();
           cookiesToSet.forEach(({ name, value, options }) => {
             cookieStore.set(name, value, options);
           });

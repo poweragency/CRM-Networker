@@ -26,13 +26,12 @@ import { formatDate, formatRelativeTime } from '@/lib/utils';
  */
 export const dynamic = 'force-dynamic';
 
-export default async function ProspectDetailPage({
-  params,
-  searchParams,
-}: {
-  params: { id: string };
-  searchParams?: { from?: string | string[] };
+export default async function ProspectDetailPage(props: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ from?: string | string[] }>;
 }) {
+  const params = await props.params;
+  const searchParams = await props.searchParams;
   const t = await getTranslations('prospect');
 
   const res = await getProspectById(params.id);

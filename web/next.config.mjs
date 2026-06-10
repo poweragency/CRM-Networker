@@ -8,9 +8,7 @@ const withNextIntl = createNextIntlPlugin('./lib/i18n/request.ts');
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
-    // Required (Next 14) so `instrumentation.ts` runs — that's where Sentry boots
-    // on the server/edge. Default in Next 15.
-    instrumentationHook: true,
+    // `instrumentation.ts` runs by default in Next 15 (no flag needed).
     // Server Actions are stable in Next 14, kept explicit for clarity.
     // Same-origin is always allowed; these are ADDITIONAL permitted origins.
     // '*.vercel.app' covers Vercel preview + production deploys. Add your custom

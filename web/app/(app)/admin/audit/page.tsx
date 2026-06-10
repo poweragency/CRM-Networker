@@ -22,11 +22,10 @@ function one(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
 }
 
-export default async function AuditPage({
-  searchParams,
-}: {
-  searchParams?: { action?: string | string[] };
+export default async function AuditPage(props: {
+  searchParams?: Promise<{ action?: string | string[] }>;
 }) {
+  const searchParams = await props.searchParams;
   const t = await getTranslations('admin_audit');
   const raw = one(searchParams?.action);
   const action: AuditAction | 'all' =
