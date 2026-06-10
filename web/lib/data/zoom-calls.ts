@@ -1,6 +1,7 @@
 import 'server-only';
 import { getClient, getOwnerContext } from '@/lib/data/crm-shared';
 import type { ZoomCallDef } from '@/lib/data/attendance-shared';
+import type { MarketerRank } from '@/lib/types/db';
 
 /**
  * Zoom call definitions management (server-only) for the settings "Call" card.
@@ -14,7 +15,7 @@ export async function listManageableCalls(): Promise<{ data: ZoomCallDef[]; demo
   try {
     const { data } = await supabase
       .from('zoom_calls')
-      .select('id,title,weekday,start_time,scope,team_branch,created_by, creator:created_by(display_name)')
+      .select('id,title,weekday,start_time,scope,team_branch,min_rank,created_by, creator:created_by(display_name)')
       .eq('active', true);
     const rows = ((data as Record<string, unknown>[] | null) ?? [])
       .map((r) => {
@@ -26,6 +27,7 @@ export async function listManageableCalls(): Promise<{ data: ZoomCallDef[]; demo
           start_time: (r.start_time as string | null) ?? null,
           scope: (r.scope as 'org' | 'team') ?? 'org',
           team_branch: (r.team_branch as 'left' | 'right' | 'all' | null) ?? null,
+          min_rank: (r.min_rank as ZoomCallDef['min_rank']) ?? null,
           created_by: (r.created_by as string | null) ?? null,
           created_by_name: cr?.display_name ?? null,
         } satisfies ZoomCallDef;
@@ -44,6 +46,8 @@ export interface CallInput {
   scope: 'org' | 'team';
   /** Only for team scope: which branch of the downline ('all' | 'left' | 'right'). */
   team_branch?: 'left' | 'right' | 'all' | null;
+  /** Minimum rank required to see/join. null/undefined = everyone (Tutti). */
+  min_rank?: MarketerRank | null;
 }
 
 export interface CallResult {
@@ -70,6 +74,7 @@ export async function createZoomCall(input: CallInput): Promise<CallResult> {
       start_time: input.start_time,
       scope: input.scope,
       team_branch: teamBranch,
+      min_rank: input.min_rank ?? null,
       created_by: createdBy,
     });
     return { ok: !error, demo: false };

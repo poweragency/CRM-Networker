@@ -19,6 +19,8 @@ export interface ZoomCallDef {
   scope: 'org' | 'team';
   /** Team calls: which branch of the creator's downline ('all' | 'left' | 'right'). */
   team_branch: 'left' | 'right' | 'all' | null;
+  /** Minimum rank required to see/join the call. null = everyone (incl. cliente/no_rank). */
+  min_rank: MarketerRank | null;
   /** Marketer who created it (null = org default). */
   created_by: string | null;
   /** Display name of the creator (for the "da Nome" label). */
