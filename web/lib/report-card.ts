@@ -508,7 +508,7 @@ export function downloadReportCard(opts: {
   const tileW = (W - 80 - 36) / 2;
   const tileH = 226;
   const tiles = [
-    { x: 40, value: String(report.total), label: 'PROSPECT TOTALI' },
+    { x: 40, value: String(report.total), label: 'PERCORSI TOTALI' },
     { x: 40 + tileW + 36, value: overall, label: 'CONVERSIONE' },
   ];
   for (const t of tiles) {
@@ -536,7 +536,7 @@ export function downloadReportCard(opts: {
     { label: 'B.INFO', value: report.reachedBi },
     { label: 'FUP', value: report.reachedFup },
     { label: 'CLOSING', value: report.reachedClosing },
-    { label: 'NUOVO', value: report.reachedIscrizione },
+    { label: 'ISCRIZIONI', value: report.reachedIscrizione },
   ];
   const stripY = tileY + tileH + 30;
   const gap = 22;
