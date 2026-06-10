@@ -6,6 +6,7 @@ import { Check, Plus, Trash2, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/crm/toaster';
+import { ImportCsvButton } from '@/components/crm/import-csv-button';
 import { cn } from '@/lib/utils';
 import type { WishlistItem } from '@/lib/types/db';
 import { saveWishlistAction } from '@/app/(app)/team/[id]/actions';
@@ -116,6 +117,32 @@ export function WishlistManager({
     commit(itemsRef.current.filter((i) => i.id !== id));
   }
 
+  /** CSV import: the first column of each row becomes a 100's-list item (caps at 100). */
+  function importRows(rows: string[][]) {
+    const room = MAX_ITEMS - itemsRef.current.length;
+    if (room <= 0) {
+      toast({ title: 'Lista piena (max 100 voci).', variant: 'error' });
+      return;
+    }
+    const titles = rows
+      .map((r) => (r[0] ?? '').trim())
+      .filter((s) => s.length > 0)
+      .slice(0, room);
+    if (titles.length === 0) {
+      toast({ title: 'Nessuna voce trovata nel file.', variant: 'error' });
+      return;
+    }
+    let next = itemsRef.current;
+    for (const raw of titles) {
+      next = [
+        ...next,
+        { id: newId(next), title: raw.slice(0, 120), horizon: 'vicino' as const, done: false },
+      ];
+    }
+    commit(next);
+    toast({ title: `${titles.length} voci importate.`, variant: 'success' });
+  }
+
   return (
     <div className="space-y-4">
       {/* Completion bar — green while in progress, GOLD once every goal is done. */}
@@ -199,6 +226,12 @@ export function WishlistManager({
             <Plus aria-hidden />
             {t('add')}
           </Button>
+          <ImportCsvButton
+            label="Importa CSV"
+            title="Importa un CSV/Excel con una voce per riga (una colonna)"
+            onRows={importRows}
+            disabled={saving}
+          />
         </div>
       )}
 

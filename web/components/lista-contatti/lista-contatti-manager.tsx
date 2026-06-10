@@ -44,8 +44,10 @@ import type { ListaContattiInput } from '@/lib/data/lista-contatti';
 import {
   createListaContattiAction,
   deleteListaContattiAction,
+  importListaContattiAction,
   updateListaContattiAction,
 } from '@/app/(app)/lista-contatti/actions';
+import { ImportCsvButton } from '@/components/crm/import-csv-button';
 import { useListaContattiStore } from '@/components/team/lista-contatti-store';
 import { ListaContattiFormSheet } from './lista-contatti-form-sheet';
 import { ListaContattiDetailSheet } from './lista-contatti-detail-sheet';
@@ -91,6 +93,10 @@ function sortByPosition(rows: ListaContattiEntry[]): ListaContattiEntry[] {
 function byName(a: ListaContattiEntry, b: ListaContattiEntry): number {
   return a.full_name.localeCompare(b.full_name, 'it', { sensitivity: 'base' });
 }
+
+/** True if a (lowercased) string is one of the rapporto enum values. */
+const isRapporto = (s: string): boolean =>
+  (LISTA_CONTATTI_RAPPORTO_ORDER as string[]).includes(s);
 
 /** A colored native <select> for an in-row enum edit (stops row-click). */
 function InlineSelect({
@@ -349,6 +355,46 @@ export function ListaContattiManager() {
     setDeleteTarget(null);
   };
 
+  /**
+   * CSV import: 3 columns — Nome e Cognome, Profilazione, Rapporto (freddo/tiepido/
+   * caldo). Stato e note restano vuoti. A header row is dropped when its rapporto
+   * cell isn't a valid value (e.g. the "Rapporto" label).
+   */
+  const importRows = async (rows: string[][]) => {
+    let data = rows;
+    const firstRapporto = (rows[0]?.[2] ?? '').trim().toLowerCase();
+    if (firstRapporto && !isRapporto(firstRapporto)) data = rows.slice(1);
+
+    const inputs: ListaContattiInput[] = [];
+    for (const r of data) {
+      const fullName = (r[0] ?? '').trim();
+      if (!fullName) continue;
+      const profilazione = (r[1] ?? '').trim();
+      const rapportoRaw = (r[2] ?? '').trim().toLowerCase();
+      inputs.push({
+        full_name: fullName.slice(0, 200),
+        relationship: profilazione ? profilazione.slice(0, 5000) : null,
+        rapporto: isRapporto(rapportoRaw) ? (rapportoRaw as ListaContattiRapporto) : null,
+      });
+    }
+    if (inputs.length === 0) {
+      toast({ title: 'Nessun contatto valido nel file.', variant: 'error' });
+      return;
+    }
+    const res = await importListaContattiAction(inputs);
+    if (!res.ok || res.entries.length === 0) {
+      toast({ title: tc('mutation_error'), variant: 'error' });
+      return;
+    }
+    setEntries((prev) => sortByPosition([...prev, ...res.entries]));
+    setDemo((d) => d || res.demo);
+    toast({
+      title: `${res.entries.length} contatti importati.`,
+      description: res.demo ? tc('created_demo') : undefined,
+      variant: 'success',
+    });
+  };
+
   const hasFilters = search.length > 0 || Object.keys(filterValues).length > 0;
 
   return (
@@ -359,10 +405,17 @@ export function ListaContattiManager() {
         icon={<ListChecks />}
         breadcrumbs={[{ label: tc('section') }, { label: t('title') }]}
         actions={
-          <Button onClick={openCreate} className="gap-2">
-            <Plus className="h-4 w-4" aria-hidden />
-            {t('new_entry')}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <ImportCsvButton
+              label="Importa CSV"
+              title="CSV/Excel con 3 colonne: Nome e Cognome, Profilazione, Rapporto (freddo/tiepido/caldo)"
+              onRows={importRows}
+            />
+            <Button onClick={openCreate} className="gap-2">
+              <Plus className="h-4 w-4" aria-hidden />
+              {t('new_entry')}
+            </Button>
+          </div>
         }
       />
 

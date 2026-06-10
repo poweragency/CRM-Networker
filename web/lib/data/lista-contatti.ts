@@ -145,6 +145,76 @@ export async function createListaContatti(
   }
 }
 
+/**
+ * Bulk-create many Lista contatti entries in ONE insert (CSV import). Appends after
+ * the caller's current max position; owner is forced to the session marketer (RLS).
+ * Demo-safe: with no env it returns optimistic rows. Returns the created entries.
+ */
+export async function bulkCreateListaContatti(
+  inputs: ListaContattiInput[],
+): Promise<MutationResult<ListaContattiEntry[]>> {
+  const { orgId, marketerId, demo } = await getOwnerContext();
+  const supabase = getClient();
+
+  const build = (input: ListaContattiInput, position: number): ListaContattiEntry => ({
+    id: demoId('cn'),
+    org_id: orgId,
+    owner_marketer_id: marketerId,
+    position,
+    full_name: input.full_name,
+    phone: input.phone ?? null,
+    relationship: input.relationship ?? null,
+    rating: input.rating ?? null,
+    rapporto: input.rapporto ?? null,
+    stato: input.stato ?? 'non_invitato',
+    percorso: input.percorso ?? 0,
+    contacted: input.contacted ?? false,
+    promoted_contact_id: null,
+    iscritto_at: input.iscritto_at ?? null,
+    notes: input.notes ?? null,
+    created_at: nowIso(),
+    updated_at: nowIso(),
+    deleted_at: null,
+  });
+
+  if (!supabase || demo) {
+    const base = MOCK_LISTA_CONTATTI.reduce((m, e) => Math.max(m, e.position), 0);
+    return { data: inputs.map((inp, i) => build(inp, base + i + 1)), demo: true, ok: true };
+  }
+
+  try {
+    const { data: top } = await supabase
+      .from('lista_contatti_entries')
+      .select('position')
+      .eq('org_id', orgId)
+      .eq('owner_marketer_id', marketerId)
+      .is('deleted_at', null)
+      .order('position', { ascending: false })
+      .limit(1)
+      .maybeSingle<{ position: number }>();
+    const base = top?.position ?? 0;
+    const payload = inputs.map((input, i) => ({
+      org_id: orgId,
+      owner_marketer_id: marketerId,
+      position: base + i + 1,
+      full_name: input.full_name,
+      phone: input.phone ?? null,
+      relationship: input.relationship ?? null,
+      rapporto: input.rapporto ?? null,
+      stato: input.stato ?? 'non_invitato',
+      notes: input.notes ?? null,
+    }));
+    const { data, error } = await supabase
+      .from('lista_contatti_entries')
+      .insert(payload)
+      .select(SELECT);
+    if (error || !data) return { data: [], demo: false, ok: false };
+    return { data: data as ListaContattiEntry[], demo: false, ok: true };
+  } catch {
+    return { data: [], demo: false, ok: false };
+  }
+}
+
 /** Update a Lista contatti entry (rename, re-rate, toggle contacted, reorder). */
 export async function updateListaContatti(
   id: string,
