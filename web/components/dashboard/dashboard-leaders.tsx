@@ -286,7 +286,7 @@ export function LeaderboardCard({
                 </p>
                 <span className="mt-0.5 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-warning">
                   <Sparkles className="h-3 w-3" aria-hidden />
-                  Campione del mese
+                  Campione del ciclo
                 </span>
               </div>
               <span className="flex shrink-0 flex-col items-end gap-0.5">

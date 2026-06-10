@@ -306,24 +306,27 @@ export async function getMonthlyTopMarketers(
 export interface CycleInfo {
   /** Current company-cycle number, or null when cycles aren't configured. */
   number: number | null;
-  /** True when the org has configured a 28-day cycle (else: calendar months). */
+  /** True when the org has an EXPLICIT cycle override (vs the global default). */
   configured: boolean;
+  /** End of the current cycle as an ISO timestamp (for the countdown), or null. */
+  endIso: string | null;
 }
 
 /** Current company-cycle info (number + configured flag) via the `cycle_info` RPC. */
 export async function getCycleInfo(): Promise<CycleInfo> {
   const supabase = getClient();
-  if (!supabase) return { number: null, configured: false };
+  if (!supabase) return { number: null, configured: false, endIso: null };
   try {
     const { data, error } = await supabase.rpc('cycle_info');
-    if (error || !data) return { number: null, configured: false };
+    if (error || !data) return { number: null, configured: false, endIso: null };
     const row = (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | undefined;
-    if (!row) return { number: null, configured: false };
+    if (!row) return { number: null, configured: false, endIso: null };
     return {
       number: row.cycle_number != null ? Number(row.cycle_number) : null,
       configured: Boolean(row.configured),
+      endIso: row.cycle_end ? String(row.cycle_end) : null,
     };
   } catch {
-    return { number: null, configured: false };
+    return { number: null, configured: false, endIso: null };
   }
 }
