@@ -47,6 +47,22 @@ const EMBLEM: Record<MarketerRank, { kind: EmblemKind; crown: 0 | 1 | 2; colored
   global_director: { kind: 'diamond', crown: 2 },
 };
 
+/** Reward (EUR) reached at each rank — shown in gold on the card. */
+const EARNINGS: Record<MarketerRank, string> = {
+  cliente: '',
+  no_rank: '',
+  executive: '€100 + commissioni',
+  consultant: '€500 + commissioni',
+  team_leader: '€1.500 + commissioni',
+  advanced_team_leader: '€2.500 + commissioni',
+  senior_team_leader: '€4.000 + commissioni',
+  executive_team_leader: '€8.500',
+  vice_president: '€15.000',
+  senior_vice_president: '€30.000',
+  executive_vice_president: '€60.000',
+  global_director: '€120.000',
+};
+
 /* ── Colour helpers ──────────────────────────────────────────────────────── */
 
 function hslToRgb(h: number, s: number, l: number): RGB {
@@ -462,26 +478,43 @@ export function downloadReportCard(opts: {
   ctx.fillText(spaced('RICONOSCIMENTO'), W / 2, 712);
 
   // Rank name (hero).
-  const { lines, size } = fitTitle(ctx, RANK_LABELS[rank].toUpperCase(), W - 130, 134);
+  const { lines, size } = fitTitle(ctx, RANK_LABELS[rank].toUpperCase(), W - 130, 132);
   ctx.save();
   ctx.shadowColor = rgba(color, 0.9);
   ctx.shadowBlur = 55;
   ctx.fillStyle = '#ffffff';
   ctx.font = `900 ${size}px Arial, sans-serif`;
   const lineH = size * 1.04;
-  let ty = 812 + size * 0.7;
+  let baseY = 800 + size * 0.7;
   for (const line of lines) {
-    ctx.fillText(line, W / 2, ty);
-    ty += lineH;
+    ctx.fillText(line, W / 2, baseY);
+    baseY += lineH;
   }
   ctx.restore();
+  let cursorY = baseY - lineH + size * 0.24;
 
-  // Cycle chip.
-  const chipY = ty + 8;
+  // Earnings (gold reward of the rank).
+  const earnings = EARNINGS[rank];
+  if (earnings) {
+    cursorY += 64;
+    ctx.save();
+    ctx.shadowColor = 'rgba(255, 200, 55, 0.6)';
+    ctx.shadowBlur = 28;
+    const gg = ctx.createLinearGradient(W / 2 - 340, 0, W / 2 + 340, 0);
+    gg.addColorStop(0, '#ffe680');
+    gg.addColorStop(1, '#ffbe2e');
+    ctx.fillStyle = gg;
+    ctx.font = '900 56px Arial, sans-serif';
+    ctx.fillText(earnings, W / 2, cursorY);
+    ctx.restore();
+  }
+
+  // Cycle chip + dates.
+  const chipY = cursorY + 30;
   const chipLabel = `CICLO ${cycleNumber}`;
-  ctx.font = '800 38px Arial, sans-serif';
-  const chipW = ctx.measureText(chipLabel).width + 90;
-  const chipH = 76;
+  ctx.font = '800 36px Arial, sans-serif';
+  const chipW = ctx.measureText(chipLabel).width + 84;
+  const chipH = 70;
   const chipX = (W - chipW) / 2;
   ctx.fillStyle = rgba(color, 0.16);
   roundRectPath(ctx, chipX, chipY, chipW, chipH, chipH / 2);
@@ -491,22 +524,26 @@ export function downloadReportCard(opts: {
   roundRectPath(ctx, chipX, chipY, chipW, chipH, chipH / 2);
   ctx.stroke();
   ctx.fillStyle = rgbStr(color);
-  ctx.fillText(chipLabel, W / 2, chipY + 52);
+  ctx.fillText(chipLabel, W / 2, chipY + 48);
 
   ctx.fillStyle = 'rgba(255,255,255,0.45)';
   ctx.font = '500 28px Arial, sans-serif';
-  ctx.fillText(`${fmtDate(report.startIso)} — ${fmtDate(report.endIso)}`, W / 2, chipY + chipH + 48);
+  ctx.fillText(`${fmtDate(report.startIso)} — ${fmtDate(report.endIso)}`, W / 2, chipY + chipH + 44);
 
-  // Stats panel.
-  const panelY = chipY + chipH + 96;
+  // Stats — anchored near the bottom (constant position, never collides with a tall rank).
+  const footerY = H - 64;
+  const cellH = 150;
+  const stripY = footerY - 86 - cellH;
+  const tileH = 200;
+  const tileY = stripY - 20 - tileH;
+  const panelY = tileY - 32;
+
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
   ctx.font = '700 30px Arial, sans-serif';
   ctx.fillText(spaced('PERFORMANCE DEL TEAM'), W / 2, panelY);
 
   const overall = pct(report.reachedIscrizione, report.reachedBi);
-  const tileY = panelY + 36;
   const tileW = (W - 80 - 36) / 2;
-  const tileH = 226;
   const tiles = [
     { x: 40, value: String(report.total), label: 'PERCORSI TOTALI' },
     { x: 40 + tileW + 36, value: overall, label: 'CONVERSIONE' },
@@ -523,12 +560,12 @@ export function downloadReportCard(opts: {
     ctx.shadowColor = rgba(color, 0.6);
     ctx.shadowBlur = 30;
     ctx.fillStyle = '#ffffff';
-    ctx.font = '900 118px Arial, sans-serif';
-    ctx.fillText(t.value, t.x + tileW / 2, tileY + 148);
+    ctx.font = '900 104px Arial, sans-serif';
+    ctx.fillText(t.value, t.x + tileW / 2, tileY + 130);
     ctx.restore();
     ctx.fillStyle = rgbStr(color);
-    ctx.font = '700 28px Arial, sans-serif';
-    ctx.fillText(spaced(t.label), t.x + tileW / 2, tileY + 192);
+    ctx.font = '700 26px Arial, sans-serif';
+    ctx.fillText(spaced(t.label), t.x + tileW / 2, tileY + 172);
   }
 
   // Funnel breakdown — people reached at each stage.
@@ -538,10 +575,8 @@ export function downloadReportCard(opts: {
     { label: 'CLOSING', value: report.reachedClosing },
     { label: 'ISCRIZIONI', value: report.reachedIscrizione },
   ];
-  const stripY = tileY + tileH + 30;
   const gap = 22;
   const cellW = (W - 80 - 3 * gap) / 4;
-  const cellH = 156;
   phases.forEach((p, i) => {
     const x = 40 + i * (cellW + gap);
     ctx.fillStyle = 'rgba(255,255,255,0.03)';
@@ -552,17 +587,17 @@ export function downloadReportCard(opts: {
     roundRectPath(ctx, x, stripY, cellW, cellH, 24);
     ctx.stroke();
     ctx.fillStyle = '#ffffff';
-    ctx.font = '900 72px Arial, sans-serif';
-    ctx.fillText(String(p.value), x + cellW / 2, stripY + 90);
+    ctx.font = '900 70px Arial, sans-serif';
+    ctx.fillText(String(p.value), x + cellW / 2, stripY + 86);
     ctx.fillStyle = rgbStr(color);
     ctx.font = '800 26px Arial, sans-serif';
-    ctx.fillText(p.label, x + cellW / 2, stripY + 132);
+    ctx.fillText(p.label, x + cellW / 2, stripY + 126);
   });
 
   // Footer.
   ctx.fillStyle = 'rgba(255,255,255,0.4)';
   ctx.font = '600 26px Arial, sans-serif';
-  ctx.fillText(spaced('CRM NETWORKER · POWER AGENCY'), W / 2, H - 64);
+  ctx.fillText(spaced('CRM NETWORKER · POWER AGENCY'), W / 2, footerY);
 
   // Download.
   canvas.toBlob((blob) => {
