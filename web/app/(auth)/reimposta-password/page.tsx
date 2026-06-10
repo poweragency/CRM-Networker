@@ -195,6 +195,12 @@ export default function ResetPasswordPage() {
       title={t('resetTitle')}
       subtitle={t('resetSubtitle')}
       icon={ShieldCheck}
+      footer={
+        <Link href="/accedi" className="inline-flex items-center gap-1.5 hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" aria-hidden />
+          {t('backToLogin')}
+        </Link>
+      }
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
         <FormField

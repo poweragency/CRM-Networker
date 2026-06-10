@@ -14,7 +14,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AuthCard } from '../_components/auth-card';
 import { FormField } from '../_components/form-field';
 import { FormError } from '../_components/form-error';
-import { OAuthButtons } from '../_components/oauth-buttons';
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -26,8 +25,7 @@ type LoginValues = z.infer<typeof loginSchema>;
 /**
  * /accedi — real email/password login (ADR-008 route).
  * Calls supabase.auth.signInWithPassword; on success redirects to the
- * `redirect` param or /dashboard. OAuth buttons are visible-but-disabled
- * (ADR-004: MFA/OAuth present but not enforced in v1).
+ * `redirect` param or /dashboard.
  *
  * useSearchParams() (inside LoginForm) requires a Suspense boundary for static
  * prerendering.
@@ -183,15 +181,6 @@ function LoginForm() {
           {isSubmitting || redirecting ? t('submitting') : t('submit')}
         </Button>
       </form>
-
-      <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground">
-        <span className="h-px flex-1 bg-border" />
-        {t('orDivider')}
-        <span className="h-px flex-1 bg-border" />
-      </div>
-
-      {/* ADR-004: OAuth present but not enforced — visible-but-disabled in v1. */}
-      <OAuthButtons />
     </AuthCard>
   );
 }
