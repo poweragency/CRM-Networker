@@ -10,6 +10,7 @@ import {
   type Accent,
 } from '@/components/dashboard/dashboard-leaders';
 import { CatenaLeaderboard } from '@/components/streak/catena-leaderboard';
+import { CycleCountdown } from '@/components/dashboard/cycle-countdown';
 import { formatPercent } from '@/lib/utils';
 
 /**
@@ -123,14 +124,14 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          <span className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-full bg-success/12 px-3 py-1.5 text-xs font-semibold text-success ring-1 ring-success/25 sm:self-center">
-            <span className="relative flex h-2 w-2" aria-hidden>
-              <span className="absolute inline-flex h-full w-full animate-glow-pulse rounded-full bg-success/70" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+          {cycle.endIso ? (
+            <CycleCountdown endIso={cycle.endIso} />
+          ) : (
+            <span className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-full bg-success/12 px-3 py-1.5 text-xs font-semibold text-success ring-1 ring-success/25 sm:self-center">
+              <Sparkles className="h-3.5 w-3.5" aria-hidden />
+              <span className="capitalize">{periodLabel}</span>
             </span>
-            <Sparkles className="h-3.5 w-3.5" aria-hidden />
-            <span className="capitalize">{periodLabel}</span>
-          </span>
+          )}
         </div>
       </section>
 
