@@ -1,6 +1,7 @@
 'use server';
 
 import {
+  bulkCreateListaContatti,
   createListaContatti,
   deleteListaContatti,
   promoteListaContatti,
@@ -49,6 +50,31 @@ export async function createListaContattiAction(
   }
   const { data, demo, ok } = await createListaContatti(input);
   return { entry: data, demo, ok };
+}
+
+export interface ImportListaContattiResult {
+  entries: ListaContattiEntry[];
+  demo: boolean;
+  ok: boolean;
+}
+
+/** Bulk-import Lista contatti entries from a parsed CSV (validated + capped). */
+export async function importListaContattiAction(
+  inputs: ListaContattiInput[],
+): Promise<ImportListaContattiResult> {
+  const MAX_IMPORT = 500;
+  if (!Array.isArray(inputs) || inputs.length === 0) {
+    return { entries: [], demo: false, ok: false };
+  }
+  const valid = inputs
+    .slice(0, MAX_IMPORT)
+    .filter((i) => isValid(listaCreateSchema, i, 'importListaContatti'));
+  if (valid.length === 0) return { entries: [], demo: false, ok: false };
+  if (!(await allowAction('importListaContatti', 5))) {
+    return { entries: [], demo: false, ok: false };
+  }
+  const { data, demo, ok } = await bulkCreateListaContatti(valid);
+  return { entries: data, demo, ok };
 }
 
 /** Patch an existing Lista contatti entry (rename, re-rate, toggle contacted, …). */
