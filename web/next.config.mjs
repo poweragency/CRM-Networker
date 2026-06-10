@@ -1,4 +1,5 @@
 import createNextIntlPlugin from 'next-intl/plugin';
+import { withSentryConfig } from '@sentry/nextjs';
 
 // Point next-intl at the request config (single-locale `it` setup, no locale path segment).
 const withNextIntl = createNextIntlPlugin('./lib/i18n/request.ts');
@@ -7,6 +8,9 @@ const withNextIntl = createNextIntlPlugin('./lib/i18n/request.ts');
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
+    // Required (Next 14) so `instrumentation.ts` runs — that's where Sentry boots
+    // on the server/edge. Default in Next 15.
+    instrumentationHook: true,
     // Server Actions are stable in Next 14, kept explicit for clarity.
     // Same-origin is always allowed; these are ADDITIONAL permitted origins.
     // '*.vercel.app' covers Vercel preview + production deploys. Add your custom
@@ -40,4 +44,15 @@ const nextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+// Wrap with Sentry LAST. Source-map upload runs only when a SENTRY_AUTH_TOKEN is
+// present (CI/Vercel), so local builds never fail for lack of it; everything else
+// is a no-op until NEXT_PUBLIC_SENTRY_DSN is set.
+export default withSentryConfig(withNextIntl(nextConfig), {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: true,
+  widenClientFileUpload: true,
+  disableLogger: true,
+  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
+});

@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import * as Sentry from '@sentry/nextjs';
 import { logError } from '@/lib/log';
 
 /**
@@ -18,6 +19,7 @@ export default function GlobalError({
 }) {
   React.useEffect(() => {
     logError('global-error', error, { digest: error.digest });
+    Sentry.captureException(error); // no-op until a DSN is configured
   }, [error]);
 
   return (
