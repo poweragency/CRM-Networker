@@ -2,9 +2,9 @@ import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 
 /**
- * ADR-004: OAuth (Google / Microsoft) is present in the UI but not enforced in
- * v1 — rendered visible-but-disabled with a "(presto)" affordance. Extracted so
- * the same disabled SSO block can be reused on the login surface.
+ * Google SSO is present in the UI but not enforced yet — rendered visible-but-
+ * disabled with a "(presto)" affordance until the provider is wired (Supabase
+ * Google provider + a /auth/callback handler). Microsoft was removed.
  */
 function GoogleGlyph() {
   return (
@@ -29,17 +29,6 @@ function GoogleGlyph() {
   );
 }
 
-function MicrosoftGlyph() {
-  return (
-    <svg className="h-4 w-4" viewBox="0 0 23 23" aria-hidden>
-      <path fill="#F25022" d="M1 1h10v10H1z" />
-      <path fill="#7FBA00" d="M12 1h10v10H12z" />
-      <path fill="#00A4EF" d="M1 12h10v10H1z" />
-      <path fill="#FFB900" d="M12 12h10v10H12z" />
-    </svg>
-  );
-}
-
 export function OAuthButtons({ className }: { className?: string }) {
   const t = useTranslations('auth');
 
@@ -51,10 +40,6 @@ export function OAuthButtons({ className }: { className?: string }) {
       <button type="button" disabled aria-disabled className={base}>
         <GoogleGlyph />
         {t('oauthGoogle')}
-      </button>
-      <button type="button" disabled aria-disabled className={base}>
-        <MicrosoftGlyph />
-        {t('oauthMicrosoft')}
       </button>
     </div>
   );
