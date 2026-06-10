@@ -1430,4 +1430,7 @@ export interface OrgSettings {
   locale: string;
   timezone: string;
   bottleneck: BottleneckThresholds;
+  /** Company-cycle anchor (28-day cycles): end datetime of a cycle + its number.
+   *  null = not configured → statistics fall back to calendar months. */
+  cycle: { anchor_end: string; anchor_number: number } | null;
 }

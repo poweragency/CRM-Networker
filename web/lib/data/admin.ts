@@ -414,6 +414,7 @@ export async function getOrgSettings(): Promise<AdminResult<OrgSettings>> {
     if (error || !data) return { data: mockOrgSettings(), demo: true };
     const settings = (data.settings ?? {}) as Record<string, unknown>;
     const bn = (settings.bottleneck ?? {}) as Record<string, unknown>;
+    const cy = (settings.cycle ?? null) as Record<string, unknown> | null;
     const def = mockOrgSettings().bottleneck;
     return {
       data: {
@@ -427,6 +428,10 @@ export async function getOrgSettings(): Promise<AdminResult<OrgSettings>> {
           followup_overdue_count: Number(bn.followup_overdue_count ?? def.followup_overdue_count),
           min_volume_conoscitiva: Number(bn.min_volume_conoscitiva ?? def.min_volume_conoscitiva),
         },
+        cycle:
+          cy && cy.anchor_end
+            ? { anchor_end: String(cy.anchor_end), anchor_number: Number(cy.anchor_number ?? 0) }
+            : null,
       },
       demo: false,
     };
@@ -439,6 +444,8 @@ export interface UpdateOrgSettingsInput {
   name: string;
   timezone: string;
   bottleneck: OrgSettings['bottleneck'];
+  /** Company-cycle anchor; omit to leave unchanged, null to clear (→ calendar months). */
+  cycle?: OrgSettings['cycle'];
 }
 
 export interface UpdateOrgSettingsResult {
@@ -453,11 +460,13 @@ export async function updateOrgSettings(
 ): Promise<UpdateOrgSettingsResult> {
   const supabase = getClient();
   const current = await getOrgSettings();
+  const nextCycle = input.cycle !== undefined ? input.cycle : current.data.cycle;
   const next: OrgSettings = {
     ...current.data,
     name: input.name,
     timezone: input.timezone,
     bottleneck: input.bottleneck,
+    cycle: nextCycle,
   };
   if (!supabase) return { data: next, demo: true, ok: true };
   try {
@@ -471,6 +480,7 @@ export async function updateOrgSettings(
     const settings = {
       ...((cur?.settings as Record<string, unknown>) ?? {}),
       bottleneck: input.bottleneck,
+      cycle: nextCycle,
     };
     const { error } = await supabase
       .from('organizations')

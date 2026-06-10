@@ -241,5 +241,6 @@ export function mockOrgSettings(): OrgSettings {
       followup_overdue_count: 5,
       min_volume_conoscitiva: 10,
     },
+    cycle: null,
   };
 }

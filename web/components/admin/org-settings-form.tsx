@@ -16,6 +16,16 @@ import { updateOrgSettingsAction } from '@/app/(app)/admin/impostazioni-org/acti
  * bottleneck-engine thresholds; slug/locale are shown read-only. Demo-safe:
  * saves through `updateOrgSettingsAction` and toasts real-vs-simulated.
  */
+
+/** ISO timestamp → `datetime-local` input value (browser local time). */
+function isoToLocalInput(iso?: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export function OrgSettingsForm({
   initial,
   initialDemo,
@@ -31,6 +41,10 @@ export function OrgSettingsForm({
   const [inactivity, setInactivity] = React.useState(initial.bottleneck.inactivity_days);
   const [followup, setFollowup] = React.useState(initial.bottleneck.followup_overdue_count);
   const [minVolume, setMinVolume] = React.useState(initial.bottleneck.min_volume_conoscitiva);
+  const [cycleNumber, setCycleNumber] = React.useState<number | ''>(
+    initial.cycle?.anchor_number ?? '',
+  );
+  const [cycleEnd, setCycleEnd] = React.useState(isoToLocalInput(initial.cycle?.anchor_end));
   const [error, setError] = React.useState<string | null>(null);
   const [pending, setPending] = React.useState(false);
 
@@ -38,6 +52,16 @@ export function OrgSettingsForm({
     e.preventDefault();
     if (!name.trim()) {
       setError(t('name_required'));
+      return;
+    }
+    // Company cycle: both fields together, or both empty (= calendar months).
+    let cycle: OrgSettings['cycle'] | undefined;
+    if (cycleEnd && cycleNumber !== '') {
+      cycle = { anchor_end: new Date(cycleEnd).toISOString(), anchor_number: Number(cycleNumber) };
+    } else if (!cycleEnd && cycleNumber === '') {
+      cycle = null;
+    } else {
+      setError('Per il ciclo aziendale imposta sia il numero che la data di fine (o lascia entrambi vuoti).');
       return;
     }
     setError(null);
@@ -51,6 +75,7 @@ export function OrgSettingsForm({
           followup_overdue_count: followup,
           min_volume_conoscitiva: minVolume,
         },
+        cycle,
       });
       toast({
         title: t('saved'),
@@ -126,6 +151,43 @@ export function OrgSettingsForm({
               onChange={(e) => setMinVolume(Number(e.target.value))}
             />
             <p className="text-xs text-muted-foreground">{t('min_volume_help')}</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="p-5 pb-3">
+          <CardTitle>Ciclo aziendale</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            I cicli durano <strong>28 giorni</strong> di default per tutte le org. Compila
+            qui SOLO per <strong>allungare o spostare</strong> il ciclo di questa org per un
+            evento particolare: imposta il numero e la nuova data/ora di fine (= azzeramento),
+            da cui ripartiranno i 28 giorni. Lascia vuoto per il default.
+          </p>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-4 p-5 pt-0 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="cy-num">Numero ciclo attuale</Label>
+            <Input
+              id="cy-num"
+              type="number"
+              min={1}
+              value={cycleNumber}
+              onChange={(e) =>
+                setCycleNumber(e.target.value === '' ? '' : Number(e.target.value))
+              }
+              placeholder="es. 78"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="cy-end">Fine ciclo attuale (azzeramento)</Label>
+            <Input
+              id="cy-end"
+              type="datetime-local"
+              value={cycleEnd}
+              onChange={(e) => setCycleEnd(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">Da qui ripartono i 28 giorni.</p>
           </div>
         </CardContent>
       </Card>
