@@ -5,7 +5,6 @@ import {
   Users,
   UserCheck,
   KeyRound,
-  MailWarning,
   UserPlus,
   ArrowRight,
   Medal,
@@ -15,7 +14,6 @@ import {
 } from 'lucide-react';
 import { getAnalyticsOverview } from '@/lib/data/analytics';
 import { listMarketers } from '@/lib/data/admin';
-import { listInvitations } from '@/lib/data/admin-invitations';
 import { ConfigNotice } from '@/components/config-notice';
 import { PageHeader } from '@/components/crm/page-header';
 import { KpiCard } from '@/components/dashboard/kpi-card';
@@ -41,22 +39,19 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function AdminPage() {
   const t = await getTranslations('admin');
-  const [overview, marketersRes, invitationsRes] = await Promise.all([
+  const [overview, marketersRes] = await Promise.all([
     getAnalyticsOverview('GLOBAL'),
     listMarketers(),
-    listInvitations(),
   ]);
 
   const rows = marketersRes.data;
   const total = rows.length;
   const activeProfiles = rows.filter((r) => r.status === 'active').length;
   const crmAccounts = rows.filter((r) => r.account_status === 'active').length;
-  const pending = invitationsRes.data.filter((i) => i.status === 'pending').length;
-  const demo = overview.demo || marketersRes.demo || invitationsRes.demo;
+  const demo = overview.demo || marketersRes.demo;
 
   const quick = [
     { href: '/admin/marketer/nuovo', icon: UserPlus, titleKey: 'quick_pre_register', descKey: 'quick_pre_register_desc', accent: 'text-info' },
-    { href: '/admin/attivazioni', icon: KeyRound, titleKey: 'quick_activations', descKey: 'quick_activations_desc', accent: 'text-primary' },
     { href: '/admin/ranghi', icon: Medal, titleKey: 'quick_ranks', descKey: 'quick_ranks_desc', accent: 'text-warning' },
     { href: '/admin/audit', icon: ScrollText, titleKey: 'quick_audit', descKey: 'quick_audit_desc', accent: 'text-muted-foreground' },
   ] as const;
@@ -68,12 +63,11 @@ export default async function AdminPage() {
 
       <section
         aria-label={t('title')}
-        className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5"
+        className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
       >
         <KpiCard label={t('kpi_marketers')} value={formatNumber(total)} hint={t('kpi_marketers_hint')} icon={Users} accent="primary" />
         <KpiCard label={t('kpi_active')} value={formatNumber(activeProfiles)} hint={t('kpi_active_hint')} icon={UserCheck} accent="success" />
         <KpiCard label={t('kpi_accounts')} value={formatNumber(crmAccounts)} hint={t('kpi_accounts_hint')} icon={KeyRound} accent="info" />
-        <KpiCard label={t('kpi_pending')} value={formatNumber(pending)} hint={t('kpi_pending_hint')} icon={MailWarning} accent="warning" />
         <KpiCard label={t('kpi_iscrizioni')} value={formatNumber(overview.summary.iscrizione)} hint={t('kpi_iscrizioni_hint')} icon={UserPlus2} accent="global" />
       </section>
 
