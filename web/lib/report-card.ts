@@ -39,15 +39,6 @@ function hslToRgb(h: number, s: number, l: number): RGB {
 const rgbStr = (c: RGB) => `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
 const rgba = (c: RGB, a: number) => `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${a})`;
 
-/** Mix a colour toward white by `t` (0..1). */
-function lighten(c: RGB, t: number): RGB {
-  return [
-    Math.round(c[0] + (255 - c[0]) * t),
-    Math.round(c[1] + (255 - c[1]) * t),
-    Math.round(c[2] + (255 - c[2]) * t),
-  ];
-}
-
 function pct(n: number, d: number): string {
   if (d <= 0) return '—';
   return `${Math.round((n / d) * 100)}%`;
@@ -276,48 +267,38 @@ export function downloadReportCard(opts: {
     ctx.fillText(spaced(t.label), t.x + tileW / 2, tileY + 196);
   }
 
-  // Per-phase strip.
+  // Funnel breakdown — people reached at each stage (B.Info → FUP → Closing → Nuovo).
   const phases = [
-    { label: 'BIZ → FOLLOW', value: pct(report.reachedFup, report.reachedBi) },
-    { label: 'FOLLOW → CLOSE', value: pct(report.reachedClosing, report.reachedFup) },
-    { label: 'CLOSE → ISCR.', value: pct(report.reachedIscrizione, report.reachedClosing) },
+    { label: 'B.INFO', value: report.reachedBi },
+    { label: 'FUP', value: report.reachedFup },
+    { label: 'CLOSING', value: report.reachedClosing },
+    { label: 'NUOVO', value: report.reachedIscrizione },
   ];
-  const stripY = tileY + tileH + 34;
-  const cellW = (W - 80 - 2 * 24) / 3;
-  const cellH = 168;
+  const stripY = tileY + tileH + 30;
+  const gap = 22;
+  const cellW = (W - 80 - 3 * gap) / 4;
+  const cellH = 156;
   phases.forEach((p, i) => {
-    const x = 40 + i * (cellW + 24);
+    const x = 40 + i * (cellW + gap);
     ctx.fillStyle = 'rgba(255,255,255,0.03)';
     roundRectPath(ctx, x, stripY, cellW, cellH, 24);
     ctx.fill();
     ctx.lineWidth = 2;
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.strokeStyle = rgba(color, 0.22);
     roundRectPath(ctx, x, stripY, cellW, cellH, 24);
     ctx.stroke();
     ctx.fillStyle = '#ffffff';
-    ctx.font = '900 64px Arial, sans-serif';
-    ctx.fillText(p.value, x + cellW / 2, stripY + 88);
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.font = '700 22px Arial, sans-serif';
-    ctx.fillText(p.label, x + cellW / 2, stripY + 134);
+    ctx.font = '900 72px Arial, sans-serif';
+    ctx.fillText(String(p.value), x + cellW / 2, stripY + 90);
+    ctx.fillStyle = rgbStr(color);
+    ctx.font = '800 26px Arial, sans-serif';
+    ctx.fillText(p.label, x + cellW / 2, stripY + 132);
   });
 
-  // ── Hype tagline ──────────────────────────────────────────────────────────
-  const tagY = stripY + cellH + 130;
-  ctx.save();
-  ctx.shadowColor = rgba(color, 0.8);
-  ctx.shadowBlur = 40;
-  const grad = ctx.createLinearGradient(W / 2 - 360, 0, W / 2 + 360, 0);
-  grad.addColorStop(0, rgbStr(lighten(color, 0.25)));
-  grad.addColorStop(1, rgbStr(color));
-  ctx.fillStyle = grad;
-  ctx.font = '900 70px Arial, sans-serif';
-  ctx.fillText('LIVELLO SBLOCCATO 🔥', W / 2, tagY);
-  ctx.restore();
-
-  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  // ── Footer ────────────────────────────────────────────────────────────────
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
   ctx.font = '600 26px Arial, sans-serif';
-  ctx.fillText(spaced('CRM NETWORKER · POWER AGENCY'), W / 2, H - 70);
+  ctx.fillText(spaced('CRM NETWORKER · POWER AGENCY'), W / 2, H - 64);
 
   // ── Download ──────────────────────────────────────────────────────────────
   canvas.toBlob((blob) => {
