@@ -44,7 +44,7 @@ export default async function DashboardPage() {
     month: 'long',
     year: 'numeric',
   }).format(new Date());
-  const onCycle = cycle.configured && cycle.number != null;
+  const onCycle = cycle.number != null;
   const periodLabel = onCycle ? `Ciclo ${cycle.number}` : monthLabel;
   const heading = onCycle ? `Migliori marketer del ciclo ${cycle.number}` : t('top_title');
 

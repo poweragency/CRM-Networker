@@ -24,8 +24,11 @@ BEGIN
   FROM public.organizations o
   WHERE o.id = public.current_org_id();
 
+  -- Default per OGNI org (anche quelle future): cicli di 28 giorni ancorati al
+  -- riferimento aziendale (ciclo 78 -> 2026-06-20 07:00 Europe/Rome). Una singola
+  -- org puo' allungare/spostare il proprio ciclo via settings.cycle (tasto admin).
   IF v_anchor IS NULL THEN
-    RETURN date_trunc('month', p_at);
+    v_anchor := timestamptz '2026-06-20 07:00:00+02';
   END IF;
 
   v_end := v_anchor;
@@ -35,23 +38,12 @@ BEGIN
 END;
 $$;
 
--- Fine (esclusiva) del ciclo che contiene p_at. Fallback: inizio mese successivo.
+-- Fine (esclusiva) del ciclo che contiene p_at = inizio + 28 giorni.
 CREATE OR REPLACE FUNCTION public.cycle_end(p_at timestamptz DEFAULT now())
 RETURNS timestamptz
-LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path TO 'public'
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public'
 AS $$
-DECLARE v_anchor timestamptz;
-BEGIN
-  SELECT (o.settings->'cycle'->>'anchor_end')::timestamptz
-    INTO v_anchor
-  FROM public.organizations o
-  WHERE o.id = public.current_org_id();
-
-  IF v_anchor IS NULL THEN
-    RETURN date_trunc('month', p_at) + interval '1 month';
-  END IF;
-  RETURN public.cycle_start(p_at) + interval '28 days';
-END;
+  SELECT public.cycle_start(p_at) + interval '28 days';
 $$;
 
 -- Numero del ciclo corrente (NULL se non configurato).
@@ -72,9 +64,10 @@ BEGIN
   FROM public.organizations o
   WHERE o.id = public.current_org_id();
 
-  IF v_anchor IS NULL OR v_num IS NULL THEN
-    RETURN NULL;
-  END IF;
+  -- Riferimento aziendale di default (ciclo 78 -> 2026-06-20 07:00) per le org
+  -- senza override: il numero del ciclo e' sempre valorizzato (mai NULL).
+  IF v_anchor IS NULL THEN v_anchor := timestamptz '2026-06-20 07:00:00+02'; END IF;
+  IF v_num    IS NULL THEN v_num    := 78; END IF;
 
   v_end := v_anchor;
   WHILE v_end <= p_at LOOP v_end := v_end + v_len; v_k := v_k + 1; END LOOP;

@@ -159,9 +159,10 @@ export function OrgSettingsForm({
         <CardHeader className="p-5 pb-3">
           <CardTitle>Ciclo aziendale</CardTitle>
           <p className="text-sm text-muted-foreground">
-            I cicli durano 28 giorni (non i mesi solari). Imposta il numero e la data/ora
-            di fine del ciclo ATTUALE: da lì le statistiche &laquo;del ciclo&raquo; si
-            azzerano e ripartono i 28 giorni. Lascia vuoto per usare i mesi solari.
+            I cicli durano <strong>28 giorni</strong> di default per tutte le org. Compila
+            qui SOLO per <strong>allungare o spostare</strong> il ciclo di questa org per un
+            evento particolare: imposta il numero e la nuova data/ora di fine (= azzeramento),
+            da cui ripartiranno i 28 giorni. Lascia vuoto per il default.
           </p>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 p-5 pt-0 sm:grid-cols-2">
