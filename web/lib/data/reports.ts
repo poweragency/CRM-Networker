@@ -156,3 +156,53 @@ export async function enqueueExport(
   };
   return { job, demo: isDemo(), ok: true };
 }
+
+/* ───────────────────────── End-of-cycle team report ───────────────────────── */
+
+export interface CycleTeamReport {
+  total: number;
+  reachedBi: number;
+  reachedFup: number;
+  reachedClosing: number;
+  reachedIscrizione: number;
+  startIso: string | null;
+  endIso: string | null;
+}
+
+const EMPTY_CYCLE_REPORT: CycleTeamReport = {
+  total: 0,
+  reachedBi: 0,
+  reachedFup: 0,
+  reachedClosing: 0,
+  reachedIscrizione: 0,
+  startIso: null,
+  endIso: null,
+};
+
+/**
+ * Team funnel aggregates for a specific cycle (the end-of-cycle report). Reached-
+ * stage counts (RLS-scoped to the caller's subtree) drive per-phase + overall
+ * (Business Info → Iscrizione) conversion and the total-prospects headline.
+ */
+export async function getCycleTeamReport(cycleNumber: number): Promise<CycleTeamReport> {
+  const supabase = getClient();
+  if (!supabase) return EMPTY_CYCLE_REPORT;
+  try {
+    const { data, error } = await supabase.rpc('cycle_team_funnel', { p_cycle: cycleNumber });
+    if (error || !data) return EMPTY_CYCLE_REPORT;
+    const row = (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | undefined;
+    if (!row) return EMPTY_CYCLE_REPORT;
+    const n = (v: unknown) => Number(v) || 0;
+    return {
+      total: n(row.total),
+      reachedBi: n(row.reached_bi),
+      reachedFup: n(row.reached_fup),
+      reachedClosing: n(row.reached_closing),
+      reachedIscrizione: n(row.reached_iscrizione),
+      startIso: row.cycle_start ? String(row.cycle_start) : null,
+      endIso: row.cycle_end ? String(row.cycle_end) : null,
+    };
+  } catch {
+    return EMPTY_CYCLE_REPORT;
+  }
+}

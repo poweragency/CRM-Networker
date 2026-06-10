@@ -12,6 +12,7 @@ import {
   type PhaseConversion,
 } from '@/lib/prospect-kpis';
 import type { ProspectStage } from '@/lib/types/db';
+import { cycleNumberAt } from '@/lib/cycle';
 import type { PersonalProspect } from '@/components/team/personal-performance';
 
 /**
@@ -41,18 +42,13 @@ interface MonthBucket {
   conv: FunnelPhaseConversions;
 }
 
-function monthKey(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+/** Bucket key = the company-cycle number containing the funnel-entry date. */
+function cycleKey(iso: string): string {
+  return String(cycleNumberAt(new Date(iso).getTime()));
 }
 
-function fmtMonth(key: string, style: 'long' | 'short'): string {
-  const [y, m] = key.split('-').map(Number);
-  const label = new Intl.DateTimeFormat('it-IT', {
-    month: style,
-    year: style === 'long' ? 'numeric' : undefined,
-  }).format(new Date(y, m - 1, 1));
-  return (label.charAt(0).toUpperCase() + label.slice(1)).replace('.', '');
+function fmtCycle(key: string, style: 'long' | 'short'): string {
+  return style === 'long' ? `Ciclo ${key}` : `C${key}`;
 }
 
 export function PerformanceModal({
@@ -102,17 +98,17 @@ function PerformanceContent({ prospects }: { prospects: PersonalProspect[] }) {
   const months = React.useMemo<MonthBucket[]>(() => {
     const map = new Map<string, ProspectStage[]>();
     for (const p of prospects) {
-      const k = monthKey(p.enteredFunnelAt);
+      const k = cycleKey(p.enteredFunnelAt);
       const arr = map.get(k);
       if (arr) arr.push(p.stage);
       else map.set(k, [p.stage]);
     }
     return [...map.entries()]
-      .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+      .sort((a, b) => Number(b[0]) - Number(a[0]))
       .map(([key, stages]) => ({
         key,
-        label: fmtMonth(key, 'long'),
-        short: fmtMonth(key, 'short'),
+        label: fmtCycle(key, 'long'),
+        short: fmtCycle(key, 'short'),
         conv: phaseConversionsFromStages(stages),
       }));
   }, [prospects]);
