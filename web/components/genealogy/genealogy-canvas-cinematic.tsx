@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Crosshair, Maximize2, Minus, Plus, Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { formatNumber, formatPercent } from '@/lib/utils';
+import { formatNumber } from '@/lib/utils';
 import {
   RANK_LABELS,
   RANK_ORDER,
@@ -682,12 +682,6 @@ function CinematicInner(
           ctx.fillText(label.toUpperCase(), L(lx), T(138));
         };
         kpi(16, formatNumber(n.kpis.prospects), t('kpi_prospects'), pal.info);
-        kpi(
-          132,
-          formatPercent(n.kpis.conversion_rate, 0),
-          t('kpi_conversion'),
-          pal.warning,
-        );
       }
 
       ctx.globalAlpha = 1;
