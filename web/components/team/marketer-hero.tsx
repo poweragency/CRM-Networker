@@ -82,13 +82,17 @@ export async function MarketerHero({
       />
 
       <div className="relative p-5 sm:p-6">
-        <Link
-          href="/statistiche"
-          className="mb-4 inline-flex items-center gap-1.5 rounded-md text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
-          {t('breadcrumb')}
-        </Link>
+        {/* Back-to-Statistiche only when viewing SOMEONE ELSE (you reach a teammate
+            from the roster); on your own profile it's hidden. */}
+        {!isSelf && (
+          <Link
+            href="/statistiche"
+            className="mb-4 inline-flex items-center gap-1.5 rounded-md text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
+            {t('breadcrumb')}
+          </Link>
+        )}
 
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
           {/* Avatar + status — the prestige glow halo for top ranks. */}
