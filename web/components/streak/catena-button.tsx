@@ -16,6 +16,7 @@ import { Modal } from '@/components/ui/modal';
 import { cn } from '@/lib/utils';
 import type { DmoStatus } from '@/lib/data/streak';
 import { toggleDmoTaskAction } from '@/app/(app)/team/[id]/actions';
+import { celebrate } from '@/lib/celebrate';
 
 /**
  * "Catena d'Oro" — the daily-streak chip shown next to the user's own name. A
@@ -64,7 +65,12 @@ export function CatenaButton({ initial }: { initial: DmoStatus }) {
   const toggle = React.useCallback(
     async (task: (typeof TASKS)[number]) => {
       const nextVal = !status[task.key];
+      // Ticking the LAST task (all 5 done) → confetti, same celebration as completing
+      // the Zoom presenze.
+      const justCompleted =
+        !status.allDone && withAllDone({ ...status, [task.key]: nextVal }).allDone;
       setStatus((prev) => withAllDone({ ...prev, [task.key]: nextVal }));
+      if (justCompleted) celebrate();
       inflight.current += 1;
       try {
         const res = await toggleDmoTaskAction(task.column, nextVal);
