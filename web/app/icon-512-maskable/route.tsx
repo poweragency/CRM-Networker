@@ -5,5 +5,5 @@ import { brandIcon } from '@/lib/brand-icon';
 export const dynamic = 'force-dynamic';
 
 export function GET() {
-  return new ImageResponse(brandIcon(512, false), { width: 512, height: 512 });
+  return new ImageResponse(brandIcon(512), { width: 512, height: 512 });
 }
