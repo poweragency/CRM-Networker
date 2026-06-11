@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og';
 
-/** iOS/macOS home-screen icon (generated) — the PowerNetwork bolt mark. */
+/** iOS/macOS home-screen icon (generated) — the Gen X bolt mark. */
 export const size = { width: 180, height: 180 };
 export const contentType = 'image/png';
 export const dynamic = 'force-dynamic';

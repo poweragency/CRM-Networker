@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { LegalShell, COMPANY } from '@/components/legal/legal-shell';
 
 export const metadata: Metadata = {
-  title: 'Termini di Servizio — CRM Networker',
-  description: "Condizioni d'uso del servizio CRM Networker.",
+  title: 'Termini di Servizio — Gen X',
+  description: "Condizioni d'uso del servizio Gen X.",
 };
 
 export default function TerminiPage() {
@@ -16,7 +16,7 @@ export default function TerminiPage() {
           heading: '1. Fornitore del servizio',
           body: [
             <>
-              CRM Networker è un servizio software in abbonamento (SaaS) fornito da {COMPANY.identifier}.
+              Gen X è un servizio software in abbonamento (SaaS) fornito da {COMPANY.identifier}.
               Regime forfettario: operazioni non soggette a IVA ai sensi dell’art. 1, commi 54-89, L. 190/2014.
               Creando un account o utilizzando il servizio l’utente accetta i presenti Termini.
             </>,
@@ -26,7 +26,7 @@ export default function TerminiPage() {
           heading: '2. Oggetto',
           body: [
             <>
-              CRM Networker è una piattaforma di CRM e business intelligence per il network marketing: gestione
+              Gen X è una piattaforma di CRM e business intelligence per il network marketing: gestione
               di contatti e prospect, genealogia della rete, chiamate, percorsi e reportistica. Il servizio è
               fornito “così com’è”, con possibili evoluzioni delle funzionalità.
             </>,

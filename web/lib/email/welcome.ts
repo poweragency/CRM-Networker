@@ -9,7 +9,7 @@ import { logError } from '@/lib/log';
  *
  * Required env (set in Vercel):
  *   RESEND_API_KEY  — your Resend API key (secret)
- *   RESEND_FROM     — verified sender, e.g. "PowerNetwork <noreply@tuodominio.it>"
+ *   RESEND_FROM     — verified sender, e.g. "Gen X <noreply@tuodominio.it>"
  * Optional:
  *   NEXT_PUBLIC_SITE_URL — app base URL (defaults to the prod domain)
  */
@@ -35,13 +35,13 @@ export async function sendWelcomeEmail(to: string, fullName: string): Promise<vo
   const loginUrl = `${APP_URL}/accedi`;
   const html = `
   <div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;color:#111;line-height:1.5;">
-    <h1 style="font-size:20px;margin:0 0 12px;">Benvenuto in PowerNetwork, ${name}! 🎉</h1>
+    <h1 style="font-size:20px;margin:0 0 12px;">Benvenuto in Gen X, ${name}! 🎉</h1>
     <p>Il tuo account è stato creato. Da oggi hai accesso al gestionale per seguire la tua rete, i percorsi dei prospect e le presenze alle call.</p>
     <p style="margin:24px 0;">
       <a href="${loginUrl}" style="background:#7c5cff;color:#fff;padding:12px 22px;border-radius:10px;text-decoration:none;font-weight:600;display:inline-block;">Accedi ora</a>
     </p>
     <p style="font-size:14px;color:#555;">Accedi con la tua email (<b>${escapeHtml(to)}</b>) e la password che ti ha comunicato il tuo sponsor. Se non la ricordi, usa <b>“Password dimenticata”</b> nella pagina di accesso.</p>
-    <p style="font-size:12px;color:#999;margin-top:32px;">PowerNetwork · Power Agency</p>
+    <p style="font-size:12px;color:#999;margin-top:32px;">Gen X · Power Agency</p>
   </div>`;
 
   try {
@@ -54,7 +54,7 @@ export async function sendWelcomeEmail(to: string, fullName: string): Promise<vo
       body: JSON.stringify({
         from,
         to,
-        subject: 'Benvenuto in PowerNetwork 🎉',
+        subject: 'Benvenuto in Gen X 🎉',
         html,
       }),
     });

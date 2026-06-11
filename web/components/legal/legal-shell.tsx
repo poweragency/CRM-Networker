@@ -44,7 +44,7 @@ export function LegalShell({
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             <Network className="h-5 w-5" aria-hidden />
           </div>
-          <span className="text-base font-semibold">CRM Networker</span>
+          <span className="text-base font-semibold">Gen X</span>
         </div>
 
         <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>

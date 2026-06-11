@@ -467,7 +467,7 @@ export function downloadReportCard(opts: {
   // Brand.
   ctx.fillStyle = 'rgba(255,255,255,0.55)';
   ctx.font = '700 30px Arial, sans-serif';
-  ctx.fillText(spaced('CRM NETWORKER'), W / 2, 150);
+  ctx.fillText(spaced('GEN X'), W / 2, 150);
 
   // Emblem (per-rank gem / diamond / tech core).
   drawEmblem(ctx, W / 2, 440, rank, color);
@@ -597,7 +597,7 @@ export function downloadReportCard(opts: {
   // Footer.
   ctx.fillStyle = 'rgba(255,255,255,0.4)';
   ctx.font = '600 26px Arial, sans-serif';
-  ctx.fillText(spaced('CRM NETWORKER · POWER AGENCY'), W / 2, footerY);
+  ctx.fillText(spaced('GEN X · POWER AGENCY'), W / 2, footerY);
 
   // Download.
   canvas.toBlob((blob) => {

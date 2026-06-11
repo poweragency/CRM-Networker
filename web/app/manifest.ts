@@ -7,8 +7,8 @@ import type { MetadataRoute } from 'next';
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'PowerNetwork',
-    short_name: 'PowerNetwork',
+    name: 'Gen X',
+    short_name: 'Gen X',
     description: 'CRM + Business Intelligence per il network marketing.',
     start_url: '/',
     scope: '/',

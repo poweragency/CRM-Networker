@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { LegalShell, COMPANY } from '@/components/legal/legal-shell';
 
 export const metadata: Metadata = {
-  title: 'Cookie Policy — CRM Networker',
-  description: "Informativa sull'uso dei cookie del servizio CRM Networker.",
+  title: 'Cookie Policy — Gen X',
+  description: "Informativa sull'uso dei cookie del servizio Gen X.",
 };
 
 export default function CookiePage() {
@@ -32,7 +32,7 @@ export default function CookiePage() {
           heading: '3. Cookie utilizzati',
           body: [
             <>
-              CRM Networker utilizza esclusivamente <strong>cookie tecnici</strong> necessari
+              Gen X utilizza esclusivamente <strong>cookie tecnici</strong> necessari
               all’autenticazione, al mantenimento della sessione e alla sicurezza (gestiti dal provider di
               autenticazione), oltre alla memorizzazione di preferenze d’interfaccia. Non utilizziamo cookie di
               profilazione o di marketing di terze parti.

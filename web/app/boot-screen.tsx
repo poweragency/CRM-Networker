@@ -4,7 +4,7 @@ import * as React from 'react';
 
 /**
  * BootScreen — a dark, branded launch overlay shown on the initial page load
- * (PWA launch / full refresh) so the user sees a glowing PowerNetwork mark on a
+ * (PWA launch / full refresh) so the user sees a glowing Gen X mark on a
  * dark background instead of a blank white screen while the app boots. It fades
  * out shortly after hydration (when the app is interactive) and removes itself;
  * it does NOT reappear on in-app (client-side) navigation.
@@ -39,7 +39,7 @@ export function BootScreen() {
             <path fill="#ffffff" d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" />
           </svg>
         </div>
-        <p className="text-sm font-semibold tracking-[0.2em] text-white/70">POWERNETWORK</p>
+        <p className="text-sm font-semibold tracking-[0.2em] text-white/70">GEN X</p>
       </div>
     </div>
   );

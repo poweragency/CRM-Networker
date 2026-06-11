@@ -2,9 +2,9 @@ import { ImageResponse } from 'next/og';
 
 /**
  * Open Graph share image (generated, 1200×630) — used as the link preview on
- * social / chat. The PowerNetwork mark + wordmark on a dark indigo-lit canvas.
+ * social / chat. The Gen X mark + wordmark on a dark indigo-lit canvas.
  */
-export const alt = 'PowerNetwork — CRM & Business Intelligence per il network marketing';
+export const alt = 'Gen X — CRM & Business Intelligence per il network marketing';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 // Render on demand (next/og can't prerender statically in the offline build).
@@ -46,7 +46,7 @@ export default function OpengraphImage() {
             </svg>
           </div>
           <div style={{ display: 'flex', fontSize: 104, fontWeight: 700, letterSpacing: -3 }}>
-            PowerNetwork
+            Gen X
           </div>
         </div>
         <div style={{ display: 'flex', marginTop: 30, fontSize: 34, color: '#9aa0b4' }}>

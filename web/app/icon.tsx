@@ -2,7 +2,7 @@ import { ImageResponse } from 'next/og';
 
 /**
  * Browser-tab favicon (generated). A white "power" bolt on the indigo brand
- * gradient — the PowerNetwork mark. Served at /icon and wired into <head> by Next.
+ * gradient — the Gen X mark. Served at /icon and wired into <head> by Next.
  */
 export const size = { width: 32, height: 32 };
 export const contentType = 'image/png';

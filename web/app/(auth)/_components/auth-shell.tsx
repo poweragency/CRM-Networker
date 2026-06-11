@@ -82,7 +82,7 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
           <span className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 shadow-[0_10px_40px_-8px_rgba(79,70,229,0.8)]">
             <Zap className="h-6 w-6 text-white" aria-hidden />
           </span>
-          <span className="text-xl font-bold tracking-tight">PowerNetwork</span>
+          <span className="text-xl font-bold tracking-tight">Gen X</span>
         </div>
 
         <div className="max-w-md">
@@ -121,7 +121,7 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
             </div>
           ) : (
             <p className="text-xs text-white/45">
-              © {new Date().getFullYear()} PowerNetwork
+              © {new Date().getFullYear()} Gen X
             </p>
           )}
         </div>
@@ -138,7 +138,7 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-700 shadow-[0_8px_30px_-8px_rgba(79,70,229,0.8)]">
             <Zap className="h-5 w-5 text-white" aria-hidden />
           </span>
-          <span className="text-base font-bold tracking-tight">PowerNetwork</span>
+          <span className="text-base font-bold tracking-tight">Gen X</span>
         </div>
 
         <div className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6">
@@ -159,7 +159,7 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         <p className="px-6 pb-6 text-center text-xs text-white/40 lg:hidden">
-          © {new Date().getFullYear()} PowerNetwork
+          © {new Date().getFullYear()} Gen X
         </p>
       </div>
     </main>

@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { LegalShell, COMPANY } from '@/components/legal/legal-shell';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy — CRM Networker',
-  description: 'Informativa sul trattamento dei dati personali del servizio CRM Networker.',
+  title: 'Privacy Policy — Gen X',
+  description: 'Informativa sul trattamento dei dati personali del servizio Gen X.',
 };
 
 export default function PrivacyPage() {
@@ -15,7 +15,7 @@ export default function PrivacyPage() {
         {
           heading: '1. Titolare e ruoli nel trattamento',
           body: [
-            <>Il servizio CRM Networker è fornito da {COMPANY.identifier} (di seguito il “Fornitore”).</>,
+            <>Il servizio Gen X è fornito da {COMPANY.identifier} (di seguito il “Fornitore”).</>,
             <>
               Per i dati relativi all’account dell’utente (profilo, abbonamento, fatturazione) il Fornitore
               agisce in qualità di <strong>titolare del trattamento</strong>. Per i dati che l’utente carica e

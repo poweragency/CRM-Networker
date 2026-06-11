@@ -1,5 +1,5 @@
 /**
- * The PowerNetwork mark as a full-bleed element for `next/og` ImageResponse:
+ * The Gen X mark as a full-bleed element for `next/og` ImageResponse:
  * a white "power" bolt on the indigo brand gradient. Full-bleed (no rounded
  * corners) so it's safe as a maskable PWA icon. Shared by the manifest icon routes.
  */
