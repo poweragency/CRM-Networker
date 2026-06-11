@@ -67,13 +67,6 @@ export default async function OrgSettingsPage() {
         />
       )}
 
-      {isAdmin && (
-        <CycleSettings
-          currentNumber={cycle?.number ?? null}
-          currentEndIso={cycle?.endIso ?? null}
-        />
-      )}
-
       <CallsSettings
         initial={calls}
         isAdmin={isAdmin}
@@ -88,6 +81,13 @@ export default async function OrgSettingsPage() {
       />
 
       {isAdmin && <RolesSettings initial={orgRoles} />}
+
+      {isAdmin && (
+        <CycleSettings
+          currentNumber={cycle?.number ?? null}
+          currentEndIso={cycle?.endIso ?? null}
+        />
+      )}
     </div>
   );
 }

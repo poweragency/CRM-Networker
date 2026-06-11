@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { CalendarClock, Loader2, Save } from 'lucide-react';
+import { AlertTriangle, CalendarClock, Loader2, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,17 +57,24 @@ export function CycleSettings({
   }
 
   return (
-    <Card>
-      <CardHeader className="p-5 pb-3">
+    <Card className="border-warning/45 bg-warning/[0.025] shadow-sm">
+      <CardHeader className="space-y-3 p-5 pb-3">
         <CardTitle className="flex items-center gap-2">
-          <CalendarClock className="h-4 w-4" aria-hidden />
+          <CalendarClock className="h-4 w-4 text-warning" aria-hidden />
           Ciclo aziendale
         </CardTitle>
+        <div className="flex items-start gap-2.5 rounded-lg border border-warning/45 bg-warning/10 px-3.5 py-3 text-sm text-warning">
+          <AlertTriangle className="mt-0.5 h-[18px] w-[18px] shrink-0" aria-hidden />
+          <span className="leading-relaxed">
+            <strong>Non toccare</strong> se non per un <strong>cambio aziendale ufficiale</strong>{' '}
+            (es. allungare il ciclo per un evento). Cambiare queste date{' '}
+            <strong>sposta l&apos;azzeramento di TUTTE le statistiche</strong> del ciclo.
+          </span>
+        </div>
         <p className="text-sm text-muted-foreground">
-          I cicli durano <strong>28 giorni</strong> (non i mesi solari). Imposta il numero e la
-          data/ora di fine del ciclo ATTUALE: da lì le statistiche &laquo;del ciclo&raquo; si
-          azzerano e ripartono i 28 giorni. Modifica solo per allungare o spostare il ciclo
-          (es. un evento aziendale).
+          I cicli durano <strong>28 giorni</strong> (non i mesi solari). Numero e data/ora di
+          fine indicano il ciclo ATTUALE: da lì le statistiche &laquo;del ciclo&raquo; si
+          azzerano e ripartono.
         </p>
       </CardHeader>
       <CardContent className="grid grid-cols-1 gap-4 p-5 pt-0 sm:grid-cols-2">
