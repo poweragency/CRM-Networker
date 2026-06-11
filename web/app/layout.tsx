@@ -4,7 +4,6 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { defaultLocale } from '@/lib/i18n/config';
 import { Providers } from './providers';
-import { BootScreen } from './boot-screen';
 import './globals.css';
 
 const inter = Inter({
@@ -61,9 +60,8 @@ export default async function RootLayout({
   const messages = await getMessages();
 
   return (
-    <html lang={defaultLocale} suppressHydrationWarning>
+    <html lang={defaultLocale} suppressHydrationWarning style={{ backgroundColor: '#0b0d16' }}>
       <body className={`${inter.variable} font-sans antialiased`}>
-        <BootScreen />
         <NextIntlClientProvider locale={defaultLocale} messages={messages}>
           <Providers>{children}</Providers>
         </NextIntlClientProvider>
