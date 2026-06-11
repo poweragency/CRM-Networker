@@ -1,5 +1,9 @@
 import type { MetadataRoute } from 'next';
 
+// Serve the manifest fresh (never statically cached) so icon/branding changes
+// propagate immediately instead of being pinned by an edge-cached static file.
+export const dynamic = 'force-dynamic';
+
 /**
  * Web App Manifest — makes the CRM installable as a standalone app (Android/Chrome
  * install prompt; iOS via Safari → Aggiungi a Home). A DARK `background_color`
