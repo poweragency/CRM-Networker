@@ -495,3 +495,31 @@ export async function updateOrgSettings(
     return { data: next, demo: true, ok: true };
   }
 }
+
+/** Update ONLY the company-cycle anchor (used by the /org settings page). Demo-safe;
+ *  merges into existing org settings so other keys are preserved. */
+export async function updateOrgCycle(
+  cycle: OrgSettings['cycle'],
+): Promise<{ ok: boolean; demo: boolean }> {
+  const supabase = getClient();
+  if (!supabase) return { ok: true, demo: true };
+  try {
+    const { orgId } = await getOwnerContext();
+    const { data: cur } = await supabase
+      .from('organizations')
+      .select('settings')
+      .eq('id', orgId)
+      .maybeSingle<Record<string, unknown>>();
+    const settings = {
+      ...((cur?.settings as Record<string, unknown>) ?? {}),
+      cycle,
+    };
+    const { error } = await supabase
+      .from('organizations')
+      .update({ settings })
+      .eq('id', orgId);
+    return { ok: !error, demo: false };
+  } catch {
+    return { ok: false, demo: true };
+  }
+}

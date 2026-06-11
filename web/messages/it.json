@@ -900,8 +900,6 @@
     "quick_ranks_desc": "Distribuzione e storico dei gradi",
     "quick_audit": "Registro attività",
     "quick_audit_desc": "Le azioni sensibili recenti",
-    "quick_org_settings": "Impostazioni organizzazione",
-    "quick_org_settings_desc": "Ciclo aziendale, nome, fuso e soglie",
     "section_bottlenecks": "Criticità aperte",
     "view_analytics": "Apri Analytics"
   },

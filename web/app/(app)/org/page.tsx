@@ -12,6 +12,8 @@ import { RolesSettings } from '@/components/team/roles-settings';
 import { CallsSettings } from '@/components/team/calls-settings';
 import { DocumentsSettings } from '@/components/team/documents-settings';
 import { OrgIdentitySettings } from '@/components/team/org-identity-settings';
+import { CycleSettings } from '@/components/team/cycle-settings';
+import { getCycleInfo } from '@/lib/data/dashboard';
 
 /**
  * /org — organization settings, reachable from the top-right account menu and
@@ -39,6 +41,7 @@ export default async function OrgSettingsPage() {
   const calls = (await listManageableCalls()).data;
   const docs = (await listOrgDocuments()).data;
   const identity = isAdmin ? (await getOrgIdentity()).data : null;
+  const cycle = isAdmin ? await getCycleInfo() : null;
 
   return (
     <div className="animate-fade-in space-y-6">
@@ -61,6 +64,13 @@ export default async function OrgSettingsPage() {
           initialName={identity?.name ?? ''}
           initialLogoUrl={identity?.logoUrl ?? null}
           orgId={claims.org_id}
+        />
+      )}
+
+      {isAdmin && (
+        <CycleSettings
+          currentNumber={cycle?.number ?? null}
+          currentEndIso={cycle?.endIso ?? null}
         />
       )}
 

@@ -11,7 +11,6 @@ import {
   ScrollText,
   BarChart3,
   UserPlus2,
-  Settings,
 } from 'lucide-react';
 import { getAnalyticsOverview } from '@/lib/data/analytics';
 import { listMarketers } from '@/lib/data/admin';
@@ -55,7 +54,6 @@ export default async function AdminPage() {
     { href: '/admin/marketer/nuovo', icon: UserPlus, titleKey: 'quick_pre_register', descKey: 'quick_pre_register_desc', accent: 'text-info' },
     { href: '/admin/ranghi', icon: Medal, titleKey: 'quick_ranks', descKey: 'quick_ranks_desc', accent: 'text-warning' },
     { href: '/admin/audit', icon: ScrollText, titleKey: 'quick_audit', descKey: 'quick_audit_desc', accent: 'text-muted-foreground' },
-    { href: '/admin/impostazioni-org', icon: Settings, titleKey: 'quick_org_settings', descKey: 'quick_org_settings_desc', accent: 'text-primary' },
   ] as const;
 
   return (
