@@ -2,6 +2,8 @@
 
 > Audit multi-agente read-only (14 dimensioni, 50 agenti, verifica avversariale dei CRITICO/ALTO). Generato dai risultati del workflow.
 
+> **⚠️ Addendum 2026-06-11:** questo report è uno **snapshot** alla data dell'audit. Alcuni finding sono stati fixati nei commit successivi del 07-08/06 (es. ALTO #6 `createInvitation` falso-successo → fix `e4bfba8`; vari fix performance/notifiche). Il CRITICO **fail-open senza env in produzione resta APERTO** (vedi `docs/DEPLOY-VERCEL.md` e la memoria di progetto). Prima di lavorare un finding, verificare nel codice se è già stato chiuso.
+
 ## Verdetto
 
 **A well-architected CRM that fails open to an auth-less admin by design, lies "success" on real failures, and has never been tested — promising bones, not shippable to paying users under attack tomorrow.**

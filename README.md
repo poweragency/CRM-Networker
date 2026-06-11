@@ -68,14 +68,9 @@ Postgres so no client or Edge layer can bypass them.
     ├── config.toml               # Supabase CLI config (Postgres 15, auth hook, ports)
     ├── seed.sql                  # dev seed: demo org + small binary tree via place_marketer()
     ├── migrations/               # SQL migrations, applied in filename order
-    │   ├── 0001_extensions.sql
-    │   ├── 0002_enums.sql
-    │   ├── 0003_tenancy_identity.sql
-    │   ├── 0004_marketers_tree.sql
-    │   ├── 0005_auth_visibility.sql
-    │   ├── 0006_rls_core.sql
-    │   ├── 0007_account_lifecycle.sql
-    │   ├── 0008_contacts.sql … 0014_notifications.sql
+    │   ├── 0001_extensions.sql … 0067_iscritti_lista_and_counts.sql
+    │   │                         # 67 migrations: tenancy, binary tree + closure/ltree,
+    │   │                         # RLS, lifecycle, CRM domain, fact layer, perf RPCs
     │   └── …
     └── functions/                # Edge Functions (Deno) — added as implemented
 ```
@@ -144,11 +139,14 @@ Regenerate the typed client whenever the schema changes:
 
 ```bash
 # hosted (linked) project:
-npx supabase gen types typescript --linked > src/lib/database.types.ts
+npx supabase gen types typescript --linked > web/lib/types/db.ts
 
 # or local stack:
-npx supabase gen types typescript --local  > src/lib/database.types.ts
+npx supabase gen types typescript --local  > web/lib/types/db.ts
 ```
+
+> Note: today `web/lib/types/db.ts` is hand-written; switching to generated types is a
+> pending task — keep the same path either way.
 
 ### 5. Run the app
 
