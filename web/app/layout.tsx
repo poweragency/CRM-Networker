@@ -1,9 +1,10 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { defaultLocale } from '@/lib/i18n/config';
 import { Providers } from './providers';
+import { BootScreen } from './boot-screen';
 import './globals.css';
 
 const inter = Inter({
@@ -34,6 +35,18 @@ export const metadata: Metadata = {
     title: 'PowerNetwork',
     description: 'CRM + Business Intelligence per il network marketing.',
   },
+  // Installed (iOS) app: standalone, dark status bar, branded title on Home.
+  appleWebApp: {
+    capable: true,
+    title: 'PowerNetwork',
+    statusBarStyle: 'black',
+  },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: '#0b0d16',
 };
 
 /**
@@ -50,6 +63,7 @@ export default async function RootLayout({
   return (
     <html lang={defaultLocale} suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`}>
+        <BootScreen />
         <NextIntlClientProvider locale={defaultLocale} messages={messages}>
           <Providers>{children}</Providers>
         </NextIntlClientProvider>
