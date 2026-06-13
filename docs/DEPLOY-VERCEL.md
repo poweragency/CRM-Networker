@@ -3,17 +3,18 @@
 L'app Next.js sta nella sottocartella **`web/`** del repo (la root contiene anche `docs/` e
 `supabase/`). L'unico passaggio non ovvio è quindi impostare la **Root Directory = `web`** su Vercel.
 
-> 🛑 **SICUREZZA (CRITICO) — NON deployare MAI in produzione senza variabili d'ambiente.**
-> In sviluppo locale, senza env, l'app gira in *modalità demo* (dati mock) per comodità.
-> ⚠️ **ATTENZIONE: contrariamente a quanto affermava una versione precedente di questo
-> documento, l'app NON fa fail-closed.** Verificato dall'audit (2026-06, AUDIT-REPORT.md):
-> senza variabili Supabase l'app fa **FAIL-OPEN** — `getCurrentClaims()` ritorna
-> `DEMO_CLAIMS` con ruolo `owner` (`web/lib/env.ts`, `web/lib/data/session.ts`,
-> `web/middleware.ts`) e serve una shell admin navigabile **a chiunque, senza login**.
-> Un deploy di produzione con env mancanti è quindi un'app esposta con admin finto.
-> **Imposta SEMPRE tutte le variabili prima del primo deploy** e verifica subito che
-> l'URL pubblico reindirizzi al login. TODO aperto: guard di boot in `web/lib/env.ts`
-> che blocchi l'avvio se `NODE_ENV=production` e le env mancano.
+> 🔒 **SICUREZZA — in produzione l'app fa FAIL-CLOSED (verificato nel codice).**
+> In sviluppo locale, senza env, l'app gira in *modalità demo* (dati mock con un'identità
+> owner fittizia) per comodità. **In produzione questo NON succede:** `isDemoAllowed` è
+> `false` quando `NODE_ENV=production` (salvo un opt-in esplicito `NEXT_PUBLIC_DEMO=1`),
+> quindi senza variabili Supabase `getCurrentClaims()` ritorna un'identità **non
+> privilegiata** (`UNAUTH_CLAIMS`, nessun org/marketer) e il layout `(app)` reindirizza
+> a `/accedi` invece di servire una shell admin (`web/lib/env.ts`,
+> `web/lib/data/session.ts`, `web/app/(app)/layout.tsx`: `if (demo && (isSupabaseConfigured
+> || !isDemoAllowed)) redirect('/accedi')`). Un deploy di produzione con env mancanti
+> resta quindi **bloccato al login**, non esposto con un admin finto.
+> Le variabili restano comunque **obbligatorie** perché l'app funzioni davvero:
+> **impostale tutte prima del primo deploy** e verifica che l'URL pubblico reindirizzi al login.
 
 ---
 

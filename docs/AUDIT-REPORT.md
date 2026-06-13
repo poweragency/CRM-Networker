@@ -2,11 +2,13 @@
 
 > Audit multi-agente read-only (14 dimensioni, 50 agenti, verifica avversariale dei CRITICO/ALTO). Generato dai risultati del workflow.
 
-> **⚠️ Addendum 2026-06-11:** questo report è uno **snapshot** alla data dell'audit. Alcuni finding sono stati fixati nei commit successivi del 07-08/06 (es. ALTO #6 `createInvitation` falso-successo → fix `e4bfba8`; vari fix performance/notifiche). Il CRITICO **fail-open senza env in produzione resta APERTO** (vedi `docs/DEPLOY-VERCEL.md` e la memoria di progetto). Prima di lavorare un finding, verificare nel codice se è già stato chiuso.
+> **⚠️ Addendum 2026-06-13:** questo report è uno **snapshot** alla data dell'audit. Alcuni finding sono stati fixati nei commit successivi (es. ALTO #6 `createInvitation` falso-successo → fix `e4bfba8`; vari fix performance/notifiche). Il **CRITICO #1 "fail-open senza env in produzione" è RISOLTO** (verificato nel codice): in produzione l'app fa ora **fail-closed** — `isDemoAllowed=false` quando `NODE_ENV=production` (`web/lib/env.ts`), quindi senza env `getCurrentClaims()` ritorna `UNAUTH_CLAIMS` (non privilegiato) e il layout `(app)` reindirizza a `/accedi` (`web/lib/data/session.ts`, `web/app/(app)/layout.tsx`: `if (demo && (isSupabaseConfigured || !isDemoAllowed)) redirect('/accedi')`); la demo owner resta solo fuori produzione o con opt-in `NEXT_PUBLIC_DEMO=1`. Una nota precedente (11/06) affermava erroneamente che il finding restasse APERTO. Il testo del finding #1 qui sotto descrive lo stato **all'epoca dell'audit**. Prima di lavorare un finding, verificare nel codice se è già stato chiuso.
 
 ## Verdetto
 
 **A well-architected CRM that fails open to an auth-less admin by design, lies "success" on real failures, and has never been tested — promising bones, not shippable to paying users under attack tomorrow.**
+
+> _Nota 2026-06-13: il "fails open to an auth-less admin" del verdetto si riferisce allo stato all'epoca dell'audit. È stato **RISOLTO**: in produzione l'app fa ora fail-closed (vedi l'Addendum in cima e il CRITICO #1)._
 
 - **Production ready:** NO  ·  **Readiness score:** 34/100
 - **Conteggio (dopo dedup, 11 duplicati rimossi):** CRITICO 1 · ALTO 13 · MEDIO 60 · BASSO 37  (tot 111)
@@ -64,6 +66,8 @@ On correctness and operations the app is also not launch-ready: a pervasive "sil
 ### CRITICO (1)
 
 #### 1. Production deploy is documented and configured with NO env vars -> app silently serves mock data under a fake admin identity (fail-open)
+
+> ✅ **RISOLTO (2026-06-13, verificato nel codice).** In produzione l'app fa ora **fail-closed**: `isDemoAllowed=false` quando `NODE_ENV=production` (`web/lib/env.ts`), `getCurrentClaims()` ritorna `UNAUTH_CLAIMS` (non privilegiato, niente org/marketer) invece di `DEMO_CLAIMS` (`web/lib/data/session.ts`), e il layout `(app)` reindirizza a `/accedi` (`web/app/(app)/layout.tsx`: `if (demo && (isSupabaseConfigured || !isDemoAllowed)) redirect('/accedi')`). La demo owner resta solo fuori produzione o con `NEXT_PUBLIC_DEMO=1`. Il testo qui sotto è lo stato **all'epoca dell'audit**.
 
 - **Gravità:** CRITICO  ·  **Priorità:** P0  ·  **Tipo:** security  ·  **Confidence:** high  ·  **Verdetto verifica:** confirmed
 - **Dimensione:** DevOps, CI/CD, Config, Secrets, Observability, Production Readiness
