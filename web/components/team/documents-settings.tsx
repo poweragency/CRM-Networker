@@ -49,6 +49,7 @@ export function DocumentsSettings({
   const [title, setTitle] = React.useState('');
   const [file, setFile] = React.useState<File | null>(null);
   const [teamBranch, setTeamBranch] = React.useState<'all' | 'left' | 'right'>('all');
+  const [isBook, setIsBook] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [deleting, setDeleting] = React.useState<string | null>(null);
   const fileRef = React.useRef<HTMLInputElement>(null);
@@ -56,6 +57,7 @@ export function DocumentsSettings({
   function resetForm() {
     setTitle('');
     setFile(null);
+    setIsBook(false);
     if (fileRef.current) fileRef.current.value = '';
   }
 
@@ -78,6 +80,7 @@ export function DocumentsSettings({
         file_url: '#',
         scope,
         team_branch: branch,
+        is_book: isAdmin && isBook,
       });
       setSaving(false);
       if (res.ok) {
@@ -107,6 +110,7 @@ export function DocumentsSettings({
         file_url: pub.publicUrl,
         scope,
         team_branch: branch,
+        is_book: isAdmin && isBook,
       });
       setSaving(false);
       if (!res.ok) {
@@ -196,6 +200,18 @@ export function DocumentsSettings({
                 <option value="left">{t('calls_branch_left')}</option>
                 <option value="right">{t('calls_branch_right')}</option>
               </select>
+            </label>
+          )}
+
+          {isAdmin && (
+            <label className="flex items-center gap-2 self-center pt-4 text-xs font-medium text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={isBook}
+                onChange={(e) => setIsBook(e.target.checked)}
+                className="h-4 w-4 rounded border-input accent-primary"
+              />
+              È un libro (sezione Libri)
             </label>
           )}
 

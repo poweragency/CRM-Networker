@@ -21,10 +21,12 @@ export interface OrgDocument {
   team_branch: 'left' | 'right' | 'all' | null;
   created_by: string | null;
   created_by_name: string | null;
+  /** Shown in the "Libri" section of the Informativa (PDF book library). */
+  is_book: boolean;
 }
 
 const SELECT =
-  'id,title,file_url,file_path,scope,team_branch,created_by, creator:created_by(display_name)';
+  'id,title,file_url,file_path,scope,team_branch,is_book,created_by, creator:created_by(display_name)';
 
 /** Documents visible to the caller (RLS: org-wide + team docs targeting them). */
 export async function listOrgDocuments(): Promise<{ data: OrgDocument[]; demo: boolean }> {
@@ -46,6 +48,7 @@ export async function listOrgDocuments(): Promise<{ data: OrgDocument[]; demo: b
         team_branch: (r.team_branch as 'left' | 'right' | 'all' | null) ?? null,
         created_by: (r.created_by as string | null) ?? null,
         created_by_name: cr?.display_name ?? null,
+        is_book: Boolean(r.is_book),
       } satisfies OrgDocument;
     });
     return { data: rows, demo: false };
@@ -61,6 +64,8 @@ export interface CreateDocInput {
   scope: 'org' | 'team';
   /** Only for team scope: which branch of the downline. */
   team_branch?: 'left' | 'right' | 'all' | null;
+  /** Show this file in the "Libri" section of the Informativa. */
+  is_book?: boolean;
 }
 
 export interface DocResult {
@@ -83,6 +88,7 @@ export async function createOrgDocument(input: CreateDocInput): Promise<DocResul
       file_url: input.file_url,
       scope: input.scope,
       team_branch: teamBranch,
+      is_book: input.is_book ?? false,
       created_by: createdBy,
     });
     return { ok: !error, demo: false };
