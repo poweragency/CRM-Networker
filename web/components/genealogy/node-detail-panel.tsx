@@ -25,6 +25,8 @@ import { StatusDot } from '@/components/ui/status-dot';
 import { Separator } from '@/components/ui/separator';
 import { cn, formatNumber, formatPercent } from '@/lib/utils';
 import type { TreeNode } from '@/lib/types/db';
+import { prospectStageBreakdownAction } from '@/app/(app)/genealogia/actions';
+import type { ProspectStageBreakdown } from '@/lib/data/genealogy';
 
 /**
  * Side detail panel opened on node selection (doc 14 §7.1). Shows a profile
@@ -94,6 +96,27 @@ function StatRow({
   );
 }
 
+function FunnelCell({
+  label,
+  value,
+  loading,
+  accent,
+}: {
+  label: string;
+  value?: number;
+  loading: boolean;
+  accent: string;
+}) {
+  return (
+    <div className="rounded-lg border bg-card px-3 py-2.5 text-center">
+      <p className={cn('text-lg font-semibold tabular-nums', accent)}>
+        {loading ? '…' : formatNumber(value ?? 0)}
+      </p>
+      <p className="mt-0.5 text-[11px] text-muted-foreground">{label}</p>
+    </div>
+  );
+}
+
 export function NodeDetailPanel({
   node,
   canActivate,
@@ -112,6 +135,26 @@ export function NodeDetailPanel({
   const tc = useTranslations('common');
   const [confirming, setConfirming] = React.useState(false);
   React.useEffect(() => setConfirming(false), [node?.id]);
+
+  // Open-prospects-per-stage, loaded on demand when a node is selected.
+  const [funnel, setFunnel] = React.useState<ProspectStageBreakdown | null>(null);
+  const [loadingFunnel, setLoadingFunnel] = React.useState(false);
+  React.useEffect(() => {
+    if (!node?.id) return;
+    let active = true;
+    setFunnel(null);
+    setLoadingFunnel(true);
+    prospectStageBreakdownAction(node.id)
+      .then((b) => {
+        if (active) setFunnel(b);
+      })
+      .finally(() => {
+        if (active) setLoadingFunnel(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [node?.id]);
 
   if (!node) return null;
 
@@ -261,6 +304,21 @@ export function NodeDetailPanel({
               accent="text-warning"
               accentBg="bg-warning/12"
             />
+          </div>
+        </section>
+
+        <Separator />
+
+        {/* Prospect APERTI per fase del funnel (caricati alla selezione del nodo). */}
+        <section className="space-y-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Prospect per fase
+          </h3>
+          <div className="grid grid-cols-2 gap-2">
+            <FunnelCell label="B. Info" value={funnel?.businessInfo} loading={loadingFunnel} accent="text-info" />
+            <FunnelCell label="Follow-up" value={funnel?.followUp} loading={loadingFunnel} accent="text-primary" />
+            <FunnelCell label="Closing" value={funnel?.closing} loading={loadingFunnel} accent="text-warning" />
+            <FunnelCell label="Check Soldi" value={funnel?.checkSoldi} loading={loadingFunnel} accent="text-success" />
           </div>
         </section>
       </div>

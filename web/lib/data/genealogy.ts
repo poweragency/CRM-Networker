@@ -754,4 +754,41 @@ export async function searchMarketers(
   }
 }
 
+export interface ProspectStageBreakdown {
+  businessInfo: number;
+  followUp: number;
+  closing: number;
+  checkSoldi: number;
+}
+
+/** Open prospects per funnel stage for a marketer (tree side panel, on-demand). */
+export async function getProspectStageBreakdown(
+  marketerId: string,
+): Promise<ProspectStageBreakdown> {
+  const empty: ProspectStageBreakdown = {
+    businessInfo: 0,
+    followUp: 0,
+    closing: 0,
+    checkSoldi: 0,
+  };
+  if (!isSupabaseConfigured || !marketerId) return empty;
+  const supabase = createClient();
+  if (!supabase) return empty;
+  try {
+    const { data, error } = await supabase.rpc('prospect_stage_breakdown', { p_id: marketerId });
+    if (error || !data) return empty;
+    const row = (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | undefined;
+    if (!row) return empty;
+    const n = (v: unknown) => Number(v) || 0;
+    return {
+      businessInfo: n(row.business_info),
+      followUp: n(row.follow_up),
+      closing: n(row.closing),
+      checkSoldi: n(row.check_soldi),
+    };
+  } catch {
+    return empty;
+  }
+}
+
 export { MOCK_ROOT_ID };

@@ -3,9 +3,11 @@
 import {
   getAncestors,
   getChildren,
+  getProspectStageBreakdown,
   getSubtree,
   searchMarketers,
   TREE_LOAD_DEPTH,
+  type ProspectStageBreakdown,
 } from '@/lib/data/genealogy';
 import { updateMarketerExtra } from '@/lib/data/team';
 import {
@@ -45,6 +47,13 @@ export interface ActionResult {
 export async function loadChildrenAction(parentId: string): Promise<ActionResult> {
   const { data, demo } = await getChildren(parentId);
   return { nodes: data, demo };
+}
+
+/** Open prospects per funnel stage for a node (loaded on selection in the side panel). */
+export async function prospectStageBreakdownAction(
+  marketerId: string,
+): Promise<ProspectStageBreakdown> {
+  return getProspectStageBreakdown(marketerId);
 }
 
 /**
