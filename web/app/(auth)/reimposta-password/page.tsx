@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import { z } from 'zod';
@@ -40,6 +41,7 @@ type SessionState = 'checking' | 'ready' | 'missing';
  */
 export default function ResetPasswordPage() {
   const t = useTranslations('auth');
+  const router = useRouter();
   const [session, setSession] = useState<SessionState>('checking');
   const [done, setDone] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -191,11 +193,20 @@ export default function ResetPasswordPage() {
   const passwordValue = watch('password');
 
   return (
-    <AuthCard
-      title={t('resetTitle')}
-      subtitle={t('resetSubtitle')}
-      icon={ShieldCheck}
-      footer={
+    <div className="space-y-3">
+      <button
+        type="button"
+        onClick={() => router.back()}
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md"
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden />
+        Indietro
+      </button>
+      <AuthCard
+        title={t('resetTitle')}
+        subtitle={t('resetSubtitle')}
+        icon={ShieldCheck}
+        footer={
         <Link href="/accedi" className="inline-flex items-center gap-1.5 hover:text-foreground">
           <ArrowLeft className="h-4 w-4" aria-hidden />
           {t('backToLogin')}
@@ -240,6 +251,7 @@ export default function ResetPasswordPage() {
           {isSubmitting ? t('resetSubmitting') : t('resetSubmit')}
         </Button>
       </form>
-    </AuthCard>
+      </AuthCard>
+    </div>
   );
 }

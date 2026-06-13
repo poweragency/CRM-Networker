@@ -3,12 +3,10 @@ import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { Building2 } from 'lucide-react';
 import { getCurrentClaims } from '@/lib/data/session';
-import { listOrgRoles } from '@/lib/data/roles';
 import { listManageableCalls } from '@/lib/data/zoom-calls';
 import { listOrgDocuments } from '@/lib/data/org-documents';
 import { getOrgIdentity } from '@/lib/data/org-identity';
 import { ConfigNotice } from '@/components/config-notice';
-import { RolesSettings } from '@/components/team/roles-settings';
 import { CallsSettings } from '@/components/team/calls-settings';
 import { DocumentsSettings } from '@/components/team/documents-settings';
 import { OrgIdentitySettings } from '@/components/team/org-identity-settings';
@@ -37,7 +35,6 @@ export default async function OrgSettingsPage() {
   const isCoAdmin = claims.role === 'co_admin';
   if (!isAdmin && !isCoAdmin) redirect('/impostazioni');
 
-  const orgRoles = isAdmin ? (await listOrgRoles()).data : [];
   const calls = (await listManageableCalls()).data;
   const docs = (await listOrgDocuments()).data;
   const identity = isAdmin ? (await getOrgIdentity()).data : null;
@@ -79,8 +76,6 @@ export default async function OrgSettingsPage() {
         orgId={claims.org_id}
         selfMarketerId={claims.marketer_id}
       />
-
-      {isAdmin && <RolesSettings initial={orgRoles} />}
 
       {isAdmin && (
         <CycleSettings
