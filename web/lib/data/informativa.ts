@@ -52,8 +52,11 @@ export const PACKAGE_INFO: PackageInfo[] = [
     ],
   },
   {
-    // Starter: per ora solo mensile — le varianti annuale/semestrale sono da definire.
     key: 'starter',
-    prices: [{ cadence: 'Mensile', price: '$ 199' }],
+    prices: [
+      { cadence: 'Annuale', price: '$ 1.500' },
+      { cadence: 'Semestrale', price: '$ 779' },
+      { cadence: 'Mensile', price: '$ 199' },
+    ],
   },
 ];
