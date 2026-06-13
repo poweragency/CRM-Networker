@@ -5,6 +5,7 @@ import { getAttendanceView } from '@/lib/data/attendance';
 import { ConfigNotice } from '@/components/config-notice';
 import { PageHeader } from '@/components/crm/page-header';
 import { AttendanceTable } from '@/components/presenze/attendance-table';
+import { getCurrentClaims } from '@/lib/data/session';
 import { todayInTimeZone } from '@/lib/utils';
 
 /**
@@ -45,6 +46,8 @@ export default async function PresenzePage(props: {
   const { calls, members, total, summary, demo } = await getAttendanceView(date, {
     limit: PAGE_SIZE,
   });
+  const { claims } = await getCurrentClaims();
+  const isAdmin = claims.role === 'admin' || claims.role === 'owner';
 
   return (
     <div className="animate-fade-in space-y-5">
@@ -63,6 +66,8 @@ export default async function PresenzePage(props: {
         summary={summary}
         pageSize={PAGE_SIZE}
         today={today}
+        selfMarketerId={claims.marketer_id}
+        isAdmin={isAdmin}
       />
     </div>
   );

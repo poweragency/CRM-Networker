@@ -113,6 +113,8 @@ export function AttendanceTable({
   summary: initialSummary,
   pageSize,
   today,
+  selfMarketerId,
+  isAdmin = false,
 }: {
   date: string;
   calls: ZoomCallDef[];
@@ -121,6 +123,10 @@ export function AttendanceTable({
   summary: AttendanceSummary;
   pageSize: number;
   today: string;
+  /** The viewer's own marketer id — they can't mark THEMSELVES present. */
+  selfMarketerId?: string;
+  /** Admins/owner can mark anyone (the self-check restriction is for members). */
+  isAdmin?: boolean;
 }) {
   const t = useTranslations('presenze');
   const { toast } = useToast();
@@ -367,6 +373,11 @@ export function AttendanceTable({
   );
 
   async function togglePresent(member: AttendanceMember, callId: string) {
+    // You can't mark YOURSELF present — only someone above you (or an admin) can.
+    if (!isAdmin && member.id === selfMarketerId) {
+      toast({ title: 'Solo chi è sopra di te può segnarti presente.', variant: 'error' });
+      return;
+    }
     const next = !present[member.id]?.[callId];
     const key = `${member.id}|${callId}|p`;
     markLocalWrite(member.id, callId);
