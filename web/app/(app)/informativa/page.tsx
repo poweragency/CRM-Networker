@@ -61,14 +61,38 @@ export default async function InformativaPage() {
                   <span className={cn('h-1.5 w-1.5 rounded-full', tone.dot)} aria-hidden />
                   {STARTING_PACKAGE_LABELS[p.key]}
                 </span>
-                <p className="relative mt-2 flex items-baseline gap-1.5">
-                  <span className="text-3xl font-semibold tabular-nums tracking-tight text-foreground">
-                    {p.price}
-                  </span>
-                  <span className="text-xs font-medium text-muted-foreground">
-                    {t('vat')}
-                  </span>
-                </p>
+                {/* Scaletta prezzi: Annuale → Semestrale → Mensile (ultima). */}
+                <div className="relative mt-3 space-y-1.5">
+                  {p.prices.map((tier, i) => {
+                    const isMonthly = i === p.prices.length - 1 && p.prices.length > 1;
+                    return (
+                      <div
+                        key={tier.cadence}
+                        className={cn(
+                          'flex items-baseline justify-between gap-2',
+                          isMonthly && 'mt-1 border-t border-border/60 pt-2',
+                        )}
+                      >
+                        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          {tier.cadence}
+                        </span>
+                        <span className="flex items-baseline gap-1">
+                          <span
+                            className={cn(
+                              'font-semibold tabular-nums tracking-tight text-foreground',
+                              i === 0 ? 'text-2xl' : 'text-lg',
+                            )}
+                          >
+                            {tier.price}
+                          </span>
+                          <span className="text-[10px] font-medium text-muted-foreground">
+                            {t('vat')}
+                          </span>
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             );
           })}
