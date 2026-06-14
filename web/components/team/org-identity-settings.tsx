@@ -78,15 +78,19 @@ export function OrgIdentitySettings({
         toast({ title: t('org_error'), variant: 'error' });
         return;
       }
-      const { data: pub } = supabase.storage.from('org-assets').getPublicUrl(path);
-      const res = await updateOrgIdentityAction({ logo_url: pub.publicUrl });
+      // Bucket privato: salviamo il PATH; la lettura genera un signed URL.
+      const res = await updateOrgIdentityAction({ logo_url: path });
       setUploading(false);
       if (!res.ok) {
         await supabase.storage.from('org-assets').remove([path]);
         toast({ title: t('org_error'), variant: 'error' });
         return;
       }
-      setLogoUrl(pub.publicUrl);
+      // Anteprima immediata via signed URL.
+      const { data: signed } = await supabase.storage
+        .from('org-assets')
+        .createSignedUrl(path, 3600);
+      setLogoUrl(signed?.signedUrl ?? null);
       toast({ title: t('org_saved'), variant: 'success' });
       router.refresh();
     } catch {

@@ -1,5 +1,6 @@
 import 'server-only';
 import { getClient, getOwnerContext } from '@/lib/data/crm-shared';
+import { ORG_ASSETS_BUCKET, orgAssetPath } from '@/lib/storage';
 
 /**
  * Org identity (name + logo) data access. The name + logo are shown in the shell
@@ -26,10 +27,18 @@ export async function getOrgIdentity(): Promise<{ data: OrgIdentity | null; demo
       .eq('id', orgId)
       .maybeSingle<{ name: string; logo_url: string | null; status: string | null }>();
     if (!data) return { data: null, demo: false };
+    // Bucket privato: il logo si serve via signed URL (RLS-scoped per org).
+    let logoUrl: string | null = null;
+    if (data.logo_url && data.logo_url !== '#') {
+      const { data: signed } = await supabase.storage
+        .from(ORG_ASSETS_BUCKET)
+        .createSignedUrl(orgAssetPath(data.logo_url), 3600);
+      logoUrl = signed?.signedUrl ?? null;
+    }
     return {
       data: {
         name: data.name,
-        logoUrl: data.logo_url ?? null,
+        logoUrl,
         suspended: data.status === 'suspended',
       },
       demo: false,

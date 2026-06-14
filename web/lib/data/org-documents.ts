@@ -1,5 +1,6 @@
 import 'server-only';
 import { getClient, getOwnerContext } from '@/lib/data/crm-shared';
+import { ORG_ASSETS_BUCKET } from '@/lib/storage';
 
 /**
  * Org documents (Informativa) data access — admin-managed downloadable files.
@@ -7,9 +8,10 @@ import { getClient, getOwnerContext } from '@/lib/data/crm-shared';
  * team files (branch-filtered to their downline). Visibility + write permissions
  * are RLS-enforced (see migration 0045). Demo-safe (no env → empty + simulated).
  *
- * The file bytes live in the public `org-assets` storage bucket; rows store the
- * storage path + public URL. Uploads happen client-side (browser client) to keep
- * large files off the server-action body; only metadata flows through the action.
+ * The file bytes live in the PRIVATE `org-assets` storage bucket; rows store the
+ * storage path. `file_url` is filled at read time with a short-lived SIGNED URL
+ * (RLS-scoped per org). Uploads happen client-side (browser client) to keep large
+ * files off the server-action body; only metadata flows through the action.
  */
 
 export interface OrgDocument {
@@ -41,9 +43,9 @@ export async function listOrgDocuments(): Promise<{ data: OrgDocument[]; demo: b
       const cr = (r.creator ?? null) as { display_name?: string } | null;
       return {
         id: String(r.id),
-        title: String(r.title),
-        file_url: String(r.file_url),
+        file_url: '', // bucket privato: riempito sotto con un signed URL
         file_path: String(r.file_path),
+        title: String(r.title),
         scope: (r.scope as 'org' | 'team') ?? 'org',
         team_branch: (r.team_branch as 'left' | 'right' | 'all' | null) ?? null,
         created_by: (r.created_by as string | null) ?? null,
@@ -51,6 +53,17 @@ export async function listOrgDocuments(): Promise<{ data: OrgDocument[]; demo: b
         is_book: Boolean(r.is_book),
       } satisfies OrgDocument;
     });
+    // Signed URL per ogni file (bucket privato, RLS-scoped per org). Batch,
+    // allineato per indice ai path passati.
+    const paths = rows.map((r) => r.file_path);
+    if (paths.length > 0) {
+      const { data: signed } = await supabase.storage
+        .from(ORG_ASSETS_BUCKET)
+        .createSignedUrls(paths, 3600);
+      signed?.forEach((s, idx) => {
+        if (rows[idx]) rows[idx].file_url = s?.signedUrl ?? '';
+      });
+    }
     return { data: rows, demo: false };
   } catch {
     return { data: [], demo: false };

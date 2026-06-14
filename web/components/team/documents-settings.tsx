@@ -103,11 +103,11 @@ export function DocumentsSettings({
         toast({ title: t('docs_error'), variant: 'error' });
         return;
       }
-      const { data: pub } = supabase.storage.from('org-assets').getPublicUrl(path);
+      // Bucket privato: salviamo il PATH; la lettura genera un signed URL.
       const res = await createOrgDocumentAction({
         title: name,
         file_path: path,
-        file_url: pub.publicUrl,
+        file_url: path,
         scope,
         team_branch: branch,
         is_book: isAdmin && isBook,
