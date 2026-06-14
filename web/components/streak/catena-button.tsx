@@ -5,11 +5,11 @@ import { useTranslations } from 'next-intl';
 import {
   Flame,
   Check,
-  BookOpen,
-  Instagram,
-  Video,
-  UserPlus,
+  MessageCircle,
+  Briefcase,
+  Sparkles,
   GraduationCap,
+  Instagram,
   type LucideIcon,
 } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
@@ -30,18 +30,24 @@ import { celebrate } from '@/lib/celebrate';
 
 type TaskKey = 'readPages' | 'igStory' | 'tiktokReel' | 'meetPerson' | 'training';
 
-/** The 5 tasks in order, with their DB column + icon + label key. */
+/**
+ * Le 5 task DMO, nell'ordine richiesto, con colonna DB + icona + titolo/descrizione.
+ * NB: i client-key e le colonne DB (booleani) restano invariati: sono solo
+ * rietichettati con le 5 nuove categorie (Inviti / Servizio / Testimonianze /
+ * Formazione / Social Media), così non serve toccare schema o RPC.
+ */
 const TASKS: {
   key: TaskKey;
   column: string;
   icon: LucideIcon;
-  labelKey: string;
+  titleKey: string;
+  descKey: string;
 }[] = [
-  { key: 'readPages', column: 'read_pages', icon: BookOpen, labelKey: 'task_read' },
-  { key: 'igStory', column: 'ig_story', icon: Instagram, labelKey: 'task_ig' },
-  { key: 'tiktokReel', column: 'tiktok_reel', icon: Video, labelKey: 'task_tiktok' },
-  { key: 'meetPerson', column: 'meet_person', icon: UserPlus, labelKey: 'task_meet' },
-  { key: 'training', column: 'training', icon: GraduationCap, labelKey: 'task_training' },
+  { key: 'meetPerson', column: 'meet_person', icon: MessageCircle, titleKey: 'task_invites_title', descKey: 'task_invites_desc' },
+  { key: 'readPages', column: 'read_pages', icon: Briefcase, titleKey: 'task_service_title', descKey: 'task_service_desc' },
+  { key: 'tiktokReel', column: 'tiktok_reel', icon: Sparkles, titleKey: 'task_testimonial_title', descKey: 'task_testimonial_desc' },
+  { key: 'training', column: 'training', icon: GraduationCap, titleKey: 'task_training_title', descKey: 'task_training_desc' },
+  { key: 'igStory', column: 'ig_story', icon: Instagram, titleKey: 'task_social_title', descKey: 'task_social_desc' },
 ];
 
 function withAllDone(s: DmoStatus): DmoStatus {
@@ -166,7 +172,8 @@ export function CatenaButton({ initial }: { initial: DmoStatus }) {
               <TaskRow
                 key={task.key}
                 icon={task.icon}
-                label={t(task.labelKey)}
+                label={t(task.titleKey)}
+                description={t(task.descKey)}
                 done={status[task.key]}
                 gold={done}
                 highlight={!done && i === firstUndone}
@@ -183,6 +190,7 @@ export function CatenaButton({ initial }: { initial: DmoStatus }) {
 function TaskRow({
   icon: Icon,
   label,
+  description,
   done,
   gold,
   highlight,
@@ -190,6 +198,7 @@ function TaskRow({
 }: {
   icon: LucideIcon;
   label: string;
+  description: string;
   done: boolean;
   gold: boolean;
   highlight: boolean;
@@ -201,7 +210,7 @@ function TaskRow({
       onClick={onClick}
       aria-pressed={done}
       className={cn(
-        'flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all duration-base ease-standard hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'flex w-full items-start gap-3 rounded-xl border px-3 py-2.5 text-left transition-all duration-base ease-standard hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         done && gold
           ? 'border-warning/40 bg-warning/[0.08]'
           : done
@@ -222,17 +231,22 @@ function TaskRow({
       >
         <Icon className="h-[18px] w-[18px]" aria-hidden />
       </span>
-      <span
-        className={cn(
-          'min-w-0 flex-1 text-sm font-medium',
-          done ? 'text-foreground' : 'text-muted-foreground',
-        )}
-      >
-        {label}
+      <span className="min-w-0 flex-1">
+        <span
+          className={cn(
+            'block text-sm font-semibold',
+            done ? 'text-foreground' : 'text-foreground',
+          )}
+        >
+          {label}
+        </span>
+        <span className="mt-0.5 block text-xs font-normal leading-snug text-muted-foreground">
+          {description}
+        </span>
       </span>
       <span
         className={cn(
-          'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors',
+          'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors',
           done && gold
             ? 'border-warning bg-gradient-to-br from-warning to-warning text-white'
             : done

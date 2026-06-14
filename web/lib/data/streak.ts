@@ -28,16 +28,18 @@ export const TASK_COLUMN: Record<DmoTask, string> = {
   training: 'training',
 };
 
+// NB: i 5 booleani sono rietichettati lato UI con le 5 categorie DMO correnti
+// (vedi components/streak/catena-button.tsx); il nome colonna/chiave è storico.
 export interface DmoStatus {
-  /** Read 10 pages. */
+  /** Categoria "Servizio". */
   readPages: boolean;
-  /** Posted an Instagram story. */
+  /** Categoria "Social Media" (storia + tiktok/reel). */
   igStory: boolean;
-  /** Posted a TikTok / reel. */
+  /** Categoria "Testimonianze". */
   tiktokReel: boolean;
-  /** Met a new person. */
+  /** Categoria "Inviti". */
   meetPerson: boolean;
-  /** Watched a training video / podcast. */
+  /** Categoria "Formazione". */
   training: boolean;
   /** All 5 daily tasks done today. */
   allDone: boolean;
