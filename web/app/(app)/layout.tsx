@@ -5,6 +5,7 @@ import { listNotifications } from '@/lib/data/notifications';
 import { getOrgIdentity } from '@/lib/data/org-identity';
 import { isSupabaseConfigured, isDemoAllowed } from '@/lib/env';
 import { AppShell } from '@/components/shell/app-shell';
+import { ServiceSuspended } from '@/components/platform/service-suspended';
 import type { NavViewer } from '@/lib/nav';
 import type { TopbarUser } from '@/components/shell/topbar';
 
@@ -30,6 +31,12 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const { claims, demo, email } = await getCurrentClaims();
+
+  // Platform super-admin is external to every org and has no marketer/org context:
+  // never render the app shell — send it to its dedicated panel.
+  if (claims.is_platform_admin) {
+    redirect('/organizzazioni');
+  }
 
   // Require login whenever there is no real session — EXCEPT in genuine local
   // demo mode (no env + demo allowed). In production with missing env we fail
@@ -64,6 +71,13 @@ export default async function AppLayout({
 
   // Org identity (name + logo) for the shell brand; placeholders when unset.
   const identity = (await getOrgIdentity()).data;
+
+  // Org sospesa (mancato rinnovo): blocca l'accesso di TUTTI i membri con il
+  // messaggio di servizio non attivo. I dati restano intatti (solo gate UI).
+  if (!demo && identity?.suspended) {
+    return <ServiceSuspended />;
+  }
+
   const orgName = demo ? 'Networker · Demo' : identity?.name || 'Workspace';
   const orgLogoUrl = identity?.logoUrl ?? null;
 

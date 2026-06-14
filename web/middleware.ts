@@ -37,6 +37,7 @@ const PROTECTED_PREFIXES = [
   '/impostazioni',
   '/admin',
   '/platform',
+  '/organizzazioni',
 ];
 
 function isProtected(pathname: string): boolean {
@@ -66,6 +67,7 @@ const LIMITED_BLOCKED = [
   '/notifiche',
   '/admin',
   '/platform',
+  '/organizzazioni',
 ];
 
 /** Decode the (untrusted) JWT payload to read the stamped app_role + rank claims. */

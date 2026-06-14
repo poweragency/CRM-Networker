@@ -10,9 +10,11 @@ import { getClient, getOwnerContext } from '@/lib/data/crm-shared';
 export interface OrgIdentity {
   name: string;
   logoUrl: string | null;
+  /** Org sospesa (mancato rinnovo): i membri vanno bloccati con un messaggio. */
+  suspended: boolean;
 }
 
-/** The current org's display name + logo url (null in demo / when unset). */
+/** The current org's display name + logo url + suspension flag (null in demo / when unset). */
 export async function getOrgIdentity(): Promise<{ data: OrgIdentity | null; demo: boolean }> {
   const supabase = getClient();
   if (!supabase) return { data: null, demo: true };
@@ -20,11 +22,18 @@ export async function getOrgIdentity(): Promise<{ data: OrgIdentity | null; demo
     const { orgId } = await getOwnerContext();
     const { data } = await supabase
       .from('organizations')
-      .select('name,logo_url')
+      .select('name,logo_url,status')
       .eq('id', orgId)
-      .maybeSingle<{ name: string; logo_url: string | null }>();
+      .maybeSingle<{ name: string; logo_url: string | null; status: string | null }>();
     if (!data) return { data: null, demo: false };
-    return { data: { name: data.name, logoUrl: data.logo_url ?? null }, demo: false };
+    return {
+      data: {
+        name: data.name,
+        logoUrl: data.logo_url ?? null,
+        suspended: data.status === 'suspended',
+      },
+      demo: false,
+    };
   } catch {
     return { data: null, demo: false };
   }

@@ -337,6 +337,11 @@ export interface SessionClaims {
   role: MembershipRole;
   rank: MarketerRank;
   crm_access: boolean;
+  /**
+   * Super-admin esterno a tutte le org (ADR-009 #3). Quando true il login NON ha
+   * org/marketer e accede solo al pannello "Organizzazioni" (route group platform).
+   */
+  is_platform_admin: boolean;
 }
 
 /* ════════════════════════════════════════════════════════════════════════

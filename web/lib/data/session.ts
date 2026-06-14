@@ -34,6 +34,7 @@ const DEMO_CLAIMS: SessionClaims = {
   role: 'owner',
   rank: 'vice_president',
   crm_access: true,
+  is_platform_admin: false,
 };
 
 /**
@@ -48,6 +49,7 @@ const UNAUTH_CLAIMS: SessionClaims = {
   role: 'member',
   rank: 'executive',
   crm_access: false,
+  is_platform_admin: false,
 };
 
 /** The fallback identity to hand out when there is no real session. */
@@ -135,11 +137,15 @@ export const getCurrentClaims = cache(async function getCurrentClaims(): Promise
           payload?.crm_access ??
           false,
       ),
+      is_platform_admin: Boolean(
+        payload?.is_platform_admin ?? appMeta.is_platform_admin ?? false,
+      ),
     };
 
-    // If the hook hasn't stamped org/marketer yet, fail closed (do NOT hand out a
-    // privileged identity) — the layout will redirect to /accedi.
-    if (!claims.org_id || !claims.marketer_id) {
+    // Platform super-admin legitimately has NO org/marketer (external to all orgs):
+    // do NOT fail closed for them. For everyone else, an unstamped org/marketer
+    // means the hook hasn't run yet → fail closed (the layout redirects to /accedi).
+    if (!claims.is_platform_admin && (!claims.org_id || !claims.marketer_id)) {
       return fallbackResult(session.user.email ?? null);
     }
 
