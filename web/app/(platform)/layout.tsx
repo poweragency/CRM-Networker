@@ -1,5 +1,6 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Building2 } from 'lucide-react';
+import { Building2, KeyRound } from 'lucide-react';
 import { getCurrentClaims } from '@/lib/data/session';
 import { isSupabaseConfigured, isDemoAllowed } from '@/lib/env';
 import { LogoutButton } from '@/components/platform/logout-button';
@@ -37,7 +38,16 @@ export default async function PlatformLayout({
               <p className="text-[11px] text-muted-foreground">Pannello super-admin</p>
             </div>
           </div>
-          <LogoutButton />
+          <div className="flex items-center gap-2">
+            <Link
+              href="/reimposta-password"
+              className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <KeyRound className="h-4 w-4" aria-hidden />
+              Cambia password
+            </Link>
+            <LogoutButton />
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">{children}</main>
