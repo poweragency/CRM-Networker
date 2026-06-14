@@ -195,24 +195,33 @@ export async function createOrgWithOwner(input: CreateOrgInput): Promise<CreateO
   return { ok: true, orgId };
 }
 
-/** Suspend (non-renewal) or reactivate an org. Data is never touched. */
+/**
+ * Suspend (non-renewal) or reactivate an org. Data is never touched. Uses the
+ * RLS client (NOT the service-role): the platform admin already has UPDATE rights
+ * on organizations via RLS (organizations_admin_update → is_platform_admin), so
+ * this works even when the service-role key isn't configured.
+ */
 export async function setOrgStatus(
   orgId: string,
   suspend: boolean,
 ): Promise<{ ok: boolean; error?: 'forbidden' | 'failed' }> {
   if (!(await isPlatformAdmin())) return { ok: false, error: 'forbidden' };
-  const admin = getAdminClient();
-  if (!admin) return { ok: false, error: 'failed' };
+  const supabase = createClient();
+  if (!supabase) return { ok: false, error: 'failed' };
   try {
-    const { error } = await admin
+    const { data, error } = await supabase
       .from('organizations')
       .update({
         status: suspend ? 'suspended' : 'active',
         suspended_at: suspend ? new Date().toISOString() : null,
       })
-      .eq('id', orgId);
-    if (error) {
-      logError('setOrgStatus', error);
+      .eq('id', orgId)
+      .select('id')
+      .maybeSingle();
+    // No row back ⇒ RLS blocked it (or the org is gone) — surface as a failure
+    // instead of a false success.
+    if (error || !data) {
+      logError('setOrgStatus', error ?? new Error('no row updated'), { orgId });
       return { ok: false, error: 'failed' };
     }
     return { ok: true };
